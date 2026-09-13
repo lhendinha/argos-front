@@ -25,6 +25,8 @@ import { describe, expect, it } from "vitest";
 import {
   ESTADO_DO_ALVO_EXCLUIDO,
   ESTADO_DO_ALVO_SEM_ACESSO,
+  LEITURA_LIDOS,
+  LEITURA_NAO_LIDOS,
   STATUS_EM_ANDAMENTO,
   STATUS_FECHADO,
   TIPO_ENVIO_LEMBRETE,
@@ -41,6 +43,8 @@ const VOCABULARIO: Record<string, string> = {
   [STATUS_FECHADO]: "STATUS_FECHADO (constants/atendimento)",
   [TIPO_ENVIO_MOVIMENTACAO]: "TIPO_ENVIO_MOVIMENTACAO (constants/historico)",
   [TIPO_ENVIO_LEMBRETE]: "TIPO_ENVIO_LEMBRETE (constants/historico)",
+  [LEITURA_NAO_LIDOS]: "LEITURA_NAO_LIDOS (constants/historico)",
+  [LEITURA_LIDOS]: "LEITURA_LIDOS (constants/historico)",
   [ESTADO_DO_ALVO_EXCLUIDO]: "ESTADO_DO_ALVO_EXCLUIDO (constants/notificacoes)",
   [ESTADO_DO_ALVO_SEM_ACESSO]: "ESTADO_DO_ALVO_SEM_ACESSO (constants/notificacoes)",
 };
@@ -54,6 +58,8 @@ const ISENCOES: Record<string, string> = {
   "constants/atendimento.ts|Fechado": "é a declaração da constante",
   "constants/historico.ts|movimentacao": "é a declaração da constante",
   "constants/historico.ts|lembrete": "é a declaração da constante",
+  "constants/historico.ts|nao_lidos": "é a declaração da constante",
+  "constants/historico.ts|lidos": "é a declaração da constante",
   "constants/notificacoes.ts|excluido": "é a declaração da constante",
   "constants/notificacoes.ts|sem_acesso": "é a declaração da constante",
   "constants/notificacoes.ts|lembrete":

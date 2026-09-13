@@ -19,3 +19,17 @@ export const TIPOS_DE_ENVIO_DO_HISTORICO = [
   TIPO_ENVIO_MOVIMENTACAO,
   TIPO_ENVIO_LEMBRETE,
 ] as const;
+
+/** O que a pessoa quer ver do histórico: o que ainda não leu, ou o que já leu.
+ *
+ * 🔴 É contrato com a API: o valor do filtro **leitura**, o mesmo na URL e na
+ * consulta. A palavra muda nos dois lados ou em nenhum.
+ *
+ * ⚠️ Vazio ("") é "Lidos e não lidos" -- sem filtro --, e por isso não entra na
+ * dupla, como no tipo de envio. O rótulo de cada opção mora na página.
+ *
+ * ➡️ `constanteNuncaViraStringSolta.test.ts` e `constants/historico.test.ts`
+ */
+export const LEITURA_NAO_LIDOS = "nao_lidos";
+export const LEITURA_LIDOS = "lidos";
+export const LEITURAS_DO_HISTORICO = [LEITURA_NAO_LIDOS, LEITURA_LIDOS] as const;
