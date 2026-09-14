@@ -46,6 +46,7 @@ Todo mundo mais entra por **convite** (sub-aba "Convidar", dentro de "Grupo", vi
 ## Rodando localmente
 
 ```bash
+nvm use          # Node 22, pelo .nvmrc
 yarn install
 cp .env.example .env
 # edita o .env com a URL real da sua Function URL
