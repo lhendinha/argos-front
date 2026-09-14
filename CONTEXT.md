@@ -1780,7 +1780,7 @@ serializa em ~6 por host. Com lote, um dia e um trimestre custam uma
 requisição.
 
 O argumento a favor do `useQueries` — reaproveitar o cache da tela de
-detalhe — não se sustenta: o detalhe devolve os registros do atendimento, o
+detalhe — não se sustenta: o detalhe devolve o atendimento inteiro, o
 resumo devolve só o assunto. São formas diferentes, e compartilhar chave
 entre duas formas é o defeito recorrente deste projeto.
 
@@ -4801,3 +4801,29 @@ doze linhas com a marca certa, a morta clicada virou lida sem navegar, e a viva
 abriu.
 
 ➡️ `scripts/verificar-marca-do-sino.mjs` e os testes de `SinoDeNotificacoes`.
+
+## A linha do tempo do atendimento vem 20 por vez (14/09/2026)
+
+Passo 2 da etapa 1 do `PLANO_LER_SO_O_NECESSARIO.md` da API. O atendimento não traz mais os registros (regra 9): o
+detalhe e a lista recebem só o último registro e a quantidade, e a linha do tempo vem da rota dos registros.
+
+- **`useRegistrosDoAtendimento`** usa `useInfiniteQuery`. ⚠️ As páginas chegam da mais nova para a mais antiga, e cada
+  uma vem em ordem de escrita: a linha do tempo junta as páginas de trás para frente. Na ordem de chegada, os 20 mais
+  recentes ficariam antes dos anteriores.
+- **Carrega à parte do cabeçalho**, com o próprio carregando e o próprio erro. Com dados na tela, um pedido que falha
+  depois (os anteriores, uma recarga) vira aviso, e o que a pessoa lia não some.
+- 🔴 **"Ver registros anteriores" não pode mover a vista.** Vinte registros entrando em cima empurram para baixo o que
+  se lia. A `LinhaDoTempo` guarda a posição do primeiro registro ao pedir e, quando eles chegam, rola a janela pela
+  diferença -- quem rola é a janela, porque o casco do app não tem contêiner com rolagem. Se o pedido falha, a âncora é
+  descartada: senão rolaria a tela quando um registro novo chegasse depois. jsdom não desenha, e o teste simula as
+  posições; quem prova é o Chrome (`scripts/verificar-registros-do-atendimento.mjs`: o registro lido fica no mesmo
+  lugar, com 2 px de tolerância).
+- O registro que chega depois da primeira pintura acende por 1,6 s, com o keyframe no tema (keyframe é global), e não
+  anima para quem pede menos movimento.
+- A confirmação de excluir conta a quantidade GUARDADA: a tela carrega 20 por vez, e contar os da tela diria menos do
+  que some.
+- ⚠️ **`clearAllMocks` limpa as chamadas, mas não a fila de respostas de uma vez só.** Um teste que deixava uma página
+  de `mockResolvedValueOnce` sem consumir a entregava ao teste seguinte, e três testes falharam longe da causa. O
+  `beforeEach` do detalhe chama `mockReset` no mock dos registros.
+- **Em produção**, o mesmo roteiro de Chrome rodou num escritório de teste criado por bootstrap, com uma cópia que recebe
+  o endereço, a conta e o subgrupo por variável de ambiente: 24/24, e o escritório apagado com resíduo zero.
