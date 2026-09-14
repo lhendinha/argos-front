@@ -423,6 +423,23 @@ e pelo mesmo motivo, com esse filtro, a lista não recarrega ao voltar o foco.
   tela, o menu do filtro e a Área de trabalho, e acusa qualquer requisição que não
   seja leitura.
 
+## A busca pelo começo da palavra (decidida em 14/09/2026, a executar)
+
+Decisão do usuário, com o motivo e as medições no `CONTEXT.md` e no
+`PLANO_LER_SO_O_NECESSARIO.md` da API: toda busca por texto do sistema passa a
+achar pela palavra completa ou pelo começo dela, por um índice de palavras, e um
+serviço de busca separado fica para quando ela ficar lenta. Ainda não
+implementado: as buscas descritas no resto deste documento são as de hoje.
+
+- 🔴 **Muda o que se acha:** hoje "anco" acha "Banco"; depois, só "banc" ou
+  "banco". Acento e maiúscula continuam sem contar.
+- 🔴 **O que busca no navegador segue a mesma regra**, senão a mesma palavra acha
+  numa tela e não em outra: o filtro do quadro (`pages/KanbanPage/index.tsx`, por
+  título e número do processo) e o dos seletores sobre as opções já carregadas
+  (`contemTermo`, em `utils/texto.ts`). Os dois procuram hoje em qualquer parte.
+- ⚠️ **Números:** hoje um pedaço do meio acha o processo. O desenho da API guarda
+  os pedaços do número como palavras para não perder isso, e a tela acompanha.
+
 ## Histórias que saíram dos comentários (Fase 3 do `PLANO_ARQUIVOS_MENORES.md`, grupo 1, 05/09/2026)
 
 O padrão de prosa (seção 0b) tira o diário do código. O que os comentários
