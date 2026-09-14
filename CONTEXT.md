@@ -437,8 +437,11 @@ implementado: as buscas descritas no resto deste documento são as de hoje.
   numa tela e não em outra: o filtro do quadro (`pages/KanbanPage/index.tsx`, por
   título e número do processo) e o dos seletores sobre as opções já carregadas
   (`contemTermo`, em `utils/texto.ts`). Os dois procuram hoje em qualquer parte.
-- ⚠️ **Números:** hoje um pedaço do meio acha o processo. O desenho da API guarda
-  os pedaços do número como palavras para não perder isso, e a tela acompanha.
+- 🔴 **Números com todos os finais** (decidido pelo usuário em 14/09/2026): na
+  API, os dígitos do processo, do CPF/CNPJ, do telefone e do número do documento
+  entram com todos os finais como palavras, e um pedaço do meio continua achando,
+  como hoje. No navegador, a parte dos dígitos fica como está: o quadro já procura
+  os dígitos do processo em qualquer posição. Só o texto passa ao começo da palavra.
 
 ## Histórias que saíram dos comentários (Fase 3 do `PLANO_ARQUIVOS_MENORES.md`, grupo 1, 05/09/2026)
 
