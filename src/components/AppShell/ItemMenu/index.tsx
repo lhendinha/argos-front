@@ -1,6 +1,7 @@
 import { Box, HStack, Text } from "@chakra-ui/react";
 import { NavLink } from "react-router-dom";
 
+import { contarFormatado, formatarQuantidade } from "../../../utils";
 import { ICONES_MENU } from "../icones";
 import type { ItemMenuProps } from "./types";
 
@@ -14,11 +15,17 @@ import type { ItemMenuProps } from "./types";
  * entrega -- não guardado em estado próprio, que é como esse tipo de menu
  * costuma dessincronizar do endereço.
  */
-export default function ItemMenu({ item }: ItemMenuProps) {
+export default function ItemMenu({ item, contador }: ItemMenuProps) {
   const Icone = ICONES_MENU[item.icone];
 
   return (
-    <NavLink to={item.caminho} end={item.caminho === "/"} style={{ display: "block" }}>
+    <NavLink
+      to={item.caminho}
+      end={item.caminho === "/"}
+      style={{ display: "block" }}
+      /* O número entra no NOME do link: a pílula é visual, e "Histórico" sozinho não diz que há o que ler. */
+      aria-label={contador ? `${item.rotulo}, ${contarFormatado(contador, "envio não lido", "envios não lidos")}` : undefined}
+    >
       {({ isActive }) => (
         /* `.nav-item` do artifact: 9px 10px, gap 11, 13.5px/600. O ativo
            ganha, além do fundo, uma barra de 3px encostada na borda da
@@ -55,6 +62,29 @@ export default function ItemMenu({ item }: ItemMenuProps) {
             </Box>
           )}
           <Text fontSize="13.5px">{item.rotulo}</Text>
+          {/* 🔴 O número EXATO, sem teto -- ao contrário do sino, que para em `MAXIMO_NO_BADGE`: aqui é a fila de leitura,
+              e "9+" não diz quanto falta. A pílula cresce com o número ("1.234") sem quebrar o menu. */}
+          {contador ? (
+            <Box
+              as="span"
+              aria-hidden="true"
+              data-contador
+              ml="auto"
+              minW="20px"
+              h="20px"
+              px="6px"
+              borderRadius="full"
+              bg="brand.darker"
+              color="white"
+              fontSize="11px"
+              fontWeight="800"
+              display="inline-grid"
+              placeItems="center"
+              css={{ fontVariantNumeric: "tabular-nums" }}
+            >
+              {formatarQuantidade(contador)}
+            </Box>
+          ) : null}
         </HStack>
       )}
     </NavLink>

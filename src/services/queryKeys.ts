@@ -94,7 +94,12 @@ export const qk = {
     tipoEnvio?: string;
     apenasComFalha?: boolean;
     dias?: number;
+    leitura?: string;
   }) => ["historico", params] as const,
+  /** Tudo o que é do Histórico -- as páginas e o contador. É o que "marcar todos" e o Desfazer invalidam. */
+  prefixoHistorico: () => ["historico"] as const,
+  /** O contador do menu. Marcar um envio invalida SÓ esta: a lista não recarrega. */
+  naoLidosDoHistorico: () => ["historico", "nao-lidos"] as const,
   detalhesProcesso: (numeroProcesso: string) => ["detalhesProcesso", numeroProcesso] as const,
   detalheCliente: (clienteId: string) => ["cliente", clienteId] as const,
   clientes: (params: { pagina?: number; tamanhoPagina?: number; busca?: string } = {}) => ["clientes", params] as const,

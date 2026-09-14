@@ -9,6 +9,7 @@ export * from "./iniciais";
 export * from "./mask";
 export * from "./mes";
 export * from "./notificacao";
+export * from "./numero";
 export * from "./ordemFracionaria";
 export * from "./paginacao";
 export * from "./periodo";

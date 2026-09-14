@@ -25,6 +25,8 @@ const mocks = vi.hoisted(() => ({
   atualizarTarefa: vi.fn(),
   removerTarefa: vi.fn(),
   listarDocumentos: vi.fn(),
+  /* Abrir a movimentação com e-mail marca o envio como lido no Histórico. */
+  marcarEnvioComoLido: vi.fn(),
 }));
 
 vi.mock("../../services", () => mocks);
@@ -440,6 +442,30 @@ describe("o teor da movimentação", () => {
 
     expect(url()).not.toContain("comunicacao");
     expect(await screen.findByText("Intimação")).toBeVisible();
+  });
+
+  it("🔴 abrir a movimentação COM envio marca o e-mail como lido -- uma vez só", async () => {
+    mocks.marcarEnvioComoLido.mockResolvedValue({ marcados: 1 });
+    comMovimentacao({ tem_envio: true });
+    montar(`/processos/sg1/${NUMERO}?comunicacao=4242`);
+
+    expect(await screen.findByText("Fica intimada a parte")).toBeVisible();
+    await waitFor(() => expect(mocks.marcarEnvioComoLido).toHaveBeenCalledWith({ numero_processo: NUMERO, comunicacao_id: 4242 }));
+    await userEvent.click(await screen.findByRole("tab", { name: "Detalhes" }));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.marcarEnvioComoLido).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["sem envio", { tem_envio: false }],
+    ["na API velha, sem o campo", undefined],
+  ])("PAR NEGATIVO: %s, abrir não marca nada", async (_caso, extra) => {
+    comMovimentacao(extra);
+    montar(`/processos/sg1/${NUMERO}?comunicacao=4242`);
+
+    expect(await screen.findByText("Fica intimada a parte")).toBeVisible();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mocks.marcarEnvioComoLido).not.toHaveBeenCalled();
   });
 
   it("com envio, oferece o caminho pro e-mail no Histórico", async () => {

@@ -1,4 +1,4 @@
-import { TIPO_ENVIO_LEMBRETE, TIPO_ENVIO_MOVIMENTACAO } from "../../constants";
+import { LEITURA_LIDOS, LEITURA_NAO_LIDOS, TIPO_ENVIO_LEMBRETE, TIPO_ENVIO_MOVIMENTACAO } from "../../constants";
 
 /** Os filtros de tipo do histórico.
  *
@@ -51,6 +51,17 @@ export const FILTROS_DE_FALHA = [
  * contrato de qualquer forma.)
  */
 export const DIAS_DA_JANELA_RECENTE = 7;
+
+/** O filtro de leitura: o lido é de cada pessoa.
+ *
+ * ⚠️ Mesmo padrão dos de cima: `id` não vazio e `valor` indo pra API. O `id` das duas opções É o valor, e é por ele que
+ * o menu acha a contagem de cada uma na resposta (`contagens_da_leitura`).
+ */
+export const FILTROS_DE_LEITURA = [
+  { id: "todos", valor: "", rotulo: "Lidos e não lidos" },
+  { id: LEITURA_NAO_LIDOS, valor: LEITURA_NAO_LIDOS, rotulo: "Só não lidos" },
+  { id: LEITURA_LIDOS, valor: LEITURA_LIDOS, rotulo: "Só lidos" },
+] as const;
 
 export const FILTROS_DE_PERIODO = [
   { id: "todos", valor: 0, rotulo: "Todos os períodos" },

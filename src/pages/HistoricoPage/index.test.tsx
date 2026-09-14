@@ -7,6 +7,11 @@ import { renderComRota } from "../../test/queryTestUtils";
 
 const mocks = vi.hoisted(() => ({
   listarHistorico: vi.fn(),
+  /* O lido de cada pessoa: o contador do botão, marcar ao abrir, marcar todos e o Desfazer. */
+  contarNaoLidosDoHistorico: vi.fn(),
+  marcarEnvioComoLido: vi.fn(),
+  marcarTodosComoLidos: vi.fn(),
+  desfazerMarcarTodos: vi.fn(),
   /* 🔴 Rota PRÓPRIA do link do e-mail (03/09/2026). Antes o deep link usava
      `listarHistorico({ numeroProcesso })`; ela passou a PAGINAR quando o
      número virou filtro de tela, e procurar numa página devolveria "não
@@ -26,10 +31,16 @@ vi.mock("../../services", async (importOriginal) => {
     /* ⚠️ Entrou quando a linha passou a mostrar o subgrupo: sem mock, o
        catálogo era uma chamada de rede de verdade dentro do teste. */
     listarSubgrupos: mocks.listarSubgrupos,
+    contarNaoLidosDoHistorico: mocks.contarNaoLidosDoHistorico,
+    marcarEnvioComoLido: mocks.marcarEnvioComoLido,
+    marcarTodosComoLidos: mocks.marcarTodosComoLidos,
+    desfazerMarcarTodos: mocks.desfazerMarcarTodos,
   };
 });
 
 import HistoricoPage from "./index";
+import { ApiError } from "../../services";
+import { LEITURA_LIDOS, LEITURA_NAO_LIDOS } from "../../constants";
 import type { OpcoesListarHistorico } from "../../types";
 
 /** Espelha a query string na tela.
@@ -759,5 +770,176 @@ describe("os dois filtros novos da barra", () => {
     renderComRota(<HistoricoPage />);
     const campo = screen.getByLabelText("Buscar por número do processo");
     expect(campo).toHaveAttribute("placeholder", "Número do processo ou parte");
+  });
+});
+
+describe("o lido de cada pessoa", () => {
+  const NAO_LIDO = { ...ITEM, sequencia: 2, lido: false };
+  const LIDO = { ...ITEM, enviado_em: "2026-08-14T03:02:13.990064+00:00", comunicacao_id: 1, sequencia: 1, lido: true };
+  const CONTAGENS = { total: 2, [LEITURA_NAO_LIDOS]: 1, [LEITURA_LIDOS]: 1 };
+  const chamadasDaLista = () => mocks.listarHistorico.mock.calls.filter(([o]) => o?.tamanhoPagina !== 1).length;
+  const linha = (estado: "não lido" | "lido") => screen.findByRole("button", { name: new RegExp(`, ${estado}$`) });
+
+  beforeEach(() => {
+    mocks.contarNaoLidosDoHistorico.mockResolvedValue({ nao_lidos: 1 });
+    mocks.marcarEnvioComoLido.mockResolvedValue({ marcados: 1 });
+    mocks.marcarTodosComoLidos.mockResolvedValue({ marcados: 2, geracao: 1 });
+    mocks.desfazerMarcarTodos.mockResolvedValue({ geracao: 0 });
+    mocks.listarHistorico.mockResolvedValue({ historico: [NAO_LIDO, LIDO], total: 2, total_paginas: 1, contagens_da_leitura: CONTAGENS });
+  });
+
+  it("a linha não lida e a lida dizem o estado no nome, e só a não lida destaca", async () => {
+    renderComRota(<HistoricoPage />);
+    expect((await linha("não lido")).getAttribute("data-lido")).toBe("false");
+    expect((await linha("lido")).getAttribute("data-lido")).toBe("true");
+  });
+
+  it("🔴 abrir o não lido marca pela sequência, muda a linha e NÃO recarrega a lista", async () => {
+    const user = userEvent.setup();
+    renderComRota(<HistoricoPage />);
+    const naoLido = await linha("não lido");
+    const antes = chamadasDaLista();
+    const contadorAntes = mocks.contarNaoLidosDoHistorico.mock.calls.length;
+
+    await user.click(naoLido);
+
+    expect(mocks.marcarEnvioComoLido).toHaveBeenCalledWith({ sequencia: 2 });
+    await waitFor(() => expect(screen.getAllByRole("button", { name: /, lido$/ })).toHaveLength(2));
+    expect(chamadasDaLista()).toBe(antes);
+    await waitFor(() => expect(mocks.contarNaoLidosDoHistorico.mock.calls.length).toBeGreaterThan(contadorAntes));
+    expect(await screen.findByText(/· 0 não lidos/)).toBeInTheDocument();
+  });
+
+  it("🔴 com 'Só não lidos', o envio aberto continua na lista", async () => {
+    const user = userEvent.setup();
+    mocks.listarHistorico.mockResolvedValue({ historico: [NAO_LIDO], total: 1, total_paginas: 1, contagens_da_leitura: CONTAGENS });
+    renderComRota(<HistoricoPage />, `/historico?leitura=${LEITURA_NAO_LIDOS}`);
+    await user.click(await linha("não lido"));
+    await screen.findByText("Detalhes do envio");
+    await user.keyboard("{Escape}");
+    expect(await linha("lido")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["o envio já lido", LIDO],
+    ["o envio sem sequência (resposta antiga)", { ...ITEM, lido: false }],
+    ["o envio sem o campo lido", ITEM],
+  ])("PAR NEGATIVO: abrir %s não gasta chamada", async (_caso, item) => {
+    const user = userEvent.setup();
+    mocks.listarHistorico.mockResolvedValue({ historico: [item], total: 1, total_paginas: 1 });
+    renderComRota(<HistoricoPage />);
+    await user.click(await screen.findByRole("button", { name: /, (não )?lido$/ }));
+    await screen.findByText("Detalhes do envio");
+    expect(mocks.marcarEnvioComoLido).not.toHaveBeenCalled();
+  });
+
+  it("⚠️ marcar que falha deixa o envio não lido -- o estado verdadeiro -- e não mostra erro", async () => {
+    const user = userEvent.setup();
+    mocks.marcarEnvioComoLido.mockRejectedValue(new ApiError("Envio não encontrado no histórico", 404));
+    renderComRota(<HistoricoPage />);
+    await user.click(await linha("não lido"));
+    await waitFor(() => expect(mocks.marcarEnvioComoLido).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 20));
+    expect(await linha("não lido")).toBeInTheDocument();
+    expect(screen.queryByText("Envio não encontrado no histórico")).not.toBeInTheDocument();
+  });
+
+  it("o link do e-mail também marca o envio que abre", async () => {
+    mocks.historicoDoProcesso.mockResolvedValue({ historico: [{ ...NAO_LIDO, sequencia: 7 }] });
+    renderComRota(
+      <HistoricoPage deepLink={{ processo: ITEM.numero_processo, comunicacaoId: String(ITEM.comunicacao_id) }} onDeepLinkConsumido={vi.fn()} />,
+    );
+    await waitFor(() => expect(mocks.marcarEnvioComoLido).toHaveBeenCalledWith({ sequencia: 7 }));
+  });
+
+  it("o filtro de leitura manda a escolha, mostra a contagem de cada opção e a da pílula ligada", async () => {
+    const user = userEvent.setup();
+    mocks.listarHistorico.mockResolvedValue({
+      historico: [NAO_LIDO], total: 1, total_paginas: 1, contagens_da_leitura: { total: 1234, [LEITURA_NAO_LIDOS]: 1000, [LEITURA_LIDOS]: 234 },
+    });
+    renderComRota(<><HistoricoPage /><SondaDeUrl /></>);
+    await user.click(await screen.findByRole("button", { name: "Lidos e não lidos" }));
+    expect(await screen.findByRole("menuitem", { name: /Lidos e não lidos\s*1\.234/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Só lidos\s*234/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: /Só não lidos\s*1\.000/ }));
+
+    await waitFor(() => expect(mocks.listarHistorico).toHaveBeenCalledWith(expect.objectContaining({ leitura: LEITURA_NAO_LIDOS, pagina: 1 })));
+    expect(urlDaSonda()).toContain(`leitura=${LEITURA_NAO_LIDOS}`);
+    expect(await screen.findByRole("button", { name: "Só não lidos · 1.000" })).toBeInTheDocument();
+    expect(screen.getByText(/· 1\.000 não lidos/)).toBeInTheDocument();
+  });
+
+  it("⚠️ sem contagens (leitura antiga), o resumo e o menu não inventam zero", async () => {
+    const user = userEvent.setup();
+    mocks.listarHistorico.mockResolvedValue({ historico: [NAO_LIDO], total: 1, total_paginas: 1 });
+    renderComRota(<HistoricoPage />);
+    await linha("não lido");
+    expect(screen.getByText(/^Mostrando/).textContent).not.toContain("não lido");
+    await user.click(screen.getByRole("button", { name: "Lidos e não lidos" }));
+    expect(await screen.findByRole("menuitem", { name: "Só não lidos" })).toBeInTheDocument();
+  });
+
+  it("🔴 marcar todos avisa que inclui os fora dos filtros, recarrega, e o Desfazer volta com a geração", async () => {
+    const user = userEvent.setup();
+    renderComRota(<HistoricoPage />);
+    await linha("não lido");
+    const antes = chamadasDaLista();
+    await user.click(await screen.findByRole("button", { name: "Marcar todos como lidos" }));
+
+    expect(await screen.findByText("2 envios marcados como lidos, inclusive os fora dos filtros.")).toBeInTheDocument();
+    await waitFor(() => expect(chamadasDaLista()).toBeGreaterThan(antes));
+    await user.click(screen.getByRole("button", { name: "Desfazer" }));
+    await waitFor(() => expect(mocks.desfazerMarcarTodos).toHaveBeenCalledWith(1));
+  });
+
+  it("PAR NEGATIVO: sem filtro nenhum ligado, o aviso não fala dos filtros", async () => {
+    const user = userEvent.setup();
+    mocks.marcarTodosComoLidos.mockResolvedValue({ marcados: 1, geracao: 3 });
+    renderComRota(<HistoricoPage tipoEnvioInicial="" />);
+    await linha("não lido");
+    await user.click(await screen.findByRole("button", { name: "Marcar todos como lidos" }));
+    expect(await screen.findByText("1 envio marcado como lido.")).toBeInTheDocument();
+  });
+
+  it("⚠️ o Desfazer recusado (passou o minuto) vira aviso com a frase do servidor", async () => {
+    const user = userEvent.setup();
+    mocks.desfazerMarcarTodos.mockRejectedValue(new ApiError("Não dá mais para desfazer: passou o minuto", 409));
+    renderComRota(<HistoricoPage />);
+    await linha("não lido");
+    await user.click(await screen.findByRole("button", { name: "Marcar todos como lidos" }));
+    await user.click(await screen.findByRole("button", { name: "Desfazer" }));
+    expect(await screen.findByText("Não dá mais para desfazer: passou o minuto")).toBeInTheDocument();
+  });
+
+  it("⚠️ marcar todos que falha avisa, e nada muda", async () => {
+    const user = userEvent.setup();
+    mocks.marcarTodosComoLidos.mockRejectedValue(new ApiError("Erro interno", 500));
+    renderComRota(<HistoricoPage />);
+    await linha("não lido");
+    await user.click(await screen.findByRole("button", { name: "Marcar todos como lidos" }));
+    expect(await screen.findByText("Não foi possível marcar os envios como lidos.")).toBeInTheDocument();
+    expect(mocks.desfazerMarcarTodos).not.toHaveBeenCalled();
+  });
+
+  it("sem não lidos, o botão diz 'Tudo lido' e fica desabilitado", async () => {
+    mocks.contarNaoLidosDoHistorico.mockResolvedValue({ nao_lidos: 0 });
+    renderComRota(<HistoricoPage />);
+    expect(await screen.findByRole("button", { name: "Tudo lido" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Marcar todos como lidos" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [LEITURA_NAO_LIDOS, "Você está em dia: nenhum envio não lido com esses filtros."],
+    [LEITURA_LIDOS, "Nenhum envio lido com esses filtros."],
+  ])("o vazio com a leitura %s diz o que faltou -- e 'Ver todos' limpa a leitura", async (leitura, recado) => {
+    const user = userEvent.setup();
+    mocks.listarHistorico.mockImplementation((o: OpcoesListarHistorico) =>
+      Promise.resolve(o?.tamanhoPagina === 1 ? { historico: [ITEM], total: 3, total_paginas: 3 } : { historico: [], total: 0, total_paginas: 0 }),
+    );
+    renderComRota(<><HistoricoPage /><SondaDeUrl /></>, `/historico?leitura=${leitura}`);
+    expect(await screen.findByText(recado)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Ver todos os envios" }));
+    await waitFor(() => expect(mocks.listarHistorico).toHaveBeenCalledWith(expect.objectContaining({ leitura: "" })));
+    expect(urlDaSonda()).not.toContain(`leitura=${leitura}`);
   });
 });
