@@ -4827,3 +4827,42 @@ detalhe e a lista recebem só o último registro e a quantidade, e a linha do te
   `beforeEach` do detalhe chama `mockReset` no mock dos registros.
 - **Em produção**, o mesmo roteiro de Chrome rodou num escritório de teste criado por bootstrap, com uma cópia que recebe
   o endereço, a conta e o subgrupo por variável de ambiente: 24/24, e o escritório apagado com resíduo zero.
+
+## "A faturar" vem por página, e os lançamentos ao abrir o cliente (14/09/2026)
+
+Passo 3.3b da etapa 3 do `PLANO_LER_SO_O_NECESSARIO.md` da API. A lista de "A faturar" trazia todos os clientes com os
+lançamentos dentro; num escritório grande a resposta passava dos 6 MB da API. Agora a API lê o índice dos cobráveis
+(passo 3.3 da API) e a tela pede só o que mostra (regra 9).
+
+- **`SecaoAFaturar` pagina pelo servidor** (`GET /faturas/a-faturar?pagina=`), com o mesmo `usePaginacaoDaLista` e o
+  mesmo `Pagination` de "Emitidas". Cada cliente mostra `N lançamentos · o mais antigo de dd/mm/aaaa`, frase do artefato
+  do "Não cobrar": a quantidade sozinha não diz há quanto tempo o dinheiro espera. A contagem de cima é a do TOTAL de
+  clientes, não a da página.
+- ⚠️ **`listarAFaturar` sempre manda a página.** Sem ela a API devolve o formato antigo, com os lançamentos, que só
+  existe até o passo 3.3c.
+- **`ModalDeEmissao` pede os lançamentos ao abrir** (`GET /faturas/a-faturar/{cliente_id}`), com carregando, erro com
+  "tentar de novo" e "Nada deste cliente para faturar." -- alguém pode ter faturado o cliente entre a lista e o clique.
+  O botão fica desabilitado até eles chegarem.
+- 🔴 **O modal guarda os DESMARCADOS, e não os marcados.** Os lançamentos chegam depois de o modal abrir: guardando os
+  marcados, "tudo marcado ao abrir" pediria um efeito copiando a resposta no estado, e a guarda de descarte leria a
+  chegada deles como mudança da pessoa. Há teste dos dois lados (fechar sem mexer fecha; desmarcar pede confirmação).
+- **Trocar de seção apaga a página**: as duas seções paginam, e a 3ª de "Emitidas" não é a 3ª de "A faturar".
+- **As chaves ficam sob um prefixo só**: `qk.aFaturarPagina` e `qk.aFaturarDoCliente` começam por `qk.aFaturar()`, que é
+  o que emitir, pagar e cancelar invalidam. O teste de chaves prova que o prefixo alcança as duas, e o guarda de
+  invalidação passou a recusar as duas chaves no `invalidateQueries`.
+- **Chrome** (`scripts/verificar-financeiro.mjs`): o antigo "'A faturar' NÃO tem barra" virou a checagem da barra com
+  mais de 10 clientes, da página com no máximo 10 e da frase do mais antigo; o modal espera a caixa chegar antes de
+  medir a cor. Para ver a paginação, o offline precisa de mais de 10 clientes com o que cobrar (a semente de desenho
+  deixa 4): o roteiro de produção do scratchpad semeia 22 clientes pela API local.
+- **Testes:** as páginas de Financeiro e de fatura, as chamadas e as chaves; 19 mutações vermelhas. Chrome no offline:
+  108 de 109. A falha é de "Emitidas" (a tabela transborda a largura) e foi medida na main, com o mesmo resultado: já
+  existia, e fica fora deste passo. ⚠️ Ao trocar de página as colunas de valor mudam de lugar, porque nenhuma das duas
+  tabelas tem largura fixa -- "Emitidas" já fazia o mesmo.
+- **Em produção** (merge 7b153f3, Vercel às 20:39 UTC): `verificar-deploy-em-producao.mjs` com 68 checagens ok, e ponta
+  a ponta num escritório de teste criado por bootstrap, com pessoa em `.invalid` e nenhum e-mail. Doze clientes e treze
+  lançamentos pela API, e a tela real em Chrome: a contagem do total, 10 por página e a página 2, trocar de seção apaga a
+  página, a tela pede sempre a página, o modal traz os 2 lançamentos do cliente pela rota dele, e emitir com um
+  desmarcado deixa só ele em "A faturar". 14 de 14, limpeza com resíduo zero, os lançamentos do escritório real intactos
+  e os logs da `api` sem erro (366 execuções na janela).
+- ⚠️ **No Playwright, a caixa de marcar do Chakra se clica pelo desenho** (`[data-part="control"]`): o `input` é
+  escondido, e o clique nele espera 30 s e falha. A primeira rodada em produção caiu nisso, no roteiro, e não na tela.
