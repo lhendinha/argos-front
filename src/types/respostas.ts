@@ -213,10 +213,21 @@ export interface RespostaDeMembroAdicionado extends RespostaDeMensagem {
   email: string;
 }
 
-/** `GET /faturas/a-faturar` -- os clientes com dinheiro esperando cobrança. */
-export interface RespostaAFaturar {
+/** `GET /faturas/a-faturar?pagina=` -- uma página dos clientes com dinheiro
+ * esperando cobrança, em ordem de nome.
+ *
+ * ⚠️ `total` é a contagem de CLIENTES, e `total_centavos` a soma de todos
+ * eles, não só dos da página. */
+export interface RespostaAFaturar extends ContagemDaPagina {
   clientes: ClienteAFaturar[];
   total_centavos: number;
+}
+
+/** `GET /faturas/a-faturar/{cliente_id}` -- os lançamentos de um cliente que
+ * ainda não foram cobrados, em ordem de vencimento. */
+export interface RespostaAFaturarDoCliente {
+  cliente_id: string;
+  lancamentos: Lancamento[];
 }
 
 /** `GET /faturas`.

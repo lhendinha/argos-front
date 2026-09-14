@@ -56,6 +56,26 @@ describe("invalidação alcança o catálogo completo, não só a página", () =
   });
 });
 
+describe("o prefixo de 'a faturar' alcança a página E o cliente aberto", () => {
+  /**
+   * 🔴 Emitir, pagar e cancelar invalidam `qk.aFaturar()`. Se a página ou os
+   * lançamentos do cliente saíssem desse prefixo, a lista continuaria
+   * mostrando o cliente já faturado -- e o modal, os lançamentos já cobrados.
+   */
+  it("a página de 'a faturar' cai com o prefixo", () => {
+    expect(invalidaria(qk.aFaturarPagina({ pagina: 2, tamanhoPagina: 20 }), qk.aFaturar())).toBe(true);
+  });
+
+  it("os lançamentos do cliente aberto caem com o prefixo", () => {
+    expect(invalidaria(qk.aFaturarDoCliente("cli1"), qk.aFaturar())).toBe(true);
+  });
+
+  it("⚠️ e as duas chaves não se confundem -- o par negativo", () => {
+    expect(invalidaria(qk.aFaturarDoCliente("cli1"), qk.aFaturarPagina())).toBe(false);
+    expect(invalidaria(qk.aFaturarPagina({ pagina: 1 }), qk.aFaturarDoCliente("cli1"))).toBe(false);
+  });
+});
+
 describe("nenhuma invalidação usa chave de PÁGINA", () => {
   /**
    * ⚠️ O teste acima prova que o prefixo funciona; este prova que ele é
@@ -67,7 +87,10 @@ describe("nenhuma invalidação usa chave de PÁGINA", () => {
    * alcança as outras páginas (objeto casa com objeto) mas nunca o catálogo
    * completo, cuja última parte é a string "todos".
    */
-  const PAGINADAS = ["opcoesProcesso", "clientes", "subgrupos", "processos", "historico", "atendimentos"];
+  const PAGINADAS = [
+    "opcoesProcesso", "clientes", "subgrupos", "processos", "historico", "atendimentos",
+    "aFaturarPagina", "aFaturarDoCliente",
+  ];
 
   it("todo invalidateQueries usa prefixo, nunca a chave paginada", () => {
     /* ⚠️ `import.meta.glob` do Vite, não `node:fs`.

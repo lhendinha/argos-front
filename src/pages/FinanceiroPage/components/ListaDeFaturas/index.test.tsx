@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   listarAFaturar: vi.fn(),
+  listarAFaturarDoCliente: vi.fn(),
   listarFaturas: vi.fn(),
   listarClientes: vi.fn(),
   emitirFatura: vi.fn(),
@@ -17,25 +18,37 @@ import ListaDeFaturas from ".";
 
 const HOJE = "2026-09-08";
 
+/** Uma página de "A faturar": só o RESUMO de cada cliente. */
 const A_FATURAR = {
   clientes: [
     {
       cliente_id: "cli1", cliente_nome: "Construtora Alfa",
       honorarios_centavos: 1_200_000, despesas_centavos: 48_000,
-      total_centavos: 1_248_000,
-      lancamentos: [
-        {
-          lancamento_id: "l1", tipo: "honorario", descricao: "Honorários da contestação",
-          valor_centavos: 1_200_000, data_vencimento: "2026-09-20", situacao: "aberto",
-          natureza: "entrada", conta_id: "c1", categoria_id: "cat1", centro_id: "",
-          rateio: [], cliente_id: "cli1", contraparte: "", subgrupo_id: "",
-          numero_processo: "", atendimento_id: "", responsavel: "", documento_numero: "",
-          parcela: "", criado_por: "x", criado_em: "2026-09-01T00:00:00Z",
-        },
-      ],
+      total_centavos: 1_248_000, quantidade: 2, mais_antigo: "2026-07-03",
     },
   ],
+  total: 1,
+  total_paginas: 1,
   total_centavos: 1_248_000,
+};
+
+/** A mesma página, dizendo que há 45 clientes -- a barra aparece sem inventar
+ * 45 objetos. */
+const A_FATURAR_COM_TRES_PAGINAS = { ...A_FATURAR, total: 45, total_paginas: 3 };
+
+/** O que o modal pede ao abrir o cliente. */
+const DO_CLIENTE = {
+  cliente_id: "cli1",
+  lancamentos: [
+    {
+      lancamento_id: "l1", tipo: "honorario", descricao: "Honorários da contestação",
+      valor_centavos: 1_200_000, data_vencimento: "2026-09-20", situacao: "aberto",
+      natureza: "entrada", conta_id: "c1", categoria_id: "cat1", centro_id: "",
+      rateio: [], cliente_id: "cli1", contraparte: "", subgrupo_id: "",
+      numero_processo: "", atendimento_id: "", responsavel: "", documento_numero: "",
+      parcela: "", criado_por: "x", criado_em: "2026-09-01T00:00:00Z",
+    },
+  ],
 };
 
 const FATURAS = {
@@ -90,6 +103,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.setSystemTime(new Date(`${HOJE}T12:00:00`));
   mocks.listarAFaturar.mockResolvedValue(A_FATURAR);
+  mocks.listarAFaturarDoCliente.mockResolvedValue(DO_CLIENTE);
   mocks.listarFaturas.mockResolvedValue(FATURAS);
   mocks.listarClientes.mockResolvedValue({
     clientes: [{ cliente_id: "cli1", nome: "Construtora Alfa" }],
@@ -101,6 +115,12 @@ describe("as duas seções", () => {
     montar();
     expect(await screen.findByText("Construtora Alfa")).toBeInTheDocument();
     expect(screen.getByText(/clique no cliente para emitir/)).toBeInTheDocument();
+  });
+
+  it("cada cliente mostra a quantidade e o vencimento MAIS ANTIGO", async () => {
+    /* A quantidade sozinha não diz há quanto tempo o dinheiro espera. */
+    montar();
+    expect(await screen.findByText("2 lançamentos · o mais antigo de 03/07/2026")).toBeInTheDocument();
   });
 
   it("🔴 honorários e despesas em colunas SEPARADAS", async () => {
@@ -245,23 +265,68 @@ describe("a paginação de Emitidas", () => {
     );
   });
 
-  it("a seção 'A faturar' NÃO pagina -- o par negativo", async () => {
-    montar("/financeiro?aba=faturas&pagina=2");
+});
+
+describe("a paginação de A faturar", () => {
+  /** 🔴 Chegou a não paginar ("são poucos clientes"), mas num escritório
+   * grande são milhares com pendência: a API devolve uma página do resumo. */
+
+  it("pede a PRIMEIRA página ao servidor -- nunca a lista inteira", async () => {
+    montar();
     await screen.findByText("Construtora Alfa");
-    expect(mocks.listarAFaturar).toHaveBeenCalledWith();
-    expect(screen.queryByText(/Por página/)).not.toBeInTheDocument();
+    expect(mocks.listarAFaturar).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1 }));
+  });
+
+  it("⚠️ com um cliente só a barra não aparece -- não há o que paginar", async () => {
+    montar();
+    await screen.findByText("Construtora Alfa");
+    expect(screen.queryByRole("button", { name: "2" })).not.toBeInTheDocument();
+  });
+
+  it("🔴 a contagem de cima é a do TOTAL de clientes, não a da página", async () => {
+    mocks.listarAFaturar.mockResolvedValue(A_FATURAR_COM_TRES_PAGINAS);
+    montar();
+    expect(
+      await screen.findByText("45 clientes com honorários e despesas a faturar · clique no cliente para emitir"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2" })).toBeInTheDocument();
+  });
+
+  it("clicar na página 2 pede a página 2 ao servidor e a põe na URL", async () => {
+    mocks.listarAFaturar.mockResolvedValue(A_FATURAR_COM_TRES_PAGINAS);
+    montar();
+    await userEvent.click(await screen.findByRole("button", { name: "2" }));
+    await waitFor(() =>
+      expect(mocks.listarAFaturar).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 })),
+    );
+    expect(url()).toContain("pagina=2");
+  });
+
+  it("🔴 trocar de SEÇÃO apaga a página", async () => {
+    /* A 2ª página de "A faturar" não tem nada a ver com a 2ª de "Emitidas". */
+    mocks.listarAFaturar.mockResolvedValue(A_FATURAR_COM_TRES_PAGINAS);
+    montar("/financeiro?aba=faturas&pagina=2");
+    await waitFor(() =>
+      expect(mocks.listarAFaturar).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 })),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Emitidas" }));
+    await waitFor(() => expect(mocks.listarFaturas).toHaveBeenCalled());
+    expect(mocks.listarFaturas).not.toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 }));
+    expect(url()).not.toContain("pagina=2");
   });
 });
 
 describe("emitir", () => {
-  it("clicar no cliente abre a emissão dele", async () => {
+  it("clicar no cliente abre a emissão dele, com os lançamentos DELE", async () => {
     montar();
     await userEvent.click(await screen.findByText("Construtora Alfa"));
     expect(await screen.findByText(/Emitir fatura · Construtora Alfa/)).toBeInTheDocument();
+    expect(await screen.findByText("Honorários da contestação")).toBeInTheDocument();
+    expect(mocks.listarAFaturarDoCliente).toHaveBeenCalledWith("cli1");
   });
 
   it("nada a faturar diz isso, em vez de tabela vazia", async () => {
-    mocks.listarAFaturar.mockResolvedValue({ clientes: [], total_centavos: 0 });
+    mocks.listarAFaturar.mockResolvedValue({ clientes: [], total: 0, total_paginas: 0, total_centavos: 0 });
     montar();
     expect(await screen.findByText(/Nada a faturar/)).toBeInTheDocument();
   });

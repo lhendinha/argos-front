@@ -280,8 +280,14 @@ export interface ClienteAFaturar {
   honorarios_centavos: number;
   despesas_centavos: number;
   total_centavos: number;
-  /** Os lançamentos que entram, para o modal desmarcar um a um. */
-  lancamentos: Lancamento[];
+  /** Quantos lançamentos esperam cobrança.
+   *
+   * 🔴 Os lançamentos em si NÃO vêm aqui: o modal de emissão os pede ao abrir
+   * (`GET /faturas/a-faturar/{cliente_id}`). A lista não lê o que não mostra. */
+  quantidade: number;
+  /** O vencimento mais antigo entre eles (`aaaa-mm-dd`): há quanto tempo o
+   * dinheiro espera. */
+  mais_antigo: string;
 }
 
 /** Uma fatura emitida. `GET /faturas` e `GET /faturas/{id}`.

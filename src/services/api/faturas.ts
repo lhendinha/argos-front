@@ -1,6 +1,7 @@
 import { chamar } from "./client";
 import type { DadosDaFatura, DadosDoPagamento } from "../../types/requisicoes";
 import type { FiltrosDeFaturas, OpcoesDoFluxo } from "../../types";
+import type { OpcoesDePaginacao } from "../../types/api";
 
 /** As faturas do escritório e o fluxo de caixa.
  *
@@ -10,13 +11,30 @@ import type { FiltrosDeFaturas, OpcoesDoFluxo } from "../../types";
  * ➡️ `pages/FinanceiroPage`, abas Faturas e Fluxo de caixa.
  */
 
-/** Os clientes com honorário ou despesa esperando cobrança.
+/** Uma página dos clientes com honorário ou despesa esperando cobrança, em
+ * ordem de nome.
  *
- * 🔴 Não é paginado, e não é descuido: a lista é "quem tem dinheiro a
- * faturar HOJE", que num escritório são poucos clientes -- e ela some da
- * tela conforme as faturas saem. */
-export function listarAFaturar() {
-  return chamar("/faturas/a-faturar");
+ * 🔴 Paginada, e só com o RESUMO de cada cliente (total, quantidade, o
+ * vencimento mais antigo). Chegou a não paginar -- "são poucos clientes" --,
+ * mas num escritório grande são milhares, e a resposta com os lançamentos
+ * dentro passava dos 6 MB da API. Os lançamentos vêm de
+ * `listarAFaturarDoCliente`, ao abrir a emissão.
+ *
+ * ⚠️ Sem `pagina` a API devolve o formato antigo, com os lançamentos: a tela
+ * sempre manda a página. */
+export function listarAFaturar({ pagina = 1, tamanhoPagina }: OpcoesDePaginacao = {}) {
+  return chamar("/faturas/a-faturar", {
+    query: {
+      pagina: String(pagina),
+      tamanho_pagina: tamanhoPagina ? String(tamanhoPagina) : undefined,
+    },
+  });
+}
+
+/** Os lançamentos de UM cliente que ainda não foram cobrados -- o que o modal
+ * de emissão mostra para desmarcar. */
+export function listarAFaturarDoCliente(clienteId: string) {
+  return chamar(`/faturas/a-faturar/${clienteId}`);
 }
 
 /** As faturas já emitidas, do período.
