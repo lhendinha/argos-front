@@ -376,6 +376,53 @@ quando nada mudou. Mandar menos campos não mudou nenhuma notificação.
 
 ➡️ `utils/atendimentos.test.ts` e `pages/AtendimentoDetalhePage/index.test.tsx`.
 
+## O lido do Histórico na tela (13/09/2026)
+
+Fase 2 do `PLANO_LIDO_NO_HISTORICO.md`, que mora na API (o desenho das listas e
+do lido está no `CONTEXT.md` de lá). A API manda o lido de cada envio, as
+contagens da leitura e o contador; a tela mostra e marca. O que o código não
+conta:
+
+### 🔴 Marcar não recarrega a lista
+
+Abrir um envio marca como lido (`useAbrirEnvio`, `useMarcarLidoNoHistorico`): o
+item e as contagens mudam no cache (`comEnvioLido`, em
+`pages/HistoricoPage/leitura.ts`) e só o contador é recarregado. Recarregar a
+lista com "Só não lidos" tiraria da tela o envio que a pessoa acabou de abrir --
+e pelo mesmo motivo, com esse filtro, a lista não recarrega ao voltar o foco.
+
+- Marca pela linha, pelo link do e-mail e pela movimentação do detalhe do
+  processo, esta só com `tem_envio`: movimentação que não gerou e-mail não tem o
+  que marcar.
+- "Marcar todos como lidos" (`useMarcarTodosComoLidos`) marca tudo o que a pessoa
+  vê, ignorando os filtros, e o Desfazer vive no aviso. O servidor o aceita por um
+  minuto e responde 409 depois. Sem nada a marcar, o botão fica no lugar e diz
+  "Tudo lido".
+
+### O contador e os números
+
+- `useNaoLidosDoHistorico` recarrega ao voltar o foco, depois de marcar e quando
+  o canal traz aviso de lembrete (`assinarCanal`, só `TIPO_LEMBRETE`): outro aviso
+  não muda o Histórico.
+- 🔴 **Todo número é exato** (decisão 11): a pílula do `ItemMenu` e o resumo usam
+  `formatarQuantidade` ("1.234"), sem "99+", e a pílula cresce sem quebrar o menu.
+  O estado vai no nome acessível do link e de cada linha.
+- O filtro de leitura fica na URL e na chave do cache; a contagem de cada opção
+  vem das contagens da leitura, com os outros filtros aplicados.
+- ⚠️ Enquanto o total carrega, o resumo já foi visto dizendo "Mostrando 15 de 0
+  envios". Não foi mexido.
+
+### Ver e conferir
+
+- ⚠️ **Semear no g-alfa do `yarn offline` não serve:** o contador de sequência de
+  lá está atrás das listas, e o envio novo nasce lido.
+  `scripts/verificar-lido-do-historico.mjs` roda contra um grupo NOVO (1.234
+  envios semeados), em Chrome.
+- 🔴 **Em produção, nunca clique numa linha:** abrir marca como lido para a conta,
+  e a conta de teste é de um escritório real. A conferência só de leitura abre a
+  tela, o menu do filtro e a Área de trabalho, e acusa qualquer requisição que não
+  seja leitura.
+
 ## Histórias que saíram dos comentários (Fase 3 do `PLANO_ARQUIVOS_MENORES.md`, grupo 1, 05/09/2026)
 
 O padrão de prosa (seção 0b) tira o diário do código. O que os comentários
