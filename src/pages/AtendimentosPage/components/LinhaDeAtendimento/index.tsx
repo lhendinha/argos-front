@@ -25,8 +25,9 @@ export default function LinhaDeAtendimento({
   onAbrir,
   ultima,
 }: LinhaDeAtendimentoProps) {
-  const registros = atendimento.registros || [];
-  const ultimo = registros[registros.length - 1];
+  /* 🔴 O último registro vem pronto no atendimento (`ultimo_registro`): a
+     lista não traz a linha do tempo (regra 9 da seção 0). */
+  const ultimo = atendimento.ultimo_registro;
 
   /* Id que não resolve cai no próprio id -- some da tela seria pior: a
      linha não diria a quem o atendimento pertence. */

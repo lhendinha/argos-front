@@ -33,3 +33,13 @@ export const COR_DE_STATUS_PADRAO: Pick<ButtonProps, "bg" | "color"> = {
 export function coresDoStatus(status: string) {
   return CORES_DO_STATUS[status] ?? COR_DE_STATUS_PADRAO;
 }
+
+/** O acender do registro que chegou na linha do tempo (`.registro.chegou .bolha`
+ * do artifact): do azul claro da marca ao fundo da bolha, em 1,6 s.
+ *
+ * ⚠️ Sem animação para quem pede menos movimento: o registro aparece já no
+ * fundo de sempre. O keyframe mora no tema porque o nome é global. */
+export const ANIMACAO_DO_REGISTRO_QUE_CHEGOU = {
+  animation: "registro-chegou 1.6s ease-out",
+  "@media (prefers-reduced-motion: reduce)": { animation: "none" },
+} as const;

@@ -2,6 +2,7 @@ import { STATUS_DE_ATENDIMENTO } from "../constants";
 import type {
   CamposDoAtendimento,
   CamposEditaveisDoAtendimento,
+  RegistroDeAtendimento,
   StatusDeAtendimento,
 } from "../types";
 import { mesmoValor } from "./iguais";
@@ -55,4 +56,27 @@ export function camposAlteradosDoAtendimento(
     mudou.status = atual.status;
   }
   return mudou;
+}
+
+/** A chave de um registro na tela: o `registro_id`, quando ele mora na tabela
+ * de registros.
+ *
+ * ⚠️ O registro que ainda mora dentro do atendimento não tem `registro_id` até
+ * a migração; aí a chave é o instante e o autor.
+ *
+ * ➡️ `utils/atendimentos.test.ts`. */
+export function chaveDoRegistro(registro: RegistroDeAtendimento): string {
+  return registro.registro_id ?? `${registro.registrado_em}#${registro.autor_id}`;
+}
+
+/** A frase do topo da linha do tempo: quantos registros a tela mostra de
+ * quantos existem.
+ *
+ * ⚠️ Com todos na tela a frase muda, e com um só vai no singular -- "Todos os
+ * 1 registros" não é português.
+ *
+ * ➡️ `utils/atendimentos.test.ts`. */
+export function contagemDaLinhaDoTempo(mostrados: number, quantidade: number): string {
+  if (mostrados >= quantidade) return quantidade === 1 ? "1 registro" : `Todos os ${quantidade} registros`;
+  return `Mostrando os ${mostrados} mais recentes de ${quantidade} registros`;
 }

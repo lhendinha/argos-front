@@ -36,9 +36,9 @@ function atendimento(parcial: Record<string, unknown> = {}) {
     /* Data do registro DIFERENTE da criação de propósito: a linha mostra as
        duas (criação à esquerda, último registro à direita), e com a mesma
        data não dá pra distinguir qual está sendo verificada. */
-    registros: [
+    ultimo_registro:
       { autor_id: "ana@x.com", autor_nome: "Ana Paula", registrado_em: "2026-08-12T09:00:00+00:00", texto: "Primeiro contato" },
-    ],
+    quantidade_de_registros: 1,
     ...parcial,
   };
 }
@@ -123,20 +123,32 @@ describe("lista", () => {
     expect(screen.queryByText("c1")).not.toBeInTheDocument();
   });
 
-  it("a prévia é do ÚLTIMO registro, não do primeiro", async () => {
+  it("a prévia é o último registro que vem pronto no atendimento", async () => {
     /* A pergunta de quem varre a lista é "em que pé isso está" -- o
      * primeiro registro é o que ela já sabe. */
     comLista([
       atendimento({
-        registros: [
-          { autor_id: "ana@x.com", autor_nome: "Ana Paula", registrado_em: "2026-08-10T09:00:00Z", texto: "Primeiro contato" },
-          { autor_id: "ana@x.com", autor_nome: "Ana Paula", registrado_em: "2026-08-12T09:00:00Z", texto: "Cliente retornou" },
-        ],
+        ultimo_registro: { autor_id: "ana@x.com", autor_nome: "Ana Paula", registrado_em: "2026-08-12T09:00:00Z", texto: "Cliente retornou" },
       }),
     ]);
     await montar();
     expect(await screen.findByText("Cliente retornou")).toBeInTheDocument();
-    expect(screen.queryByText("Primeiro contato")).not.toBeInTheDocument();
+  });
+
+  it("🔴 a lista antiga de registros, se ainda vier, NÃO vira prévia", async () => {
+    /* A lista sai da resposta no passo 4 (regra 9 da seção 0): a tela que
+       ainda a lesse mostraria a prévia até lá e a perderia depois. */
+    comLista([
+      atendimento({
+        ultimo_registro: null,
+        registros: [
+          { autor_id: "ana@x.com", autor_nome: "Ana Paula", registrado_em: "2026-08-10T09:00:00Z", texto: "Da lista antiga" },
+        ],
+      }),
+    ]);
+    await montar();
+    await screen.findByText(/Revisão de contrato/);
+    expect(screen.queryByText("Da lista antiga")).not.toBeInTheDocument();
   });
 
   it("conta quantos mostra de quantos existem", async () => {
@@ -167,8 +179,8 @@ describe("autor do último registro", () => {
        grupo. As iniciais do e-mail ainda identificam, e sumir com o avatar
        seria pior. */
     comLista([atendimento({
-      registros: [{ autor_id: "ana@x.com", autor_nome: null,
-                    registrado_em: "2026-08-12T09:00:00Z", texto: "Primeiro contato" }],
+      ultimo_registro: { autor_id: "ana@x.com", autor_nome: null,
+                         registrado_em: "2026-08-12T09:00:00Z", texto: "Primeiro contato" },
     })]);
     await montar();
     expect(await screen.findByText("AN")).toBeInTheDocument();
