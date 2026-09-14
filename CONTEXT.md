@@ -449,6 +449,8 @@ implementado: as buscas descritas no resto deste documento são as de hoje.
 
 - 🔴 **Muda o que se acha:** hoje "anco" acha "Banco"; depois, só "banc" ou
   "banco". Acento e maiúscula continuam sem contar.
+- 🔴 **Texto a partir de 2 letras; número com qualquer tamanho** (decidido pelo
+  usuário em 14/09/2026). Uma letra só leria tudo o que começa com ela.
 - 🔴 **O que busca no navegador segue a mesma regra**, senão a mesma palavra acha
   numa tela e não em outra: o filtro do quadro (`pages/KanbanPage/index.tsx`, por
   título e número do processo) e o dos seletores sobre as opções já carregadas
