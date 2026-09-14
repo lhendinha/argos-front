@@ -81,8 +81,10 @@ Nenhuma edição de código é feita direto na `main`. O fluxo, sem exceção:
      item, com o estado de carregando dentro do modal ou da página.
    - ⚠️ **O item da lista não preenche detalhe nem formulário de edição:** a
      lista não traz tudo. Quem abre o item pede o item.
-   - ⚠️ **Detalhe pesado não se relê a cada volta à janela:** fica guardado
-     por alguns minutos, e as edições da própria pessoa invalidam na hora.
+   - ⚠️ **O peso se resolve na leitura, não no cache:** o React Query fica como
+     está (`staleTime: 0`, recarga ao voltar para a janela). Com a lista só com
+     o que a tela mostra, reler é barato, e guardar por minutos atrasaria o dado
+     novo (decidido pelo usuário em 14/09/2026).
    - ⚠️ **Ordem ao tirar um campo da lista:** a API ganha a rota do item, o
      front passa a usá-la, e só então a API tira o campo. Na ordem inversa a
      tela lê `undefined`.
