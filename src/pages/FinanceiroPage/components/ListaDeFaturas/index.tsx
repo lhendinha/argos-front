@@ -31,18 +31,22 @@ import type { RespostaAFaturar, RespostaDeFaturas } from "../../../../types/resp
  * tempo --, e uma pílula que não filtra nada engana.
  *
  * ⚠️ **Cada seção carrega a SUA consulta.** As duas juntas seriam duas
- * requisições para mostrar uma tela só, e a de "a faturar" lê a partição
- * inteira do lado de lá.
+ * requisições para mostrar uma tela só.
  *
- * ⚠️ **Só "Emitidas" é paginada**, e é a mesma assimetria da pílula de
- * período: "a faturar" é o que está aberto HOJE, e encolhe conforme se
- * cobra; "emitidas" nunca perde uma linha, porque paga e cancelada ficam.
+ * 🔴 **As duas seções paginam no servidor.** "A faturar" chegou a não
+ * paginar ("são poucos clientes"), mas num escritório grande são milhares
+ * com pendência: a API lê o índice dos cobráveis e devolve só o resumo de
+ * cada cliente, e os lançamentos vêm ao abrir a emissão.
  *
  * ➡️ `index.test.tsx`.
  */
 export default function ListaDeFaturas() {
   const navegar = useNavigate();
-  const [secao, setSecao] = useEstadoNaUrl<SecaoDeFaturas>("secao", "a-faturar");
+  /* ⚠️ Trocar de seção apaga a página: as duas paginam, e a 3ª de "Emitidas"
+     não tem nada a ver com a 3ª de "A faturar". */
+  const [secao, setSecao] = useEstadoNaUrl<SecaoDeFaturas>("secao", "a-faturar", {
+    tambemApaga: ["pagina"],
+  });
   /* ⚠️ Trocar o período volta para a primeira página: a 4ª de "todos" quase
      nunca existe em "este mês", e o servidor devolveria vazio. É a mesma
      régua que `usePaginacaoDaLista` aplica ao tamanho. */
@@ -54,10 +58,15 @@ export default function ListaDeFaturas() {
 
   const intervalo = intervaloDoPeriodo(periodoId);
 
+  const paginaDeAFaturar = { pagina, tamanhoPagina };
+
   const aFaturar = useQuery<RespostaAFaturar>({
-    queryKey: qk.aFaturar(),
-    queryFn: () => listarAFaturar() as Promise<RespostaAFaturar>,
+    queryKey: qk.aFaturarPagina(paginaDeAFaturar),
+    queryFn: () => listarAFaturar(paginaDeAFaturar) as Promise<RespostaAFaturar>,
     enabled: secao === "a-faturar",
+    /* A página anterior fica na tela enquanto a próxima vem, como em
+       "Emitidas". */
+    placeholderData: (anterior) => anterior,
   });
 
   const filtrosDeEmitidas = {
@@ -111,6 +120,14 @@ export default function ListaDeFaturas() {
           carregando={aFaturar.isPending}
           erro={aFaturar.isError}
           onTentarDeNovo={() => aFaturar.refetch()}
+          paginacao={{
+            pagina,
+            totalPaginas: aFaturar.data?.total_paginas ?? 0,
+            total: aFaturar.data?.total ?? 0,
+            tamanhoPagina,
+            onMudarPagina: setPagina,
+            onMudarTamanho: setTamanhoPagina,
+          }}
           onEmitir={setClienteNoModal}
         />
       ) : (

@@ -50,7 +50,13 @@ export const qk = {
   /** ⚠️ Sem parâmetro, como `configuracoesDoGrupo`: o grupo vem do token,
    * então só existe UMA resposta por sessão. */
   catalogoFinanceiro: () => ["catalogo-financeiro"] as const,
+  /** O PREFIXO de tudo que é "a faturar": quem emite, paga ou cancela
+   * invalida por ele, e a página e o cliente aberto recarregam juntos. */
   aFaturar: () => ["a-faturar"] as const,
+  /** ⚠️ A página INTEIRA entra na chave, como em `faturas`. */
+  aFaturarPagina: (params: Record<string, unknown> = {}) => ["a-faturar", "pagina", params] as const,
+  /** Os lançamentos de um cliente, pedidos ao abrir a emissão. */
+  aFaturarDoCliente: (clienteId: string) => ["a-faturar", "cliente", clienteId] as const,
   /** ⚠️ O recorte INTEIRO entra na chave -- período e página. A chave só
    * com o período mostraria a página 1 depois de clicar na 2. */
   faturas: (filtros: Record<string, unknown> = {}) => ["faturas", filtros] as const,

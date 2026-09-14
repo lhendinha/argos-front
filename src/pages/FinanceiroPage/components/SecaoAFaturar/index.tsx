@@ -6,9 +6,10 @@ import {
   Esqueleto,
   EstadoDeErro,
   EstadoVazio,
+  Pagination,
   Tabela,
 } from "../../../../components";
-import { contar, formatarCentavos } from "../../../../utils";
+import { contar, formatarCentavos, formatarData } from "../../../../utils";
 import { COLUNAS_A_FATURAR } from "../../constants";
 import type { SecaoAFaturarProps } from "./types";
 
@@ -24,10 +25,21 @@ import type { SecaoAFaturarProps } from "./types";
  * cobrança, a despesa vira um recebível de reembolso. Somá-las numa coluna
  * só esconderia de que é feito o total.
  *
+ * 🔴 **Paginada, e cada linha só com o resumo**: total, quantidade e o
+ * vencimento mais antigo. Os lançamentos vêm ao abrir o cliente, no modal de
+ * emissão -- a lista não lê o que não mostra. Com eles dentro, a resposta de
+ * um escritório grande passava dos 6 MB da API.
+ *
+ * ⚠️ **"O mais antigo de" vem do artefato do "Não cobrar"**: diz há quanto
+ * tempo o dinheiro espera, o que a quantidade sozinha não diz.
+ *
+ * ⚠️ **A contagem de cima é a do TOTAL de clientes**, não a da página: "20
+ * clientes com honorários a faturar" numa lista de 300 mentiria.
+ *
  * ➡️ `../ListaDeFaturas/index.test.tsx`.
  */
 export default function SecaoAFaturar({
-  clientes, carregando, erro, onTentarDeNovo, onEmitir,
+  clientes, carregando, erro, onTentarDeNovo, paginacao, onEmitir,
 }: SecaoAFaturarProps) {
   if (carregando) return <Esqueleto linhas={4} />;
   if (erro) {
@@ -44,8 +56,8 @@ export default function SecaoAFaturar({
   return (
     <>
       <Text fontSize="11.5px" color="fg.subtle" mb="10px">
-        {clientes.length > 0
-          ? `${contar(clientes.length, "cliente", "clientes")} com honorários e despesas a faturar · clique no cliente para emitir`
+        {paginacao.total > 0
+          ? `${contar(paginacao.total, "cliente", "clientes")} com honorários e despesas a faturar · clique no cliente para emitir`
           : ""}
       </Text>
 
@@ -76,7 +88,7 @@ export default function SecaoAFaturar({
               <CelulaComSub
                 variante="destaque"
                 principal={c.cliente_nome}
-                sub={contar(c.lancamentos.length, "lançamento", "lançamentos")}
+                sub={`${contar(c.quantidade, "lançamento", "lançamentos")} · o mais antigo de ${formatarData(c.mais_antigo)}`}
               />
               <Table.Cell p="13px 14px" textAlign="right" borderBottomWidth="1px" borderBottomColor="border.subtle">
                 <Text fontSize="13px" fontFamily="mono" whiteSpace="nowrap">
@@ -96,6 +108,7 @@ export default function SecaoAFaturar({
             </Table.Row>
           ))}
         </Tabela>
+        <Pagination {...paginacao} />
       </CartaoDeTabela>
     </>
   );

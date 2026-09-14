@@ -572,13 +572,26 @@ if (await existe(barra)) {
   conferir(true, "menos de 11 faturas: a barra some sozinha (rode a semente de desenho)");
 }
 
-/* O par negativo da assimetria: "A faturar" é o que está aberto HOJE, e
-   encolhe conforme se cobra -- não é lista que cresça, e não pagina. */
+/* 🔴 "A faturar" também pagina (etapa 3.3b): num escritório grande são
+   milhares de clientes com pendência, e a API devolve uma página só com o
+   resumo de cada um -- os lançamentos vêm ao abrir a emissão. */
 await pagina.goto(`${APP}/financeiro?aba=faturas`);
 await pagina.getByRole("row").first().waitFor();
 await pagina.waitForTimeout(400);
-conferir(!(await existe(pagina.getByText(/Por página/).first())),
-  "⚠️ 'A faturar' NÃO tem barra de paginação -- o par negativo");
+const linhaDoCliente = await pagina.locator("tbody tr").first().innerText();
+conferir(/\d+ lançamentos? · o mais antigo de \d{2}\/\d{2}\/\d{4}/.test(linhaDoCliente),
+  "cada cliente mostra a quantidade e o vencimento mais antigo", linhaDoCliente);
+const contagemAFaturar = await pagina.getByText(/com honorários e despesas a faturar/).first().innerText();
+const clientesAFaturar = Number((contagemAFaturar.match(/^(\d+)/) ?? [])[1] ?? 0);
+if (clientesAFaturar > 10) {
+  conferir(await existe(pagina.getByText(/Por página/).first()),
+    "com mais de 10 clientes, 'A faturar' tem barra de paginação", contagemAFaturar);
+  const linhasDaPagina = await pagina.locator("tbody tr").count();
+  conferir(linhasDaPagina <= 10, "e a página traz no máximo 10 clientes", String(linhasDaPagina));
+} else {
+  conferir(!(await existe(pagina.getByText(/Por página/).first())),
+    "com até 10 clientes a barra some sozinha (rode a semente de desenho)", contagemAFaturar);
+}
 
 /* 🔴 A CAIXA DE MARCAR do modal de emissão, medida.
    Ela saía preta (#18181b): o preenchimento vem de `colorPalette.solid`, o
@@ -591,6 +604,8 @@ conferir(!(await existe(pagina.getByText(/Por página/).first())),
    de unidade sobre o tema passaria verde nas duas versões. */
 await pagina.getByRole("row").nth(1).click();
 await pagina.getByText(/Emitir fatura ·/).waitFor();
+/* ⚠️ Os lançamentos chegam DEPOIS de o modal abrir: pedidos pelo cliente. */
+await pagina.locator('[data-scope="checkbox"][data-part="control"]').first().waitFor();
 await pagina.waitForTimeout(400);
 const caixa = await pagina.evaluate(() => {
   const c = document.querySelector('[data-scope="checkbox"][data-part="control"]');

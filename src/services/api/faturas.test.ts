@@ -9,6 +9,7 @@ import {
   emitirFatura,
   lerFluxoDeCaixa,
   listarAFaturar,
+  listarAFaturarDoCliente,
   listarFaturas,
   pagarFatura,
 } from "./faturas";
@@ -19,9 +20,23 @@ beforeEach(() => {
 });
 
 describe("as rotas de fatura", () => {
-  it("a faturar não leva parâmetro nenhum", async () => {
+  it("🔴 a faturar SEMPRE manda a página -- sem ela a API devolve o formato antigo, com os lançamentos", async () => {
     await listarAFaturar();
-    expect(chamar).toHaveBeenCalledWith("/faturas/a-faturar");
+    expect(chamar).toHaveBeenCalledWith("/faturas/a-faturar", {
+      query: { pagina: "1", tamanho_pagina: undefined },
+    });
+  });
+
+  it("a faturar leva a página e o tamanho em snake_case, como texto", async () => {
+    await listarAFaturar({ pagina: 3, tamanhoPagina: 20 });
+    expect(chamar).toHaveBeenCalledWith("/faturas/a-faturar", {
+      query: { pagina: "3", tamanho_pagina: "20" },
+    });
+  });
+
+  it("os lançamentos de um cliente vão pela rota DELE", async () => {
+    await listarAFaturarDoCliente("cli-9");
+    expect(chamar).toHaveBeenCalledWith("/faturas/a-faturar/cli-9");
   });
 
   it("listar manda o período e a página quando eles existem", async () => {
