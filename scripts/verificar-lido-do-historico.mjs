@@ -1,7 +1,8 @@
 /** O lido do Histórico em Chrome de verdade, com a lista CHEIA.
  *
  *   1) cd ../api && yarn offline
- *   2) semear uma lista cheia de envios não lidos para o chefe@local.test (mais de 99, para a pílula crescer)
+ *   2) semear uma lista cheia de envios não lidos num grupo novo (mais de 99, para a pílula crescer) e passar a conta
+ *      que a semente imprime em CONTA_EMAIL e CONTA_SENHA
  *   3) VITE_API_URL=http://localhost:8099 VITE_WS_URL=ws://localhost:8098 yarn dev --port 5174 --strictPort
  *   4) node scripts/verificar-lido-do-historico.mjs
  *
@@ -15,7 +16,9 @@ import { chromium } from "playwright";
 
 const APP = process.env.APP_URL ?? "http://localhost:5174";
 const API = process.env.API_URL ?? "http://localhost:8099";
-const CONTA = { email: "chefe@local.test", senha: "Senha!Local1" };
+/** ⚠️ A conta vem da semente: ela funda um grupo NOVO a cada rodada, porque no grupo de trabalho do offline o contador
+ * de sequência pode estar atrás das listas, e aí o envio novo nasce lido. */
+const CONTA = { email: process.env.CONTA_EMAIL ?? "chefe@local.test", senha: process.env.CONTA_SENHA ?? "Senha!Local1" };
 const SAIDA = process.env.SAIDA ?? "/tmp/verificar-lido-do-historico.png";
 const fmt = (n) => n.toLocaleString("pt-BR");
 
@@ -116,7 +119,8 @@ const quantasAntes = await linhas.count();
 await linhas.first().click();
 await pagina.getByText("Detalhes do envio").waitFor();
 await pagina.keyboard.press("Escape");
-conferir((await linhas.first().getAttribute("data-lido")) === "true", "a linha aberta vira lida e continua na lista");
+// ⚠️ Espera a resposta: a linha muda quando o servidor confirma, e olhar logo depois do Escape chega antes dela.
+conferir((await esperarTexto(() => linhas.first().getAttribute("data-lido"), "true")) === "true", "a linha aberta vira lida e continua na lista");
 conferir((await linhas.count()) === quantasAntes, "a lista não perdeu a linha aberta", `${quantasAntes}`);
 conferir((await esperarTexto(contadorDoMenu, fmt(n0 - 1))) === fmt(n0 - 1), "o contador do menu desce um", fmt(n0 - 1));
 
@@ -130,11 +134,20 @@ await pagina.screenshot({ path: SAIDA, fullPage: false });
 
 // ── marcar todos e Desfazer
 await pagina.getByRole("button", { name: "Marcar todos como lidos" }).click();
+/* ⚠️ `waitFor`, e não `isVisible`: este não espera, e o aviso só aparece quando o servidor responde. As esperas daqui em
+   diante são curtas de propósito -- o Desfazer vive 9 s no aviso. */
 const aviso = pagina.getByText(/marcados? como lidos?, inclusive os fora dos filtros\./);
-conferir(await aviso.isVisible({ timeout: 8000 }).catch(() => false), "o aviso diz que inclui os fora dos filtros");
+const apareceu = await aviso.waitFor({ timeout: 8000 }).then(() => true, () => false);
+conferir(apareceu, "o aviso diz que inclui os fora dos filtros", apareceu ? await aviso.textContent() : "");
 const depois = (await api("/historico/nao-lidos", token)).nao_lidos;
-conferir((await esperarTexto(contadorDoMenu, depois === 0 ? null : fmt(depois))) === (depois === 0 ? null : fmt(depois)), "o contador do menu acompanha", String(depois));
-if (depois === 0) conferir(await pagina.getByRole("button", { name: "Tudo lido" }).isDisabled(), "sem não lidos, o botão diz Tudo lido e desabilita");
+conferir(depois < n0 - 2, "marcar todos marcou no servidor", `${fmt(n0 - 2)} -> ${fmt(depois)}`);
+const noMenu = depois === 0 ? null : fmt(depois);
+conferir((await esperarTexto(contadorDoMenu, noMenu, 3000)) === noMenu, "o contador do menu acompanha", String(depois));
+if (depois === 0) {
+  const tudoLido = pagina.getByRole("button", { name: "Tudo lido" });
+  const desabilitou = await tudoLido.waitFor({ timeout: 3000 }).then(() => tudoLido.isDisabled(), () => false);
+  conferir(desabilitou, "sem não lidos, o botão diz Tudo lido e desabilita");
+}
 await pagina.getByRole("button", { name: "Desfazer" }).click();
 conferir((await esperarTexto(contadorDoMenu, fmt(n0 - 2))) === fmt(n0 - 2), "o Desfazer devolve o contador", fmt(n0 - 2));
 
