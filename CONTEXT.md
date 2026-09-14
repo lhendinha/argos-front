@@ -4866,3 +4866,39 @@ lançamentos dentro; num escritório grande a resposta passava dos 6 MB da API. 
   e os logs da `api` sem erro (366 execuções na janela).
 - ⚠️ **No Playwright, a caixa de marcar do Chakra se clica pelo desenho** (`[data-part="control"]`): o `input` é
   escondido, e o clique nele espera 30 s e falha. A primeira rodada em produção caiu nisso, no roteiro, e não na tela.
+
+## O "Não cobrar" na tela (14/09/2026)
+
+Passo 3.4b da etapa 3 do `PLANO_LER_SO_O_NECESSARIO.md` da API, pelo artefato 83232ad9 (aprovado pelo usuário). A
+despesa de cliente sai de "A faturar" de vez, e volta só por "Voltar a cobrar"; a API é o passo 3.4.
+
+- **"Não cobradas" é a terceira seção de Faturas** (`SecaoNaoCobradas`), entre "A faturar" e "Emitidas": a despesa com o
+  cliente e "marcada por X em dd/mm/aaaa", a data em que foi adiantada, o valor e "Voltar a cobrar". A linha abre o
+  detalhe do lançamento; o botão para o clique antes da linha.
+- 🔴 **A pílula mostra a contagem** ("Não cobradas · N"): é dinheiro adiantado que não volta, e não pode sumir de vista.
+  A contagem é o `total` da primeira página, pedida em qualquer seção -- dentro da seção, a página do endereço.
+- **No modal de emissão, só a DESPESA tem "Não cobrar"**, numa coluna própria: o honorário em aberto já fica de fora
+  desmarcando. O texto diz a diferença (desmarcar deixa para a próxima fatura; "Não cobrar" tira de vez), e a data da
+  despesa paga diz "adiantada em" -- "paga em" se lia como pago pelo cliente. Ao clicar, a despesa sai da lista NA HORA
+  (`setQueryData` na chave do cliente), e o aviso traz o Desfazer.
+- **No detalhe do lançamento**, "Não cobrar" ou "Voltar a cobrar" junto das ações, só na despesa de cliente fora de
+  fatura (a regra do servidor), e a etiqueta "Não cobrar" com "Marcada por X em dd/mm/aaaa: fora de "A faturar"." O
+  nome é o apelido que a API resolve (`nao_cobrar_por_nome`, o e-mail para quem não tem).
+- **Na lista de lançamentos**, a etiqueta cinza "Não cobrar" ao lado da situação (`CORES_DO_NAO_COBRAR`): a despesa paga
+  continua "Efetivado", e é a segunda etiqueta que diz por que ela não está em "A faturar".
+- 🔴 **Todo "Não cobrar" e "Voltar a cobrar" se desfaz pelo AVISO**, o padrão do sistema: o Desfazer chama a ação
+  contrária. As chaves `qk.naoCobradas()` e `qk.aFaturar()` são prefixos, e cada ação invalida as duas e a lista.
+- ⚠️ O guarda `tiposDoPacote` passou a 131 (`NaoCobrada`).
+
+- 🔴 **A tabela do modal transbordava**, e só o Chrome mostrou: com a coluna do botão, 723px numa caixa de 706, e o
+  "Não cobrar" saía cortado. Tirar o nowrap do TEXTO da data não mudou nada -- medido, a `Tabela` põe
+  `white-space: nowrap` em toda célula. A correção é `whiteSpace="normal"` na CÉLULA da data ("adiantada em" em cima, a
+  data embaixo), e o roteiro de Chrome mede o transbordo.
+- **Testes:** seção, pílula, modal, detalhe, linha, chamadas e chaves; suíte 2.695; tsc, eslint e build limpos; 20
+  mutações vermelhas. Uma ficou verde na primeira rodada -- tirar a remoção imediata do modal --, porque o teste deixava
+  a nova busca voltar sem a despesa e a linha sumia de qualquer jeito; o teste passou a deixar a busca PENDENTE.
+- **Em produção** (merge 500ef20, Vercel às 23:34 UTC): `verificar-deploy-em-producao.mjs` com 68 checagens ok, e ponta a
+  ponta em Chrome num escritório de teste criado por bootstrap, com pessoa em `.invalid` e nenhum e-mail: o modal cabendo
+  (706 de 706), a despesa saindo na hora, o Desfazer do aviso, a pílula de 0 para 1, a seção com quem marcou, o detalhe
+  com a etiqueta e voltar a cobrar. 14 de 14, limpeza com resíduo zero, os lançamentos do escritório real intactos e os
+  logs da `api` sem erro (200 execuções na janela). Sem apelido, a pessoa de teste aparece pelo e-mail, como previsto.
