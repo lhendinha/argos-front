@@ -1,5 +1,5 @@
-import { Flex } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
+import { Flex, Text } from "@chakra-ui/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 
@@ -8,16 +8,19 @@ import { PERIODOS_DE_DINHEIRO } from "../../../../constants";
 import { useClientesBuscaveis } from "../../../../hooks/useClientesBuscaveis";
 import { useEstadoNaUrl } from "../../../../hooks/useEstadoNaUrl";
 import { usePaginacaoDaLista } from "../../../../hooks/usePaginacaoDaLista";
-import { listarAFaturar, listarFaturas } from "../../../../services";
+import { useToast } from "../../../../contexts/ToastContext";
+import { listarAFaturar, listarFaturas, listarNaoCobradas, naoCobrarLancamento, voltarACobrarLancamento } from "../../../../services";
+import { ApiError } from "../../../../services/api/client";
 import { qk } from "../../../../services/queryKeys";
 import { intervaloDoPeriodo } from "../../../../utils";
 import { SECOES_DE_FATURAS } from "../../constants";
 import ModalDeEmissao from "../ModalDeEmissao";
 import SecaoAFaturar from "../SecaoAFaturar";
 import SecaoEmitidas from "../SecaoEmitidas";
+import SecaoNaoCobradas from "../SecaoNaoCobradas";
 import type { SecaoDeFaturas } from "../../types";
-import type { ClienteAFaturar } from "../../../../types";
-import type { RespostaAFaturar, RespostaDeFaturas } from "../../../../types/respostas";
+import type { ClienteAFaturar, NaoCobrada } from "../../../../types";
+import type { RespostaAFaturar, RespostaDeFaturas, RespostaDeNaoCobradas } from "../../../../types/respostas";
 
 /** A aba de Faturas: o que há para cobrar, e o que já foi cobrado.
  *
@@ -33,7 +36,11 @@ import type { RespostaAFaturar, RespostaDeFaturas } from "../../../../types/resp
  * ⚠️ **Cada seção carrega a SUA consulta.** As duas juntas seriam duas
  * requisições para mostrar uma tela só.
  *
- * 🔴 **As duas seções paginam no servidor.** "A faturar" chegou a não
+ * 🔴 **"Não cobradas" é a terceira seção** (artefato do "Não cobrar"): as despesas tiradas de "A faturar" de vez. A
+ * pílula mostra a CONTAGEM -- é o dinheiro adiantado que não volta, e ele não pode sumir de vista --, e por isso a
+ * primeira página dela é pedida em qualquer seção: o `total` da resposta é o número.
+ *
+ * 🔴 **As seções paginam no servidor.** "A faturar" chegou a não
  * paginar ("são poucos clientes"), mas num escritório grande são milhares
  * com pendência: a API lê o índice dos cobráveis e devolve só o resumo de
  * cada cliente, e os lançamentos vêm ao abrir a emissão.
@@ -67,6 +74,40 @@ export default function ListaDeFaturas() {
     /* A página anterior fica na tela enquanto a próxima vem, como em
        "Emitidas". */
     placeholderData: (anterior) => anterior,
+  });
+
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  /* ⚠️ A contagem da pílula sai do `total` da página pedida: na própria seção, a página escolhida; fora dela, a
+     primeira -- é a mesma resposta, e a mesma chave quando a pessoa está na página 1. */
+  const paginaDeNaoCobradas = secao === "nao-cobradas" ? { pagina, tamanhoPagina } : { pagina: 1, tamanhoPagina };
+  const naoCobradas = useQuery<RespostaDeNaoCobradas>({
+    queryKey: qk.naoCobradasPagina(paginaDeNaoCobradas),
+    queryFn: () => listarNaoCobradas(paginaDeNaoCobradas) as Promise<RespostaDeNaoCobradas>,
+    placeholderData: (anterior) => anterior,
+  });
+
+  function aposMudarACobranca() {
+    queryClient.invalidateQueries({ queryKey: qk.naoCobradas() });
+    queryClient.invalidateQueries({ queryKey: qk.aFaturar() });
+    queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
+  }
+
+  const naoCobrarDeNovo = useMutation({
+    mutationFn: (d: NaoCobrada) => naoCobrarLancamento(d.lancamento_id),
+    onSuccess: aposMudarACobranca,
+    onError: (err) => toast.erro(err instanceof ApiError ? err.message : "Não foi possível desfazer."),
+  });
+
+  /** 🔴 "Voltar a cobrar" com o Desfazer no AVISO, o padrão do sistema: desfazer marca de novo. */
+  const voltarACobrar = useMutation({
+    mutationFn: (d: NaoCobrada) => voltarACobrarLancamento(d.lancamento_id),
+    onSuccess: (_resposta, d) => {
+      aposMudarACobranca();
+      toast.sucesso(`${d.descricao} voltou para "A faturar".`, { onDesfazer: () => naoCobrarDeNovo.mutate(d) });
+    },
+    onError: (err) =>
+      toast.erro(err instanceof ApiError ? err.message : "Não foi possível voltar a cobrar a despesa."),
   });
 
   const filtrosDeEmitidas = {
@@ -103,6 +144,11 @@ export default function ListaDeFaturas() {
         {SECOES_DE_FATURAS.map((s) => (
           <PilulaDeFiltro key={s.id} ativo={secao === s.id} onClick={() => setSecao(s.id)}>
             {s.rotulo}
+            {s.id === "nao-cobradas" && Boolean(naoCobradas.data?.total) && (
+              <Text as="span" fontFamily="mono" fontSize="11.5px" fontWeight="600" letterSpacing="0">
+                · {naoCobradas.data?.total}
+              </Text>
+            )}
           </PilulaDeFiltro>
         ))}
         {secao === "emitidas" && (
@@ -114,7 +160,26 @@ export default function ListaDeFaturas() {
         )}
       </Flex>
 
-      {secao === "a-faturar" ? (
+      {secao === "nao-cobradas" && (
+        <SecaoNaoCobradas
+          itens={naoCobradas.data?.lancamentos ?? []}
+          carregando={naoCobradas.isPending}
+          erro={naoCobradas.isError}
+          onTentarDeNovo={() => naoCobradas.refetch()}
+          paginacao={{
+            pagina,
+            totalPaginas: naoCobradas.data?.total_paginas ?? 0,
+            total: naoCobradas.data?.total ?? 0,
+            tamanhoPagina,
+            onMudarPagina: setPagina,
+            onMudarTamanho: setTamanhoPagina,
+          }}
+          onAbrir={(lancamentoId) => navegar(`/financeiro/lancamentos/${lancamentoId}`)}
+          onVoltarACobrar={(d) => voltarACobrar.mutate(d)}
+          voltando={voltarACobrar.isPending ? (voltarACobrar.variables?.lancamento_id ?? "") : ""}
+        />
+      )}
+      {secao === "a-faturar" && (
         <SecaoAFaturar
           clientes={aFaturar.data?.clientes ?? []}
           carregando={aFaturar.isPending}
@@ -130,7 +195,8 @@ export default function ListaDeFaturas() {
           }}
           onEmitir={setClienteNoModal}
         />
-      ) : (
+      )}
+      {secao === "emitidas" && (
         <SecaoEmitidas
           faturas={emitidas.data?.faturas ?? []}
           carregando={emitidas.isPending}

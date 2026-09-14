@@ -57,6 +57,11 @@ export const qk = {
   aFaturarPagina: (params: Record<string, unknown> = {}) => ["a-faturar", "pagina", params] as const,
   /** Os lançamentos de um cliente, pedidos ao abrir a emissão. */
   aFaturarDoCliente: (clienteId: string) => ["a-faturar", "cliente", clienteId] as const,
+  /** O PREFIXO das não cobradas: marcar e voltar a cobrar invalidam por ele, e a contagem da pílula recarrega junto
+   * com a página. */
+  naoCobradas: () => ["nao-cobradas"] as const,
+  /** ⚠️ A página INTEIRA entra na chave. */
+  naoCobradasPagina: (params: Record<string, unknown> = {}) => ["nao-cobradas", "pagina", params] as const,
   /** ⚠️ O recorte INTEIRO entra na chave -- período e página. A chave só
    * com o período mostraria a página 1 depois de clicar na 2. */
   faturas: (filtros: Record<string, unknown> = {}) => ["faturas", filtros] as const,

@@ -1,7 +1,7 @@
 import { Flex, Table, Text } from "@chakra-ui/react";
 
 import { CelulaComSub, Etiqueta } from "../../../../components";
-import { coresDaSituacao, corDoValor, sinalDoValor } from "../../../../theme/lancamento";
+import { CORES_DO_NAO_COBRAR, coresDaSituacao, corDoValor, sinalDoValor } from "../../../../theme/lancamento";
 import { formatarCentavos, formatarData } from "../../../../utils";
 import { LARGURA_MAXIMA_DA_COLUNA_DE_TEXTO, LARGURA_MAXIMA_DA_DESCRICAO, ROTULO_DA_SITUACAO } from "../../constants";
 import type { LinhaDeLancamentoProps } from "./types";
@@ -77,9 +77,14 @@ export default function LinhaDeLancamento({
         <Text fontSize="13px" whiteSpace="nowrap">{formatarData(l.data_vencimento)}</Text>
       </Table.Cell>
       <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">
-        <Etiqueta cores={coresDaSituacao(l.situacao)}>
-          {ROTULO_DA_SITUACAO[l.situacao] ?? l.situacao}
-        </Etiqueta>
+        {/* A etiqueta "Não cobrar" ao lado da situação, como no artefato: a despesa paga continua "Efetivado", e
+            é a segunda etiqueta que diz por que ela não aparece em "A faturar". */}
+        <Flex gap="6px" wrap="wrap">
+          <Etiqueta cores={coresDaSituacao(l.situacao)}>
+            {ROTULO_DA_SITUACAO[l.situacao] ?? l.situacao}
+          </Etiqueta>
+          {Boolean(l.nao_cobrar_em) && <Etiqueta cores={CORES_DO_NAO_COBRAR}>Não cobrar</Etiqueta>}
+        </Flex>
       </Table.Cell>
       {/* 🔴 `textAlign` na CÉLULA, e não só o `Flex` que empurra o conteúdo:
           é `td.direita` no artefato, e é o que faz o cabeçalho da coluna e o

@@ -100,6 +100,18 @@ export function reabrirLancamento(lancamentoId: string) {
   return chamar(`/lancamentos/${lancamentoId}/reabrir`, { method: "POST" });
 }
 
+/** Tira uma despesa de cliente de "A faturar" de vez, sem prazo automático.
+ *
+ * ⚠️ Só despesa de cliente e sem fatura: honorário e despesa sem cliente são 400, e a que está numa fatura, 409. */
+export function naoCobrarLancamento(lancamentoId: string) {
+  return chamar(`/lancamentos/${lancamentoId}/nao-cobrar`, { method: "POST" });
+}
+
+/** Devolve a despesa marcada a "A faturar". ⚠️ A que não está marcada é 409. */
+export function voltarACobrarLancamento(lancamentoId: string) {
+  return chamar(`/lancamentos/${lancamentoId}/voltar-a-cobrar`, { method: "POST" });
+}
+
 /** ⚠️ Nível `admin`+, ao contrário do resto do módulo: apagar dinheiro já
  * lançado é o único caminho sem volta daqui. */
 export function excluirLancamento(lancamentoId: string, escopo: EscopoDaSerie = "este") {

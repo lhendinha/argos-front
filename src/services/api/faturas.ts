@@ -31,6 +31,18 @@ export function listarAFaturar({ pagina = 1, tamanhoPagina }: OpcoesDePaginacao 
   });
 }
 
+/** As despesas marcadas para "não cobrar", da marca mais recente para a mais antiga.
+ *
+ * 🔴 Paginada, e lida de um índice só das marcadas: o `total` é a contagem da pílula "Não cobradas". */
+export function listarNaoCobradas({ pagina = 1, tamanhoPagina }: OpcoesDePaginacao = {}) {
+  return chamar("/faturas/nao-cobradas", {
+    query: {
+      pagina: String(pagina),
+      tamanho_pagina: tamanhoPagina ? String(tamanhoPagina) : undefined,
+    },
+  });
+}
+
 /** Os lançamentos de UM cliente que ainda não foram cobrados -- o que o modal
  * de emissão mostra para desmarcar. */
 export function listarAFaturarDoCliente(clienteId: string) {

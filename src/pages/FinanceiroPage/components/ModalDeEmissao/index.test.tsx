@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   emitirFatura: vi.fn(),
   listarAFaturarDoCliente: vi.fn(),
+  naoCobrarLancamento: vi.fn(),
+  voltarACobrarLancamento: vi.fn(),
   papelAtende: vi.fn(() => true),
 }));
 vi.mock("../../../../services", () => mocks);
@@ -42,7 +44,7 @@ const DO_CLIENTE = {
     lancamento(),
     lancamento({ lancamento_id: "l2", descricao: "Honorários da audiência", valor_centavos: 400000 }),
     lancamento({
-      lancamento_id: "l3", tipo: "saida", natureza: "saida",
+      lancamento_id: "l3", tipo: "saida", natureza: "saida", data_efetivacao: "2026-09-03",
       descricao: "Custas de distribuição", valor_centavos: 48000,
     }),
   ],
@@ -67,6 +69,9 @@ beforeEach(() => {
   mocks.listarAFaturarDoCliente.mockReset();
   mocks.listarAFaturarDoCliente.mockResolvedValue(DO_CLIENTE);
   mocks.emitirFatura.mockResolvedValue({ fatura_id: "f9", numero: "2026-0008" });
+  mocks.naoCobrarLancamento.mockReset();
+  mocks.naoCobrarLancamento.mockResolvedValue({});
+  mocks.voltarACobrarLancamento.mockResolvedValue({});
 });
 
 describe("os lançamentos do cliente", () => {
@@ -208,5 +213,55 @@ describe("emitir", () => {
     ).toBeInTheDocument();
     expect(onEmitida).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Emitir fatura" })).toBeInTheDocument();
+  });
+});
+
+describe("não cobrar", () => {
+  it("🔴 só a DESPESA tem o botão -- o honorário em aberto já sai desmarcando", async () => {
+    montar();
+    await caixasCarregadas();
+    expect(screen.getAllByRole("button", { name: /^Não cobrar/ })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Não cobrar Custas de distribuição" })).toBeInTheDocument();
+  });
+
+  it("o texto diz a diferença entre desmarcar e não cobrar", async () => {
+    montar();
+    await caixasCarregadas();
+    expect(screen.getByText("Desmarque")).toBeInTheDocument();
+    expect(screen.getByText(/para tirar uma despesa de vez/)).toBeInTheDocument();
+  });
+
+  it("⚠️ a despesa paga diz 'adiantada em', e o honorário 'vence'", async () => {
+    montar();
+    await caixasCarregadas();
+    expect(screen.getByText("adiantada em 03/09/2026")).toBeInTheDocument();
+    expect(screen.getAllByText("vence 20/09/2026")).toHaveLength(2);
+  });
+
+  it("🔴 clicar tira a despesa da lista na hora, e o aviso traz o Desfazer", async () => {
+    montar();
+    await caixasCarregadas();
+    /* ⚠️ A nova busca fica PENDENTE: se ela voltasse sem a despesa, a linha sumiria de qualquer jeito e o teste não
+       provaria o "na hora" -- a mutação que tirava o `setQueryData` passava verde assim. */
+    mocks.listarAFaturarDoCliente.mockReturnValue(new Promise(() => {}));
+    await userEvent.click(screen.getByRole("button", { name: "Não cobrar Custas de distribuição" }));
+
+    await waitFor(() => expect(mocks.naoCobrarLancamento).toHaveBeenCalledWith("l3"));
+    await waitFor(() => expect(screen.getAllByRole("checkbox")).toHaveLength(2));
+    expect(screen.queryByText("Custas de distribuição")).not.toBeInTheDocument();
+    expect(await screen.findByText("Custas de distribuição não será cobrada.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Desfazer" }));
+    await waitFor(() => expect(mocks.voltarACobrarLancamento).toHaveBeenCalledWith("l3"));
+  });
+
+  it("a recusa do servidor aparece no formulário, e a despesa fica -- o par negativo", async () => {
+    const { ApiError } = await import("../../../../services/api/client");
+    mocks.naoCobrarLancamento.mockRejectedValue(new ApiError("Essa despesa já está marcada para não cobrar", 409));
+    montar();
+    await caixasCarregadas();
+    await userEvent.click(screen.getByRole("button", { name: "Não cobrar Custas de distribuição" }));
+
+    expect(await screen.findByText("Essa despesa já está marcada para não cobrar")).toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(3);
   });
 });

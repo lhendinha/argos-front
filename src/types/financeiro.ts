@@ -184,6 +184,13 @@ export interface Lancamento {
    * mudariam o total de um documento já emitido. A tela esconde as duas
    * ações e diz por quê -- ver `LancamentoDetalhePage`. */
   fatura_id?: string;
+  /** Quem marcou a despesa para "não cobrar", e quando (`aaaa-mm-dd`). Ausentes = cobrável.
+   *
+   * 🔴 Sem prazo automático: a marca só sai por "Voltar a cobrar". */
+  nao_cobrar_por?: string;
+  nao_cobrar_em?: string;
+  /** O apelido de quem marcou, resolvido pelo servidor (o e-mail para quem não tem). Vem no DETALHE. */
+  nao_cobrar_por_nome?: string;
   criado_por: string;
   criado_em: string;
 }
@@ -288,6 +295,23 @@ export interface ClienteAFaturar {
   /** O vencimento mais antigo entre eles (`aaaa-mm-dd`): há quanto tempo o
    * dinheiro espera. */
   mais_antigo: string;
+}
+
+/** Uma despesa marcada para "não cobrar". `GET /faturas/nao-cobradas`. */
+export interface NaoCobrada {
+  lancamento_id: string;
+  descricao: string;
+  cliente_id: string;
+  /** Do CADASTRO, e não o gravado no lançamento: aquele envelhece enquanto a despesa não é cobrável. */
+  cliente_nome: string;
+  valor_centavos: number;
+  data_vencimento: string;
+  /** Quando o escritório pagou -- a coluna "Adiantada em". */
+  data_efetivacao: string;
+  nao_cobrar_por: string;
+  /** O apelido de quem marcou (o e-mail para quem não tem). */
+  nao_cobrar_por_nome: string;
+  nao_cobrar_em: string;
 }
 
 /** Uma fatura emitida. `GET /faturas` e `GET /faturas/{id}`.
