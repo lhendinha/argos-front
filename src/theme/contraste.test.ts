@@ -277,3 +277,21 @@ describe("a caixa de marcar fala a paleta do projeto", () => {
     expect(nativo?.accentColor).toBe("fg.brand");
   });
 });
+
+describe("a linha NÃO LIDA do Histórico", () => {
+  /* O fundo é o `brandFaint`, e em cima dele vão o título em `ink` e a linha de detalhes em `slate`. */
+  it.each([
+    ["o título", cores.ink],
+    ["os detalhes", cores.slate],
+  ])("%s passa em AA sobre o fundo da linha", (_nome, texto) => {
+    expect(contraste(texto, cores.brandFaint)).toBeGreaterThanOrEqual(AA_TEXTO_PEQUENO);
+  });
+
+  it("o ponto cheio da marca passa como elemento gráfico sobre o fundo da linha", () => {
+    expect(contraste(cores.brand, cores.brandFaint)).toBeGreaterThanOrEqual(AA_GRAFICO);
+  });
+
+  it("🔴 e o fundo é mais claro que o do hover -- senão passar o mouse não mudaria nada", () => {
+    expect(contraste(cores.ink, cores.brandFaint)).toBeGreaterThan(contraste(cores.ink, cores.brandTint));
+  });
+});

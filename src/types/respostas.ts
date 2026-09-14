@@ -9,6 +9,7 @@
  * A chave do array repete o nome do recurso porque é assim que o backend
  * monta o envelope (`shared/paginacao.py`) -- não é escolha desta camada.
  */
+import type { LEITURAS_DO_HISTORICO } from "../constants/historico";
 import type {
   Atendimento,
   AtendimentoResumido,
@@ -143,7 +144,29 @@ export interface RespostaDeDocumentosPaginada extends RespostaDeDocumentos, Cont
 
 export interface RespostaDeMembrosPaginada extends RespostaDeMembros, ContagemDaPagina {}
 export interface RespostaDeProcessosPaginada extends RespostaDeProcessos, ContagemDaPagina {}
-export interface RespostaDeHistoricoPaginada extends RespostaDeHistorico, ContagemDaPagina {}
+/** Quantos envios há em cada opção do filtro de leitura, com os outros filtros aplicados: `total` é "Lidos e não lidos". */
+export interface ContagensDaLeitura extends Record<(typeof LEITURAS_DO_HISTORICO)[number], number> {
+  total: number;
+}
+/** A página do Histórico traz junto as contagens da leitura.
+ *
+ * ⚠️ Ausentes quando o servidor cai na leitura antiga, que não conta os não lidos: quem lê não inventa zero. */
+export interface RespostaDeHistoricoPaginada extends RespostaDeHistorico, ContagemDaPagina {
+  contagens_da_leitura?: ContagensDaLeitura;
+}
+/** `GET /historico/nao-lidos`: o contador do menu. */
+export interface RespostaDeNaoLidosDoHistorico {
+  nao_lidos: number;
+}
+/** `POST /historico/leituras`: quantos ESTA chamada marcou -- zero se já estava lido. */
+export interface RespostaDeLeituraDoHistorico {
+  marcados: number;
+}
+/** `POST /historico/marcar-todos-lidos`: quantos deixaram de ser não lidos, e a geração que o Desfazer devolve. */
+export interface RespostaDeMarcarTodosLidos {
+  marcados: number;
+  geracao: number;
+}
 
 // --- respostas de uma coisa só ---------------------------------------------
 

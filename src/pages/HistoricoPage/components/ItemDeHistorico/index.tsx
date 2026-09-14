@@ -13,6 +13,9 @@ import type { ItemDeHistoricoProps } from "./types";
  */
 export default function ItemDeHistorico({ item, subgruposVisiveis, onAbrir }: ItemDeHistoricoProps) {
   const falhou = Boolean(item.falhou);
+  /* ⚠️ Só `false` é não lido: resposta antiga, sem o campo, não destaca nada -- não saber não é motivo pra chamar
+     atenção. */
+  const naoLido = item.lido === false;
 
   /** Lembrete de tarefa não tem processo -- `numero_processo` guarda
    * `TAREFA#{id}` porque é chave de partição. Mostrar isso mascarado como
@@ -35,14 +38,19 @@ export default function ItemDeHistorico({ item, subgruposVisiveis, onAbrir }: It
     <Flex
       role="button"
       tabIndex={0}
+      /* O estado vai no NOME: o fundo, o peso e o anel são só visuais, e quem usa leitor de tela precisa ouvir o que a
+         linha mostra. */
+      aria-label={`${titulo}, ${naoLido ? "não lido" : "lido"}${falhou ? ", falha no envio" : ""}`}
+      data-lido={naoLido ? "false" : "true"}
       gap="14px"
       p="15px 14px"
+      bg={naoLido ? "brand.faint" : undefined}
       borderBottomWidth="1px"
       borderBottomColor="border.subtle"
       _last={{ borderBottomWidth: 0 }}
       cursor="pointer"
       transition="background .1s"
-      _hover={{ bg: "bg.canvas" }}
+      _hover={{ bg: naoLido ? "bg.brand.subtle" : "bg.canvas" }}
       _focusVisible={{ outline: "2px solid", outlineColor: "fg.brand", outlineOffset: "-2px" }}
       onClick={() => onAbrir(item)}
       onKeyDown={(e) => {
@@ -54,17 +62,19 @@ export default function ItemDeHistorico({ item, subgruposVisiveis, onAbrir }: It
     >
       {/* O ponto repete em COR o que a etiqueta diz em texto, e é o que
           deixa uma falha visível numa lista longa sem ler linha por linha. */}
-      <Ponto tom={falhou ? "ruim" : "marca"} noTopo />
+      <Ponto tom={falhou ? "ruim" : "marca"} noTopo vazado={!naoLido} />
 
       <Stack gap="3px" minW="0">
+        {/* O não lido tem o título em negrito e em tinta; o lido, mais leve e em cinza -- como no artefato do lido. */}
         <Text
           fontSize="13.5px"
-          fontWeight="700"
+          fontWeight={ehDeTarefa ? (naoLido ? "800" : "500") : naoLido ? "600" : "400"}
+          color={naoLido ? "fg" : "fg.muted"}
           fontFamily={ehDeTarefa ? undefined : "mono"}
         >
           {titulo}
         </Text>
-        <Text fontSize="12px" color="fg.subtle">
+        <Text fontSize="12px" color={naoLido ? "fg.muted" : "fg.subtle"}>
           {meta}
         </Text>
         {/* 🔴 Só os subgrupos QUE VOCÊ PARTICIPA, e este é o único lugar do
@@ -82,7 +92,7 @@ export default function ItemDeHistorico({ item, subgruposVisiveis, onAbrir }: It
             realmente entra em jogo. */}
         <EtiquetasDeSubgrupo nomes={subgruposVisiveis(item.subgrupos_notificados)} />
         {item.destinatarios && item.destinatarios.length > 0 && (
-          <Text fontSize="12px" color="fg.subtle">
+          <Text fontSize="12px" color={naoLido ? "fg.muted" : "fg.subtle"}>
             Pra: {item.destinatarios.join(", ")}
           </Text>
         )}

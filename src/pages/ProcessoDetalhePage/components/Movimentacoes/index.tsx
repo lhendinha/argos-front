@@ -1,8 +1,9 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { Faixa, ItemDeMovimentacao, ModalDeTarefa, Pagination } from "../../../../components";
+import { useMarcarLidoNoHistorico } from "../../../../hooks/useMarcarLidoNoHistorico";
 import { formatarData, mascararNumeroProcesso, PARAM_DA_ABA } from "../../../../utils";
 import {
   MOVIMENTACOES_POR_PAGINA,
@@ -69,6 +70,22 @@ export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
     setParams(proximos, { replace: true });
   };
 
+  const aberta =
+    idAberto != null
+      ? (comunicacoes.find((c) => String(c.comunicacao_id) === idAberto) ?? null)
+      : null;
+
+  /* Abrir a movimentação é ler o e-mail que avisou dela (decisão 10 do lido) -- e só quando houve e-mail: sem envio, não
+     há o que marcar. Uma vez por movimentação: o efeito olha o id, e não o objeto, que a consulta recria. */
+  const marcarLido = useMarcarLidoNoHistorico();
+  const idParaMarcar = aberta?.tem_envio ? aberta.comunicacao_id : null;
+  useEffect(() => {
+    if (aberta && idParaMarcar != null) {
+      marcarLido({ numero_processo: aberta.numero_processo, comunicacao_id: Number(idParaMarcar) });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só a movimentação aberta: `aberta` e `marcarLido` são recriados a cada render
+  }, [idParaMarcar]);
+
   if (comunicacoes.length === 0) {
     return (
       <Text fontSize="13px" color="fg.subtle">
@@ -76,11 +93,6 @@ export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
       </Text>
     );
   }
-
-  const aberta =
-    idAberto != null
-      ? (comunicacoes.find((c) => String(c.comunicacao_id) === idAberto) ?? null)
-      : null;
 
   const totalPaginas = Math.ceil(comunicacoes.length / tamanhoPagina);
   const inicio = (pagina - 1) * tamanhoPagina;

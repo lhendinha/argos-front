@@ -38,6 +38,7 @@ export const system = createSystem(defaultConfig, {
           darker: { value: cores.brandDarker },
           tint: { value: cores.brandTint },
           tint2: { value: cores.brandTint2 },
+          faint: { value: cores.brandFaint },
         },
         ink: { value: cores.ink },
         slate: {

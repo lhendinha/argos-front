@@ -18,4 +18,7 @@ export interface FiltroDeMenuProps<T> {
   opcoes: readonly OpcaoDeFiltro<T>[];
   valor: T;
   onMudar: (valor: T) => void;
+  /** Quantos itens cada opção traz, pelo `id` dela -- o filtro de leitura mostra o número de cada uma (decisão 11 do
+   * lido). Ausente, o menu não mostra número nenhum. */
+  contagens?: Partial<Record<string, number>>;
 }

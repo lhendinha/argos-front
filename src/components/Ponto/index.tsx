@@ -9,7 +9,7 @@ import type { PontoProps } from "./types";
  * já houve um pedido explícito pra que todas tivessem o mesmo tamanho.
  * Quatro cópias de `9px` divergem no primeiro ajuste.
  */
-export default function Ponto({ tom = "marca", noTopo }: PontoProps) {
+export default function Ponto({ tom = "marca", noTopo, vazado }: PontoProps) {
   return (
     <Box
       aria-hidden="true"
@@ -18,7 +18,10 @@ export default function Ponto({ tom = "marca", noTopo }: PontoProps) {
       mt={noTopo ? "6px" : undefined}
       flex="0 0 auto"
       borderRadius="full"
-      bg={CORES_DO_PONTO[tom]}
+      bg={vazado ? "transparent" : CORES_DO_PONTO[tom]}
+      /* O anel é o LIDO do Histórico: a mesma cor do tom, só o contorno, e mais apagado -- o não lido é que chama. */
+      boxShadow={vazado ? `inset 0 0 0 2px {colors.${CORES_DO_PONTO[tom]}}` : undefined}
+      opacity={vazado ? 0.55 : undefined}
     />
   );
 }

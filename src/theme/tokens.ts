@@ -34,6 +34,9 @@ export const cores = {
   brandDarker: "#004f7a",
   brandTint: "#e8f5fc",
   brandTint2: "#d4edfa",
+  /** O fundo da linha NÃO LIDA do Histórico (`--unread-row` do artefato do lido): um azul quase branco, que destaca
+   * sem competir com o `brandTint` do hover e da seleção. */
+  brandFaint: "#f7fbfe",
 
   // Texto e traço, do mais escuro ao mais claro.
   ink: "#152029",

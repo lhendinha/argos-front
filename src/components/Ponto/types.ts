@@ -12,4 +12,6 @@ export interface PontoProps {
   /** Alinha com a PRIMEIRA linha de um bloco de texto de várias linhas.
    * Sem isso o ponto centraliza no bloco inteiro e fica flutuando no meio. */
   noTopo?: boolean;
+  /** Só o contorno: o envio LIDO do Histórico. O cheio é o não lido. */
+  vazado?: boolean;
 }

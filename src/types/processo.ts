@@ -263,7 +263,26 @@ export interface HistoricoItem {
    * vazia. Quem lê distingue por aqui, nunca decompondo aquele campo. */
   tarefa_id?: string;
   subgrupo_id?: string;
+  /** A ordem do envio no grupo: é por ela que se marca o envio como lido. */
+  sequencia?: number;
+  /** Se a pessoa já leu este envio -- o lido é de cada pessoa. Ausente em resposta antiga: quem lê trata como lido, sem
+   * destaque. */
+  lido?: boolean;
 }
+
+/** Marca como lido pela sequência: a lista do Histórico e o link do e-mail. */
+export interface LeituraPelaSequencia {
+  sequencia: number;
+}
+
+/** Marca como lido pela movimentação aberta no detalhe do processo, que não conhece a sequência do envio. */
+export interface LeituraPelaMovimentacao {
+  numero_processo: string;
+  comunicacao_id: number;
+}
+
+/** O corpo de `POST /historico/leituras`: um dos dois jeitos, nunca os dois. */
+export type AlvoDaLeitura = LeituraPelaSequencia | LeituraPelaMovimentacao;
 
 /** Os dois parâmetros do deep link de Histórico. Só conta como deep link se
  * vierem os DOIS -- o e-mail de movimentação manda juntos. */
@@ -346,6 +365,8 @@ export interface OpcoesListarHistorico {
    * pra um dia de Brasília ser comparado com um instante em UTC, que é a
    * fresta de 3h que a API acabou de fechar. */
   dias?: number;
+  /** Um dos valores de `LEITURAS_DO_HISTORICO`. Vazio traz os lidos e os não lidos. */
+  leitura?: string;
   pagina?: number;
   tamanhoPagina?: number;
 }

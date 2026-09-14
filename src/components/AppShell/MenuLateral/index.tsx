@@ -1,6 +1,7 @@
 import { Box, Stack } from "@chakra-ui/react";
 
 import { ITENS_NAVEGACAO } from "../../../constants";
+import { useNaoLidosDoHistorico } from "../../../hooks/useNaoLidosDoHistorico";
 import { papelAtende } from "../../../services";
 import BotaoDeSuporte from "../BotaoDeSuporte";
 import ItemMenu from "../ItemMenu";
@@ -15,6 +16,8 @@ export default function MenuLateral() {
   const itens = ITENS_NAVEGACAO.filter(
     (i) => !i.pendente && (!i.minimo || papelAtende(i.minimo)),
   );
+  /* Aqui, e não no item: o menu está em toda tela, e é o único lugar de onde o contador aparece em todas. */
+  const naoLidosDoHistorico = useNaoLidosDoHistorico();
 
   return (
     <Box
@@ -40,7 +43,11 @@ export default function MenuLateral() {
 
       <Stack as="nav" aria-label="Navegação principal" gap="0" flex="1" overflowY="auto" p="6px 12px">
         {itens.map((item) => (
-          <ItemMenu key={item.caminho} item={item} />
+          <ItemMenu
+            key={item.caminho}
+            item={item}
+            contador={item.caminho === "/historico" ? naoLidosDoHistorico : undefined}
+          />
         ))}
       </Stack>
 

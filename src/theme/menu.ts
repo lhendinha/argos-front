@@ -42,6 +42,21 @@ export const OPCAO_DE_MENU: SystemStyleObject = {
   _hover: { bg: "bg.canvas" },
 };
 
+/** A opção que mostra quantos itens ela traz: o rótulo à esquerda, o número à direita (`.menu .n` do artefato do lido). */
+export const OPCAO_COM_CONTAGEM: SystemStyleObject = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: "16px",
+};
+
+/** O número da opção, em mono tabular: as contagens de um menu se alinham pela direita. */
+export const CONTAGEM_NA_OPCAO: SystemStyleObject = {
+  fontFamily: "mono",
+  fontWeight: "500",
+  color: "fg.subtle",
+  fontVariantNumeric: "tabular-nums",
+};
+
 export const OPCAO_DE_MENU_ATIVA: SystemStyleObject = {
   bg: "bg.brand.subtle",
   color: "brand.darker",

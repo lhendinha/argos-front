@@ -8,18 +8,26 @@ import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { Botao, CabecalhoDePagina, CampoDeBusca, CartaoDeTabela, AreaAtualizando, EstadoVazio, EstadoDeErro, Esqueleto, IconePlus, Modal, ModalDeTarefa, Pagination } from "../../components";
+import BotaoDeTexto from "../../components/BotaoDeTexto";
+import { LEITURA_LIDOS, LEITURA_NAO_LIDOS } from "../../constants";
+import { useNaoLidosDoHistorico } from "../../hooks/useNaoLidosDoHistorico";
 import { listarHistorico } from "../../services";
 import { useToastOnQueryError } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
 import { useNomesDeSubgruposVisiveis } from "../../hooks/useNomesDeSubgruposVisiveis";
 import { useTodosOsSubgrupos } from "../../hooks/useTodosOsSubgrupos";
-import { contar, mascararNumeroProcesso } from "../../utils";
+import { mascararNumeroProcesso } from "../../utils";
 import DetalheHistorico from "./components/DetalheHistorico";
 import FiltroDeMenu from "./components/FiltroDeMenu";
 import ItemDeHistorico from "./components/ItemDeHistorico";
+import ResumoDaLista from "./components/ResumoDaLista";
+import { useAbrirEnvio } from "./hooks/useAbrirEnvio";
 import { useLinkProfundoDoHistorico } from "./hooks/useLinkProfundoDoHistorico";
+import { useMarcarTodosComoLidos } from "./hooks/useMarcarTodosComoLidos";
+import { contagensDoFiltroDeLeitura } from "./leitura";
 import {
   FILTROS_DE_FALHA,
+  FILTROS_DE_LEITURA,
   FILTROS_DE_PERIODO,
   TIPOS_DE_ENVIO,
   TIPO_DE_ENVIO_PADRAO,
@@ -80,6 +88,8 @@ export default function HistoricoPage({
      processo seriam VINTE. O campo mostra o que foi digitado na hora; quem
      espera é a consulta. */
   const numeroProcesso = useValorComEspera(numeroInput);
+  /* A leitura na URL como os outros filtros: "Só não lidos" que morre no F5 obriga a escolher de novo a cada visita. */
+  const [leitura, setLeitura] = useEstadoNaUrl("leitura", "", { tambemApaga: ["pagina"] });
   const { atualizar } = useParametrosDaUrl();
 
   /* UMA vez na página, não uma por item. ⚠️ `Visiveis` e não `Nome`: aqui a
@@ -112,16 +122,20 @@ export default function HistoricoPage({
   const notificados = itemAberto?.subgrupos_notificados;
   const subgrupoDaTarefa =
     itemAberto && !itemAberto.tarefa_id && notificados?.length === 1 ? notificados[0] : null;
+  const filtros = { pagina, tamanhoPagina, tipoEnvio, apenasComFalha, dias, subgrupoId, numeroProcesso, leitura };
+  const chaveDaLista = qk.historico(filtros);
   const query = useQuery<RespostaDeHistoricoPaginada>({
-    queryKey: qk.historico({ pagina, tamanhoPagina, tipoEnvio, apenasComFalha, dias, subgrupoId, numeroProcesso }),
+    queryKey: chaveDaLista,
+    /* 🔴 Com "Só não lidos", voltar o foco NÃO recarrega a lista: o envio recém-aberto sairia de debaixo do dedo de quem
+       acabou de lê-lo. O contador do menu recarrega igual. */
+    refetchOnWindowFocus: leitura !== LEITURA_NAO_LIDOS,
     /* Mantém a página anterior na tela enquanto a nova vem. Sem isto a
        `queryKey` muda, a chave nasce fria, `isPending` vira `true` e a
        tabela DESMONTA -- pisca a cada página, a cada filtro e a cada tecla
        da busca. O `AreaAtualizando` em volta é que diz que o conteúdo
        visível ainda é o antigo. */
     placeholderData: keepPreviousData,
-    queryFn: () =>
-      listarHistorico({ pagina, tamanhoPagina, tipoEnvio, apenasComFalha, dias, subgrupoId, numeroProcesso }),
+    queryFn: () => listarHistorico(filtros),
   });
   useToastOnQueryError(query.error, "Não foi possível carregar o histórico.");
   const historico = query.data?.historico || [];
@@ -136,8 +150,14 @@ export default function HistoricoPage({
     queryFn: () => listarHistorico({ pagina: 1, tamanhoPagina: 1 }),
   });
   const totalSemFiltro = totalQuery.data?.total ?? 0;
+  const contagens = query.data?.contagens_da_leitura;
+  const naoLidosDoMenu = useNaoLidosDoHistorico();
 
-  const { resolvendo: resolvendoLink } = useLinkProfundoDoHistorico(deepLink, setItemAberto, onDeepLinkConsumido);
+  const abrirEnvio = useAbrirEnvio(chaveDaLista, setItemAberto);
+  const comFiltro = Boolean(tipoEnvio || apenasComFalha || dias || subgrupoId || numeroProcesso || leitura);
+  const { marcarTodos, marcando } = useMarcarTodosComoLidos(comFiltro);
+
+  const { resolvendo: resolvendoLink } = useLinkProfundoDoHistorico(deepLink, abrirEnvio, onDeepLinkConsumido);
 
   /* Voltar pra página 1 a cada filtro: estar na página 4 de um conjunto que
      acabou de encolher pra 2 páginas mostraria vazio sem motivo.
@@ -160,7 +180,7 @@ export default function HistoricoPage({
        razão: um filtro que sobrevive ao "ver todos" deixa a lista vazia e a
        pessoa sem caminho. */
     atualizar(
-      { tipo: "", falha: false, dias: 0, subgrupo: "", processo: "" },
+      { tipo: "", falha: false, dias: 0, subgrupo: "", processo: "", leitura: "" },
       { tambemApaga: ["pagina"] },
     );
   }
@@ -170,12 +190,24 @@ export default function HistoricoPage({
       <CabecalhoDePagina
         titulo="Histórico"
         subtitulo="Movimentações detectadas e notificações enviadas."
+        acoes={
+          /* "Tudo lido" quando não há o que marcar: o botão fica no lugar, e a pessoa vê que está em dia. */
+          <BotaoDeTexto onClick={marcarTodos} desabilitado={naoLidosDoMenu === 0 || marcando}>
+            {naoLidosDoMenu === 0 ? "Tudo lido" : "Marcar todos como lidos"}
+          </BotaoDeTexto>
+        }
       />
 
       <Flex align="center" gap="8px" wrap="wrap" mb="18px">
         <FiltroDeMenu opcoes={TIPOS_DE_ENVIO} valor={tipoEnvio} onMudar={setTipoEnvio} />
         <FiltroDeMenu opcoes={FILTROS_DE_FALHA} valor={apenasComFalha} onMudar={setApenasComFalha} />
         <FiltroDeMenu opcoes={FILTROS_DE_PERIODO} valor={dias} onMudar={setDias} />
+        <FiltroDeMenu
+          opcoes={FILTROS_DE_LEITURA}
+          valor={leitura}
+          onMudar={setLeitura}
+          contagens={contagensDoFiltroDeLeitura(contagens)}
+        />
         {/* 🔴 Só aparece com DOIS ou mais subgrupos: com um só, o filtro não
             filtra nada e ocupa a barra. Mesma régua da pílula de subgrupo de
             Processos, e o motivo está escrito lá. */}
@@ -210,15 +242,12 @@ export default function HistoricoPage({
         />
       </Flex>
 
-      {/* Some enquanto carrega, em vez de dizer "carregando…": o esqueleto
-          logo abaixo já é o recado, e duas mensagens da mesma espera na
-          mesma tela é ruído. Mantém a linha ocupando o espaço pra a
-          contagem não empurrar a tabela ao chegar. */}
-      <Text fontSize="11.5px" color="fg.subtle" mb="10px" minH="17px">
-        {query.isPending
-          ? ""
-          : `Mostrando ${total} de ${contar(totalSemFiltro, "envio", "envios")}`}
-      </Text>
+      <ResumoDaLista
+        carregando={query.isPending}
+        total={total}
+        totalSemFiltro={totalSemFiltro}
+        naoLidos={contagens?.[LEITURA_NAO_LIDOS]}
+      />
 
       {query.isPending ? (
         <Esqueleto linhas={4} />
@@ -245,7 +274,11 @@ export default function HistoricoPage({
                  período, e a frase mandava a pessoa olhar pro filtro errado. */
               mensagem={
                 totalSemFiltro > 0
-                  ? "Nenhum envio com esses filtros."
+                  ? leitura === LEITURA_NAO_LIDOS
+                    ? "Você está em dia: nenhum envio não lido com esses filtros."
+                    : leitura === LEITURA_LIDOS
+                      ? "Nenhum envio lido com esses filtros."
+                      : "Nenhum envio com esses filtros."
                   : "Nenhum e-mail enviado ainda. Os avisos de movimentação e de prazo aparecem aqui."
               }
               acao={
@@ -268,7 +301,7 @@ export default function HistoricoPage({
                     key={`${h.numero_processo}-${h.enviado_em}-${i}`}
                     item={h}
                     subgruposVisiveis={subgruposVisiveis}
-                    onAbrir={setItemAberto}
+                    onAbrir={abrirEnvio}
                   />
                 ))}
               </AreaAtualizando>

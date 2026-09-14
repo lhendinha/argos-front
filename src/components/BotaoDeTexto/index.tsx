@@ -3,11 +3,12 @@ import type { BotaoDeTextoProps } from "./types";
 
 /** Botão sem moldura, na cor da marca (`.btn-text` do artifact). Usado no
  * "← Voltar" das telas de detalhe. */
-export default function BotaoDeTexto({ onClick, children }: BotaoDeTextoProps) {
+export default function BotaoDeTexto({ onClick, children, desabilitado }: BotaoDeTextoProps) {
   return (
     <Button
       type="button"
       onClick={onClick}
+      disabled={desabilitado}
       display="inline-flex"
       alignItems="center"
       gap="7px"
@@ -19,6 +20,8 @@ export default function BotaoDeTexto({ onClick, children }: BotaoDeTextoProps) {
       fontSize="13px"
       fontWeight="700"
       _hover={{ textDecoration: "underline" }}
+      /* Desabilitado é texto cinza e sem sublinhado: um link apagado que sublinha no hover promete um clique que não há. */
+      _disabled={{ color: "fg.subtle", cursor: "default", opacity: 1, _hover: { textDecoration: "none" } }}
     >
       {children}
     </Button>
