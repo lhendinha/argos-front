@@ -19,6 +19,7 @@ import { abaValida, contar, mascararNumeroProcesso, PARAM_DA_ABA } from "../../u
 import LinhaDoTempo from "./components/LinhaDoTempo";
 import NovoRegistro from "./components/NovoRegistro";
 import { ABAS_DO_ATENDIMENTO, GRUPO_DE_ABAS } from "./constants";
+import { useRegistrosDoAtendimento } from "./hooks/useRegistrosDoAtendimento";
 import FormularioAtendimento from "./components/FormularioAtendimento";
 import type { AbaDoAtendimento } from "./types";
 import type { Atendimento, CamposDoAtendimento } from "../../types";
@@ -66,14 +67,23 @@ export default function AtendimentoDetalhePage() {
     retry: false,
   });
 
+  /* A linha do tempo vem À PARTE, 20 por vez -- ver `useRegistrosDoAtendimento`. */
+  const linhaDoTempo = useRegistrosDoAtendimento(subgrupoId, atendimentoId);
+
+  function verAnteriores() {
+    void linhaDoTempo.consulta.fetchNextPage().then((resultado) => {
+      if (resultado.isError) toast.erro("Não foi possível carregar os registros anteriores.");
+    });
+  }
+
   /* O nome de cada cliente vem em `cliente_nomes`, DENTRO do atendimento.
      Aqui havia uma consulta ao catálogo inteiro de clientes -- numa tela que
      mostra UM atendimento. */
 
   function invalidar() {
     queryClient.invalidateQueries({ queryKey: qk.atendimento(subgrupoId, atendimentoId) });
-    // A listagem mostra status e a prévia do último registro -- os dois
-    // acabaram de mudar.
+    // A listagem mostra status e a prévia do último registro, e a linha do
+    // tempo mora sob o mesmo prefixo -- os três acabaram de mudar.
     queryClient.invalidateQueries({ queryKey: ["atendimentos"] });
   }
 
@@ -144,6 +154,9 @@ export default function AtendimentoDetalhePage() {
   }
 
   const atendimento = query.data;
+  /* A quantidade GUARDADA no atendimento: a tela carrega 20 registros por vez,
+     e contar os da tela diria menos do que some. */
+  const quantidadeDeRegistros = atendimento.quantidade_de_registros ?? 0;
 
   return (
     <Box>
@@ -237,9 +250,25 @@ export default function AtendimentoDetalhePage() {
       <PainelDaAba grupo={GRUPO_DE_ABAS} id="registros" ativa={aba}>
         <Cartao>
           <Box p="16px 18px">
-            <LinhaDoTempo
-              registros={atendimento.registros || []}
-            />
+            {/* ⚠️ Com dados, a linha do tempo fica mesmo se um pedido depois
+                falhar (os anteriores, uma recarga): o que a pessoa lia não some. */}
+            {linhaDoTempo.consulta.data ? (
+              <LinhaDoTempo
+                registros={linhaDoTempo.registros}
+                quantidade={linhaDoTempo.quantidade}
+                temAnteriores={linhaDoTempo.consulta.hasNextPage}
+                carregandoAnteriores={linhaDoTempo.consulta.isFetchingNextPage}
+                onVerAnteriores={verAnteriores}
+              />
+            ) : linhaDoTempo.consulta.isError ? (
+              <EstadoDeErro
+                mensagem="Não foi possível carregar os registros."
+                onTentarDeNovo={() => linhaDoTempo.consulta.refetch()}
+                tentando={linhaDoTempo.consulta.isFetching}
+              />
+            ) : (
+              <Esqueleto linhas={4} />
+            )}
             <NovoRegistro
               enviando={registrar.isPending}
               onEnviar={(texto) => registrar.mutateAsync(texto)}
@@ -290,10 +319,10 @@ export default function AtendimentoDetalhePage() {
           mensagem={
             <>
               O atendimento <strong>{atendimento.assunto}</strong> e{" "}
-              {(atendimento.registros || []).length === 1
+              {quantidadeDeRegistros === 1
                 ? "o seu único registro será removido"
                 : `todos os seus ${contar(
-                    (atendimento.registros || []).length,
+                    quantidadeDeRegistros,
                     "registro",
                     "registros",
                   )} serão removidos`}

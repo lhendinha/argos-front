@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   detalhesAtendimento: vi.fn(),
   atualizarAtendimento: vi.fn(),
   adicionarRegistro: vi.fn(),
+  registrosDoAtendimento: vi.fn(),
   removerAtendimento: vi.fn(),
   listarDocumentos: vi.fn(),
   listarClientes: vi.fn(),
@@ -40,17 +41,22 @@ const ATENDIMENTO = {
   cliente_ids: ["c1"],
   cliente_nomes: ["Maria Souza"],
   processo_numero: "00002668720218130559",
-  /* 🔴 `autor_nome` vem NO registro desde 25/08/2026, resolvido pelo servidor.
-     Antes a linha do tempo traduzia e-mail em apelido com o catálogo inteiro
-     de pessoas do grupo -- e aquela consulta só rodava pra `manager` pra
-     cima, então quem é `user` via e-mail cru. */
-  registros: [
-    { autor_id: "ana@x.com", autor_nome: "Ana Paula",
-      registrado_em: "2026-08-10T09:00:00+00:00", texto: "Primeiro contato" },
-    { autor_id: "joao@x.com", autor_nome: "João",
-      registrado_em: "2026-08-12T14:30:00+00:00", texto: "Cliente retornou" },
-  ],
+  ultimo_registro: { autor_id: "joao@x.com", autor_nome: "João",
+                     registrado_em: "2026-08-12T14:30:00+00:00", texto: "Cliente retornou" },
+  quantidade_de_registros: 2,
 };
+
+/* 🔴 A linha do tempo vem da rota dos registros, À PARTE do atendimento. E
+   `autor_nome` vem NO registro, resolvido pelo servidor: antes a linha do
+   tempo traduzia e-mail em apelido com o catálogo inteiro de pessoas do grupo
+   -- e aquela consulta só rodava pra `manager` pra cima, então quem é `user`
+   via e-mail cru. */
+const REGISTROS = [
+  { registro_id: "a1#2026-08-10T09:00:00+00:00#01", autor_id: "ana@x.com", autor_nome: "Ana Paula",
+    registrado_em: "2026-08-10T09:00:00+00:00", texto: "Primeiro contato" },
+  { registro_id: "a1#2026-08-12T14:30:00+00:00#02", autor_id: "joao@x.com", autor_nome: "João",
+    registrado_em: "2026-08-12T14:30:00+00:00", texto: "Cliente retornou" },
+];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -61,6 +67,10 @@ beforeEach(() => {
   mocks.getApelido.mockReturnValue("Ana");
   mocks.getEmail.mockReturnValue("ana@x.com");
   mocks.detalhesAtendimento.mockResolvedValue(ATENDIMENTO);
+  /* ⚠️ `mockReset`, e não só o `clearAllMocks` acima: ele limpa as chamadas, mas não a fila de respostas de uma vez
+     só, e a página que um teste não pediu vazava para o seguinte. */
+  mocks.registrosDoAtendimento.mockReset();
+  mocks.registrosDoAtendimento.mockResolvedValue({ registros: REGISTROS, anteriores: null, quantidade: 2 });
   mocks.listarClientes.mockResolvedValue({
     clientes: [{ cliente_id: "c1", nome: "Maria Souza", grupo_id: "g1" }],
   });
@@ -115,13 +125,14 @@ describe("cabeçalho", () => {
 describe("linha do tempo", () => {
   it("mostra os registros na ordem de escrita", async () => {
     await montar();
+    await screen.findByText("Cliente retornou");
     const textos = screen.getAllByText(/Primeiro contato|Cliente retornou/);
     expect(textos.map((t) => t.textContent)).toEqual(["Primeiro contato", "Cliente retornou"]);
   });
 
   it("mostra o APELIDO de quem escreveu, não o e-mail", async () => {
     await montar();
-    expect(screen.getByText("Ana Paula")).toBeInTheDocument();
+    expect(await screen.findByText("Ana Paula")).toBeInTheDocument();
     expect(screen.getByText("João")).toBeInTheDocument();
     expect(screen.queryByText("joao@x.com")).not.toBeInTheDocument();
   });
@@ -130,10 +141,10 @@ describe("linha do tempo", () => {
     /* `autor_nome` ausente: quem nunca definiu apelido, ou autor de outro
        grupo (o servidor resolve dentro do grupo de quem lê). O e-mail ainda
        identifica, e sumir com o autor seria pior. */
-    mocks.detalhesAtendimento.mockResolvedValue({
-      ...ATENDIMENTO,
-      registros: [{ autor_id: "ana@x.com", autor_nome: null,
-                    registrado_em: "2026-08-10T09:00:00+00:00", texto: "Primeiro contato" }],
+    mocks.registrosDoAtendimento.mockResolvedValue({
+      registros: [{ ...REGISTROS[0], autor_nome: null }],
+      anteriores: null,
+      quantidade: 1,
     });
     await montar();
     expect(await screen.findByText("ana@x.com")).toBeInTheDocument();
@@ -327,10 +338,7 @@ describe("exclusão", () => {
 
   it("com UM registro, a frase vai no singular por extenso", async () => {
     // "1 registro" soa a formulário; o artifact escreve "o seu único".
-    mocks.detalhesAtendimento.mockResolvedValue({
-      ...ATENDIMENTO,
-      registros: [ATENDIMENTO.registros[0]],
-    });
+    mocks.detalhesAtendimento.mockResolvedValue({ ...ATENDIMENTO, quantidade_de_registros: 1 });
     await montar();
     /* ⚠️ Por /Excluir/, e não pelo `aria-label` "Excluir atendimento": o
        botão passou a ter TEXTO em 26/08/2026, no visual de
@@ -473,5 +481,167 @@ describe("o subgrupo no cabeçalho", () => {
     montar();
 
     expect(await screen.findByText("Cível")).toBeInTheDocument();
+  });
+});
+
+describe("linha do tempo, 20 por vez", () => {
+  /** Uma página da rota dos registros, em ordem de escrita. */
+  function pagina(textos: string[], anteriores: string | null, quantidade: number) {
+    return {
+      registros: textos.map((texto, i) => ({
+        registro_id: `a1#${texto}#${i}`, autor_id: "ana@x.com", autor_nome: "Ana Paula",
+        registrado_em: `2026-08-1${i}T09:00:00+00:00`, texto,
+      })),
+      anteriores,
+      quantidade,
+    };
+  }
+
+  function anterioresEmDuasPaginas() {
+    mocks.registrosDoAtendimento
+      .mockResolvedValueOnce(pagina(["r3", "r4"], "a1#cursor", 4))
+      .mockResolvedValueOnce(pagina(["r1", "r2"], null, 4));
+  }
+
+  it("pede os mais recentes, sem cursor", async () => {
+    await montar();
+    await waitFor(() => expect(mocks.registrosDoAtendimento).toHaveBeenCalledWith("s1", "a1", ""));
+  });
+
+  it("🔴 'Ver registros anteriores' traz a página de trás e a põe EM CIMA, em ordem de escrita", async () => {
+    anterioresEmDuasPaginas();
+    await montar();
+    expect(await screen.findByText("Mostrando os 2 mais recentes de 4 registros")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Ver registros anteriores" }));
+
+    expect(await screen.findByText("Todos os 4 registros")).toBeInTheDocument();
+    expect(mocks.registrosDoAtendimento).toHaveBeenLastCalledWith("s1", "a1", "a1#cursor");
+    expect(screen.getAllByText(/^r[1-4]$/).map((t) => t.textContent)).toEqual(["r1", "r2", "r3", "r4"]);
+    expect(screen.queryByRole("button", { name: "Ver registros anteriores" })).not.toBeInTheDocument();
+  });
+
+  it("sem anteriores, não oferece o botão -- e a frase diz que são todos", async () => {
+    await montar();
+    expect(await screen.findByText("Todos os 2 registros")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver registros anteriores" })).not.toBeInTheDocument();
+  });
+
+  it("o botão é o de contorno, como no desenho aprovado", async () => {
+    anterioresEmDuasPaginas();
+    await montar();
+    expect(await screen.findByRole("button", { name: "Ver registros anteriores" })).toHaveAttribute(
+      "data-variante",
+      "ghost",
+    );
+  });
+
+  it("enquanto os anteriores chegam, o botão diz 'Carregando…' e fica travado", async () => {
+    let entregar: (valor: unknown) => void = () => {};
+    mocks.registrosDoAtendimento
+      .mockResolvedValueOnce(pagina(["r3", "r4"], "a1#cursor", 4))
+      .mockReturnValueOnce(new Promise((resolve) => { entregar = resolve; }));
+    await montar();
+    await userEvent.click(await screen.findByRole("button", { name: "Ver registros anteriores" }));
+
+    expect(await screen.findByRole("button", { name: "Carregando…" })).toBeDisabled();
+    entregar(pagina(["r1", "r2"], null, 4));
+    expect(await screen.findByText("Todos os 4 registros")).toBeInTheDocument();
+  });
+
+  it("🔴 se os anteriores falham, avisa -- e a linha do tempo fica", async () => {
+    mocks.registrosDoAtendimento
+      .mockResolvedValueOnce(pagina(["r3", "r4"], "a1#cursor", 4))
+      .mockRejectedValueOnce(new Error("caiu"));
+    await montar();
+    await userEvent.click(await screen.findByRole("button", { name: "Ver registros anteriores" }));
+
+    expect(await screen.findByText("Não foi possível carregar os registros anteriores.")).toBeInTheDocument();
+    expect(screen.getByText("r3")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver registros anteriores" })).toBeEnabled();
+  });
+
+  it("🔴 carrega À PARTE: o cabeçalho e o campo de escrever não esperam os registros", async () => {
+    mocks.registrosDoAtendimento.mockReturnValue(new Promise(() => {}));
+    await montar();
+    expect(screen.getByLabelText("Novo registro do atendimento")).toBeInTheDocument();
+    expect(screen.queryByText("Primeiro contato")).not.toBeInTheDocument();
+  });
+
+  it("erro nos registros não derruba a tela: diz o que houve e tenta de novo", async () => {
+    mocks.registrosDoAtendimento.mockRejectedValueOnce(new Error("caiu"));
+    await montar();
+    expect(await screen.findByText("Não foi possível carregar os registros.")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+    expect(await screen.findByText("Primeiro contato")).toBeInTheDocument();
+  });
+
+  it("🔴 os registros que ainda vêm DENTRO do atendimento não aparecem", async () => {
+    /* A lista sai da resposta no passo 4: a tela que ainda a lesse mudaria
+       sozinha quando ela saísse. */
+    mocks.detalhesAtendimento.mockResolvedValue({
+      ...ATENDIMENTO,
+      registros: [{ autor_id: "ana@x.com", autor_nome: "Ana Paula",
+                    registrado_em: "2026-08-01T09:00:00+00:00", texto: "Da lista antiga" }],
+    });
+    await montar();
+    await screen.findByText("Primeiro contato");
+    expect(screen.queryByText("Da lista antiga")).not.toBeInTheDocument();
+  });
+
+  it("registrar recarrega a linha do tempo", async () => {
+    await montar();
+    await screen.findByText("Primeiro contato");
+    const antes = mocks.registrosDoAtendimento.mock.calls.length;
+
+    await userEvent.type(screen.getByLabelText("Novo registro do atendimento"), "Enviei a minuta");
+    await userEvent.click(screen.getByRole("button", { name: "Adicionar registro" }));
+
+    await waitFor(() => expect(mocks.registrosDoAtendimento.mock.calls.length).toBeGreaterThan(antes));
+  });
+
+  it("o que chega depois acende; o da primeira pintura, não", async () => {
+    anterioresEmDuasPaginas();
+    await montar();
+    await userEvent.click(await screen.findByRole("button", { name: "Ver registros anteriores" }));
+    await screen.findByText("r1");
+
+    const acesos = [...document.querySelectorAll("[data-chegou]")].map((el) => el.textContent).join(" ");
+    expect(acesos).toMatch(/r1.*r2/);
+    expect(acesos).not.toMatch(/r3|r4/);
+  });
+
+  it("🔴 os anteriores entram em cima SEM a vista pular", async () => {
+    /* jsdom não desenha: a posição de cada registro é simulada pela ordem na
+       tela, 100px cada. Dois registros novos em cima empurram o que se lia
+       200px para baixo, e a janela tem de rolar os mesmos 200px. */
+    const rolou = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    const posicao = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        return { top: [...document.querySelectorAll("[data-registro]")].indexOf(this) * 100 } as DOMRect;
+      });
+    try {
+      anterioresEmDuasPaginas();
+      await montar();
+      await userEvent.click(await screen.findByRole("button", { name: "Ver registros anteriores" }));
+      await screen.findByText("r1");
+
+      await waitFor(() => expect(rolou).toHaveBeenCalledWith(0, 200));
+    } finally {
+      rolou.mockRestore();
+      posicao.mockRestore();
+    }
+  });
+
+  it("🔴 a confirmação de excluir conta pela QUANTIDADE guardada, não pelos da tela", async () => {
+    mocks.detalhesAtendimento.mockResolvedValue({ ...ATENDIMENTO, quantidade_de_registros: 87 });
+    mocks.registrosDoAtendimento.mockResolvedValue(pagina(["r68", "r69"], "a1#cursor", 87));
+    await montar();
+    await screen.findByText("r69");
+
+    await userEvent.click(screen.getByRole("button", { name: /Excluir/ }));
+    expect(await screen.findByRole("dialog")).toHaveTextContent("todos os seus 87 registros serão removidos");
   });
 });

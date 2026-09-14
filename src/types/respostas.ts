@@ -29,6 +29,7 @@ import type {
   Notificacao,
   OpcaoProcesso,
   Processo,
+  RegistroDeAtendimento,
   Subgrupo,
   Tarefa,
 } from "./index";
@@ -86,6 +87,17 @@ export interface RespostaDeAtendimentos {
  * `AtendimentoResumido`. */
 export interface RespostaDeAtendimentosResumidos {
   atendimentos: AtendimentoResumido[];
+}
+
+/** Uma página da linha do tempo do atendimento.
+ *
+ * `registros` vem do mais antigo ao mais novo DENTRO da página, e as páginas
+ * andam para trás: `anteriores` é o cursor da página mais antiga seguinte,
+ * `null` quando não há mais. `quantidade` é o total do atendimento. */
+export interface RespostaDeRegistrosDoAtendimento {
+  registros: RegistroDeAtendimento[];
+  anteriores: string | null;
+  quantidade: number;
 }
 
 export interface RespostaDeHistorico {

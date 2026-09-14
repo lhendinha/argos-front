@@ -28,6 +28,11 @@ export const system = createSystem(defaultConfig, {
         from: { opacity: 0, transform: "translateY(6px)" },
         to: { opacity: 1, transform: "none" },
       },
+      /* O registro que acabou de entrar na linha do tempo do atendimento. */
+      "registro-chegou": {
+        from: { background: cores.brandTint },
+        to: { background: cores.canvas },
+      },
     },
 
     tokens: {

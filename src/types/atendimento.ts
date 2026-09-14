@@ -11,6 +11,10 @@ import type { STATUS_DE_ATENDIMENTO } from "../constants/atendimento";
  * cliente, e reescrever o passado é justamente o que ele não pode
  * permitir -- o servidor não tem rota pra isso. */
 export interface RegistroDeAtendimento {
+  /** A chave do registro na tabela de registros (atendimento, instante e desempate).
+   *
+   * ⚠️ Ausente no registro que ainda mora dentro do atendimento, até a migração. */
+  registro_id?: string;
   autor_id: string;
   /** Apelido de quem escreveu -- derivado, o servidor resolve pra o que está
    * devolvendo (`atendimentos_router._serializar`).
@@ -56,9 +60,16 @@ export interface Atendimento {
   responsaveis?: string[];
   responsaveis_nomes?: string[];
   processo_numero?: string | null;
-  /** A listagem devolve o atendimento inteiro, registros inclusos -- é de
-   * onde sai a prévia do último registro em cada linha. */
-  registros: RegistroDeAtendimento[];
+  /** O último registro: a prévia de cada linha da lista.
+   *
+   * 🔴 A linha do tempo NÃO vem no atendimento: vem de `registrosDoAtendimento`,
+   * 20 por vez (regra 9 da seção 0). O item do atendimento tem teto de 400 KB
+   * no banco, e guardar todos os registros nele travava o atendimento longo.
+   *
+   * ⚠️ Opcional porque nem toda rota o devolve (os resumos, o vínculo da tarefa). */
+  ultimo_registro?: RegistroDeAtendimento | null;
+  /** Quantos registros o atendimento tem -- o que a confirmação de excluir diz. */
+  quantidade_de_registros?: number;
 }
 
 /** O mínimo pra rotular uma tarefa vinculada: quem é o atendimento e qual o

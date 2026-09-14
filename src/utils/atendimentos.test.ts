@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { STATUS_EM_ANDAMENTO, STATUS_FECHADO } from "../constants";
-import { camposAlteradosDoAtendimento, ehStatusDeAtendimento } from "./atendimentos";
+import {
+  camposAlteradosDoAtendimento,
+  chaveDoRegistro,
+  contagemDaLinhaDoTempo,
+  ehStatusDeAtendimento,
+} from "./atendimentos";
 
 /** O atendimento como está gravado. */
 const GRAVADO = {
@@ -93,5 +98,37 @@ describe("camposAlteradosDoAtendimento", () => {
         camposAlteradosDoAtendimento(GRAVADO, { ...GRAVADO, status: "Arquivado" }),
       ).toEqual({});
     });
+  });
+});
+
+describe("chaveDoRegistro", () => {
+  const registro = { autor_id: "ana@x.test", registrado_em: "2026-09-14T10:00:00+00:00", texto: "a" };
+
+  it("usa o registro_id quando o registro mora na tabela", () => {
+    expect(chaveDoRegistro({ ...registro, registro_id: "at1#2026-09-14T10:00:00+00:00#ab12" })).toBe(
+      "at1#2026-09-14T10:00:00+00:00#ab12",
+    );
+  });
+
+  it("sem registro_id (ainda dentro do atendimento), cai no instante e no autor", () => {
+    expect(chaveDoRegistro(registro)).toBe("2026-09-14T10:00:00+00:00#ana@x.test");
+  });
+
+  it("duas pessoas no mesmo instante dão chaves diferentes", () => {
+    expect(chaveDoRegistro(registro)).not.toBe(chaveDoRegistro({ ...registro, autor_id: "joao@x.test" }));
+  });
+});
+
+describe("contagemDaLinhaDoTempo", () => {
+  it("com registros antes dos da tela, diz quantos mostra de quantos existem", () => {
+    expect(contagemDaLinhaDoTempo(20, 87)).toBe("Mostrando os 20 mais recentes de 87 registros");
+  });
+
+  it("com todos na tela, a frase muda", () => {
+    expect(contagemDaLinhaDoTempo(87, 87)).toBe("Todos os 87 registros");
+  });
+
+  it("com um só, vai no singular", () => {
+    expect(contagemDaLinhaDoTempo(1, 1)).toBe("1 registro");
   });
 });

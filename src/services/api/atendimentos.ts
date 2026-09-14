@@ -4,6 +4,7 @@ import type {
   OpcoesListarAtendimentos,
   ResumoDeAtendimento,
 } from "../../types";
+import type { RespostaDeRegistrosDoAtendimento } from "../../types/respostas";
 
 /** `GET /atendimentos`, escopado aos subgrupos que a pessoa enxerga.
  *
@@ -50,6 +51,20 @@ export function resumosDeAtendimentos(pares: { subgrupoId: string; atendimentoId
 
 export function detalhesAtendimento(subgrupoId: string, atendimentoId: string) {
   return chamar(`/subgrupos/${subgrupoId}/atendimentos/${atendimentoId}`);
+}
+
+/** Uma página da linha do tempo: os 20 registros mais recentes, ou os 20
+ * antes do cursor `antes`.
+ *
+ * ⚠️ O cursor é o `anteriores` da página anterior, devolvido como veio; vazio
+ * não vai na URL. O servidor recusa com 400 o cursor de outro atendimento.
+ *
+ * ➡️ `atendimentos.test.ts`, "a linha do tempo do atendimento". */
+export function registrosDoAtendimento(subgrupoId: string, atendimentoId: string, antes?: string) {
+  return chamar<RespostaDeRegistrosDoAtendimento>(
+    `/subgrupos/${subgrupoId}/atendimentos/${atendimentoId}/registros`,
+    { query: { antes: antes || undefined } },
+  );
 }
 
 export function criarAtendimento(dados: {

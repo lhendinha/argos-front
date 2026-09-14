@@ -40,6 +40,12 @@ export const qk = {
   ) => ["atendimentos", params] as const,
   atendimento: (subgrupoId: string, atendimentoId: string) =>
     ["atendimentos", "detalhe", subgrupoId, atendimentoId] as const,
+  /** A linha do tempo de um atendimento, página a página.
+   *
+   * ⚠️ Sob o prefixo "atendimentos": registrar invalida o prefixo, e a linha
+   * do tempo recarrega junto com a lista e o cabeçalho. */
+  registrosDoAtendimento: (subgrupoId: string, atendimentoId: string) =>
+    ["atendimentos", "registros", subgrupoId, atendimentoId] as const,
   configuracoesDoGrupo: () => ["configuracoes-do-grupo"] as const,
   /** ⚠️ Sem parâmetro, como `configuracoesDoGrupo`: o grupo vem do token,
    * então só existe UMA resposta por sessão. */

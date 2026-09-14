@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("./client", () => mocks);
 
-import { listarAtendimentos } from "./atendimentos";
+import { listarAtendimentos, registrosDoAtendimento } from "./atendimentos";
 
 /** O que sai no fio, para a listagem de atendimentos.
  *
@@ -37,5 +37,18 @@ describe("os filtros que chegam ao servidor", () => {
        sabe omitir. */
     await listarAtendimentos({ status: "x" });
     expect(queryEnviada().subgrupo_id).toBeUndefined();
+  });
+});
+
+describe("a linha do tempo do atendimento", () => {
+  it("🔴 pede a rota dos registros do atendimento, com o cursor em antes", async () => {
+    await registrosDoAtendimento("sg-1", "at-1", "at-1#2026-09-14T10:00:00+00:00#ab12");
+    expect(mocks.chamar.mock.calls[0][0]).toBe("/subgrupos/sg-1/atendimentos/at-1/registros");
+    expect(queryEnviada().antes).toBe("at-1#2026-09-14T10:00:00+00:00#ab12");
+  });
+
+  it("a primeira página vai sem cursor -- e não como string vazia", async () => {
+    await registrosDoAtendimento("sg-1", "at-1", "");
+    expect(queryEnviada().antes).toBeUndefined();
   });
 });
