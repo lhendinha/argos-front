@@ -10,6 +10,7 @@ import {
   lerFluxoDeCaixa,
   listarAFaturar,
   listarAFaturarDoCliente,
+  listarNaoCobradas,
   listarFaturas,
   pagarFatura,
 } from "./faturas";
@@ -32,6 +33,13 @@ describe("as rotas de fatura", () => {
     expect(chamar).toHaveBeenCalledWith("/faturas/a-faturar", {
       query: { pagina: "3", tamanho_pagina: "20" },
     });
+  });
+
+  it("as não cobradas mandam a página, a primeira por padrão", async () => {
+    await listarNaoCobradas();
+    expect(chamar).toHaveBeenCalledWith("/faturas/nao-cobradas", { query: { pagina: "1", tamanho_pagina: undefined } });
+    await listarNaoCobradas({ pagina: 2, tamanhoPagina: 20 });
+    expect(chamar).toHaveBeenLastCalledWith("/faturas/nao-cobradas", { query: { pagina: "2", tamanho_pagina: "20" } });
   });
 
   it("os lançamentos de um cliente vão pela rota DELE", async () => {

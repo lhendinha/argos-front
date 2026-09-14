@@ -20,6 +20,7 @@ import {
 import {
   NATUREZA_ENTRADA,
   SITUACAO_EFETIVADO,
+  TIPO_SAIDA,
   TIPO_TRANSFERENCIA,
 } from "../../constants";
 import { useToast } from "../../contexts/ToastContext";
@@ -32,13 +33,16 @@ import {
   efetivarLancamento,
   excluirLancamento,
   lerCatalogoFinanceiro,
+  naoCobrarLancamento,
   papelAtende,
   reabrirLancamento,
+  voltarACobrarLancamento,
 } from "../../services";
 import { ApiError } from "../../services/api/client";
 import { invalidarCatalogoFinanceiro, toastErroMutation } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
-import { coresDaSituacao } from "../../theme/lancamento";
+import { CORES_DO_NAO_COBRAR, coresDaSituacao } from "../../theme/lancamento";
+import { formatarData } from "../../utils";
 import { ROTULO_DA_SITUACAO } from "../FinanceiroPage/constants";
 import type { CatalogoFinanceiro, Cliente, EscopoDaSerie, Lancamento } from "../../types";
 import type { CamposDoLancamento } from "../../types/requisicoes";
@@ -170,6 +174,37 @@ export default function LancamentoDetalhePage() {
     onError: (err) => toastErroMutation(toast, err, "Não foi possível desfazer a baixa."),
   });
 
+  /** 🔴 "Não cobrar" e "Voltar a cobrar" se desfazem pelo AVISO, o padrão do sistema: o toast traz o Desfazer, que é a
+   * ação contrária. Os dois derrubam "a faturar" e as não cobradas junto com o detalhe e a lista. */
+  function releCobranca() {
+    queryClient.invalidateQueries({ queryKey: qk.lancamento(lancamentoId) });
+    queryClient.invalidateQueries({ queryKey: qk.aFaturar() });
+    queryClient.invalidateQueries({ queryKey: qk.naoCobradas() });
+    queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
+  }
+
+  const naoCobrar = useMutation({
+    mutationFn: () => naoCobrarLancamento(lancamentoId),
+    onSuccess: () => {
+      releCobranca();
+      toast.sucesso(`${query.data?.descricao ?? "A despesa"} não será cobrada.`, {
+        onDesfazer: () => voltarACobrar.mutate(),
+      });
+    },
+    onError: (err) => toastErroMutation(toast, err, "Não foi possível tirar a despesa da cobrança."),
+  });
+
+  const voltarACobrar = useMutation({
+    mutationFn: () => voltarACobrarLancamento(lancamentoId),
+    onSuccess: () => {
+      releCobranca();
+      toast.sucesso(`${query.data?.descricao ?? "A despesa"} voltou para "A faturar".`, {
+        onDesfazer: () => naoCobrar.mutate(),
+      });
+    },
+    onError: (err) => toastErroMutation(toast, err, "Não foi possível voltar a cobrar a despesa."),
+  });
+
   const excluir = useMutation({
     mutationFn: () => excluirLancamento(lancamentoId, escopo),
     onSuccess: (resposta: { removidos?: number }) => {
@@ -230,6 +265,9 @@ export default function LancamentoDetalhePage() {
   const podeExcluir = papelAtende("admin") && !emFatura;
   const podeDarBaixa = !eTransferencia && !efetivado;
   const podeDesfazer = !eTransferencia && efetivado && !emFatura;
+  /** A regra do servidor (`impedimento_para_nao_cobrar` e o 409 da fatura): só a despesa de cliente fora de fatura. */
+  const podeNaoCobrar = lancamento.tipo === TIPO_SAIDA && Boolean(lancamento.cliente_id) && !emFatura;
+  const naoCobrada = Boolean(lancamento.nao_cobrar_em);
 
   /** O motivo de a tela não oferecer o que a pessoa espera. Vazio quando não
    * há motivo -- e aí o subtítulo não aparece. */
@@ -280,6 +318,15 @@ export default function LancamentoDetalhePage() {
             {Boolean(lancamento.recorrencia_id) && !lancamento.parcela && (
               <EtiquetaDeMetadado>Faz parte de uma série</EtiquetaDeMetadado>
             )}
+            {naoCobrada && (
+              <>
+                <Etiqueta cores={CORES_DO_NAO_COBRAR}>Não cobrar</Etiqueta>
+                <Text fontSize="12px" color="fg.subtle">
+                  Marcada por {lancamento.nao_cobrar_por_nome || lancamento.nao_cobrar_por} em{" "}
+                  {formatarData(lancamento.nao_cobrar_em)}: fora de "A faturar".
+                </Text>
+              </>
+            )}
             {/* O impedimento explica a ausência de um botão, e por isso mora
                 junto das etiquetas de estado -- não é subtítulo da tela. */}
             {impedimento && (
@@ -314,6 +361,17 @@ export default function LancamentoDetalhePage() {
           {podeDesfazer && (
             <Botao variante="ghost" onClick={() => reabrir.mutate()} disabled={reabrir.isPending}>
               Desfazer baixa
+            </Botao>
+          )}
+          {/* Um dos dois, nunca os dois -- como "Marcar como pago" e "Desfazer baixa". */}
+          {podeNaoCobrar && naoCobrada && (
+            <Botao variante="ghost" onClick={() => voltarACobrar.mutate()} disabled={voltarACobrar.isPending}>
+              Voltar a cobrar
+            </Botao>
+          )}
+          {podeNaoCobrar && !naoCobrada && (
+            <Botao variante="ghost" onClick={() => naoCobrar.mutate()} disabled={naoCobrar.isPending}>
+              Não cobrar
             </Botao>
           )}
           <Botao type="submit" form="form-do-lancamento" disabled={salvar.isPending}>

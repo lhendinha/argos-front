@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   atualizarLancamento: vi.fn(),
   efetivarLancamento: vi.fn(),
   reabrirLancamento: vi.fn(),
+  naoCobrarLancamento: vi.fn(),
+  voltarACobrarLancamento: vi.fn(),
   excluirLancamento: vi.fn(),
   lerCatalogoFinanceiro: vi.fn(),
   detalheCliente: vi.fn(),
@@ -108,6 +110,9 @@ beforeEach(() => {
   mocks.atualizarLancamento.mockResolvedValue({ lancamento_id: "l1", atualizados: 1 });
   mocks.efetivarLancamento.mockResolvedValue({ lancamento_id: "l1" });
   mocks.reabrirLancamento.mockResolvedValue({ lancamento_id: "l1" });
+  mocks.naoCobrarLancamento.mockReset();
+  mocks.naoCobrarLancamento.mockResolvedValue({ lancamento_id: "l1" });
+  mocks.voltarACobrarLancamento.mockResolvedValue({ lancamento_id: "l1" });
   mocks.excluirLancamento.mockResolvedValue({ lancamento_id: "l1", removidos: 1 });
   mocks.lerCatalogoFinanceiro.mockResolvedValue(CATALOGO);
   mocks.detalheCliente.mockResolvedValue({ cliente_id: "c1", nome: "Construtora Alfa" });
@@ -709,5 +714,66 @@ describe("voltar", () => {
     await carregada();
     await userEvent.click(screen.getByRole("button", { name: /Voltar/ }));
     await waitFor(() => expect(url()).toContain("/financeiro"));
+  });
+});
+
+describe("não cobrar", () => {
+  /** 🔴 A regra é a do servidor: só a despesa de cliente, e fora de fatura. */
+  const DESPESA_DE_CLIENTE = {
+    ...LANCAMENTO, tipo: "saida", natureza: "saida", descricao: "Diligência do oficial",
+    cliente_id: "c1", contraparte: "", parcela: "", situacao: "efetivado", data_efetivacao: "2026-09-03",
+  };
+
+  it("🔴 na despesa de cliente fora de fatura, aparece 'Não cobrar'", async () => {
+    mocks.detalheLancamento.mockResolvedValue({ ...DESPESA_DE_CLIENTE });
+    montar();
+    await carregada("Diligência do oficial");
+    expect(screen.getByRole("button", { name: "Não cobrar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Voltar a cobrar" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["no honorário", { tipo: "honorario", natureza: "entrada" }],
+    ["na despesa sem cliente", { cliente_id: "", contraparte: "Fornecedor" }],
+    ["na despesa que está numa fatura", { fatura_id: "f1" }],
+  ])("não aparece %s -- o par negativo", async (_caso, extra) => {
+    mocks.detalheLancamento.mockResolvedValue({ ...DESPESA_DE_CLIENTE, ...extra });
+    montar();
+    await carregada("Diligência do oficial");
+    expect(screen.queryByRole("button", { name: "Não cobrar" })).not.toBeInTheDocument();
+  });
+
+  it("🔴 marcada: a etiqueta com quem marcou e quando, e o botão vira 'Voltar a cobrar'", async () => {
+    mocks.detalheLancamento.mockResolvedValue({
+      ...DESPESA_DE_CLIENTE, nao_cobrar_em: "2026-09-05", nao_cobrar_por: "ana@x.com", nao_cobrar_por_nome: "chefe",
+    });
+    montar();
+    await carregada("Diligência do oficial");
+    expect(screen.getByText("Não cobrar")).toBeInTheDocument();
+    expect(screen.getByText('Marcada por chefe em 05/09/2026: fora de "A faturar".')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Voltar a cobrar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Não cobrar" })).not.toBeInTheDocument();
+  });
+
+  it("clicar chama o servidor, e o aviso traz o Desfazer, que volta a cobrar", async () => {
+    mocks.detalheLancamento.mockResolvedValue({ ...DESPESA_DE_CLIENTE });
+    montar();
+    await carregada("Diligência do oficial");
+    await userEvent.click(screen.getByRole("button", { name: "Não cobrar" }));
+
+    await waitFor(() => expect(mocks.naoCobrarLancamento).toHaveBeenCalledWith("l1"));
+    expect(await screen.findByText("Diligência do oficial não será cobrada.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Desfazer" }));
+    await waitFor(() => expect(mocks.voltarACobrarLancamento).toHaveBeenCalledWith("l1"));
+  });
+
+  it("o servidor recusa -- a tela continua de pé e avisa", async () => {
+    mocks.detalheLancamento.mockResolvedValue({ ...DESPESA_DE_CLIENTE });
+    mocks.naoCobrarLancamento.mockRejectedValue(new Error("rede"));
+    montar();
+    await carregada("Diligência do oficial");
+    await userEvent.click(screen.getByRole("button", { name: "Não cobrar" }));
+    expect(await screen.findByText(/Não foi possível tirar a despesa da cobrança/)).toBeInTheDocument();
+    expect(await carregada("Diligência do oficial")).toBeInTheDocument();
   });
 });

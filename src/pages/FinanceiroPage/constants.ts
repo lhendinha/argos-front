@@ -237,6 +237,7 @@ export const LARGURA_MAXIMA_DA_DESCRICAO = "330px";
  */
 export const SECOES_DE_FATURAS = [
   { id: "a-faturar", rotulo: "A faturar" },
+  { id: "nao-cobradas", rotulo: "Não cobradas" },
   { id: "emitidas", rotulo: "Emitidas" },
 ] as const;
 
@@ -269,11 +270,23 @@ export const COLUNAS_DO_DOCUMENTO = [
 
 /** As colunas da prévia da emissão. A primeira é a caixa de marcar, e o
  * cabeçalho dela é vazio -- como o `<th style="width:36px">` do artefato. */
+/** ⚠️ "Data", e não "Vencimento": a despesa mostra quando o escritório a ADIANTOU, e o honorário, quando vence. A última
+ * coluna, sem nome, é a do "Não cobrar" -- só a despesa tem o botão. */
 export const COLUNAS_DA_EMISSAO = [
   "",
   "Lançamento",
-  "Vencimento",
+  "Data",
   { rotulo: "Valor", aDireita: true },
+  "",
+] as const;
+
+/** A tabela de "Não cobradas", como no artefato: a despesa (com cliente e quem marcou), quando foi adiantada, o valor
+ * e o "Voltar a cobrar". */
+export const COLUNAS_NAO_COBRADAS = [
+  "Despesa",
+  "Adiantada em",
+  { rotulo: "Valor", aDireita: true },
+  "",
 ] as const;
 
 /** A janela do "A pagar" da Área de trabalho, em dias.

@@ -29,9 +29,11 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    trouxe `EstadoDoAlvo`, a união dos estados do alvo de uma notificação. O
    `PLANO_LIDO_NO_HISTORICO` trouxe três: `LeituraPelaSequencia` e
    `LeituraPelaMovimentacao`, os dois jeitos de marcar um envio como lido, e
-   `AlvoDaLeitura`, a união deles no corpo da rota. O número é o guarda: tipo
-   novo sem pensar não passa. */
-const TIPOS_NO_PACOTE = 130;
+   `AlvoDaLeitura`, a união deles no corpo da rota. O passo 3.4 do
+   `PLANO_LER_SO_O_NECESSARIO` trouxe `NaoCobrada`, a despesa marcada para
+   "não cobrar" como a lista a recebe. O número é o guarda: tipo novo sem
+   pensar não passa. */
+const TIPOS_NO_PACOTE = 131;
 
 const dominios = readdirSync(PASTA)
   .filter((a) => a.endsWith(".ts") && !FORA_DO_INDICE.has(a))

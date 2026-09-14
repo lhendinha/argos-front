@@ -39,6 +39,13 @@ export function coresDaSituacao(situacao: string) {
   return CORES_DA_SITUACAO[situacao] ?? COR_DE_SITUACAO_PADRAO;
 }
 
+/** A etiqueta "Não cobrar": cinza, como a `etiqueta cinza` do artefato. É o que está FORA da cobrança -- nem a fila de
+ * trabalho (âmbar) nem o resolvido (verde). */
+export const CORES_DO_NAO_COBRAR: Pick<ButtonProps, "bg" | "color"> = {
+  bg: "border.subtle",
+  color: "fg.muted",
+};
+
 /** A cor do VALOR na linha: verde entra, vermelho sai.
  *
  * 🔴 É a leitura do extrato, e a mesma da natureza da categoria. A

@@ -18,10 +18,16 @@ import {
 import { NATUREZA_SAIDA } from "../../../../constants";
 import { useToast } from "../../../../contexts/ToastContext";
 import { useGuardaDeDescarte } from "../../../../hooks/useGuardaDeDescarte";
-import { emitirFatura, listarAFaturarDoCliente } from "../../../../services";
+import {
+  emitirFatura,
+  listarAFaturarDoCliente,
+  naoCobrarLancamento,
+  voltarACobrarLancamento,
+} from "../../../../services";
 import { ApiError } from "../../../../services/api/client";
 import { invalidarCatalogoFinanceiro } from "../../../../services/queryClient";
 import { qk } from "../../../../services/queryKeys";
+import type { Lancamento } from "../../../../types";
 import type { RespostaAFaturarDoCliente } from "../../../../types/respostas";
 import { contar, formatarCentavos, formatarData, hojeISO } from "../../../../utils";
 import { COLUNAS_DA_EMISSAO } from "../../constants";
@@ -37,6 +43,10 @@ import type { ModalDeEmissaoProps } from "./types";
  * 🔴 **O total é recalculado ao desmarcar**, e não é enfeite: a fatura é um
  * documento que o cliente recebe, e o número dela tem de ser o do que
  * entrou. Quem emite decide o que fica de fora desta vez.
+ *
+ * 🔴 **"Desmarcar" e "Não cobrar" são coisas diferentes, e o texto diz.** Desmarcar deixa para a próxima fatura; "Não
+ * cobrar" tira a DESPESA de vez (o honorário não tem o botão: em aberto, ele já fica de fora desmarcando). Ao clicar,
+ * ela sai da lista na hora, e o aviso traz o Desfazer.
  *
  * ⚠️ **Guarda os DESMARCADOS, e não os marcados.** Os lançamentos chegam
  * depois de o modal abrir: guardando os marcados, "tudo marcado ao abrir"
@@ -112,6 +122,34 @@ export default function ModalDeEmissao({ cliente, onFechar, onEmitida }: ModalDe
       setErro(err instanceof ApiError ? err.message : "Não foi possível emitir a fatura."),
   });
 
+  /** Tira da lista em cache e derruba o que depende da marca: "a faturar", as não cobradas e os lançamentos. */
+  function aposMudarACobranca(lancamentoId: string, sai: boolean) {
+    if (sai) {
+      queryClient.setQueryData<RespostaAFaturarDoCliente>(qk.aFaturarDoCliente(cliente.cliente_id), (atual) =>
+        atual && { ...atual, lancamentos: atual.lancamentos.filter((l) => l.lancamento_id !== lancamentoId) });
+    }
+    queryClient.invalidateQueries({ queryKey: qk.aFaturar() });
+    queryClient.invalidateQueries({ queryKey: qk.naoCobradas() });
+    queryClient.invalidateQueries({ queryKey: ["lancamentos"] });
+  }
+
+  const voltarACobrar = useMutation({
+    mutationFn: (l: Lancamento) => voltarACobrarLancamento(l.lancamento_id),
+    onSuccess: (_resposta, l) => aposMudarACobranca(l.lancamento_id, false),
+    onError: (err) =>
+      toast.erro(err instanceof ApiError ? err.message : "Não foi possível voltar a cobrar a despesa."),
+  });
+
+  const naoCobrar = useMutation({
+    mutationFn: (l: Lancamento) => naoCobrarLancamento(l.lancamento_id),
+    onSuccess: (_resposta, l) => {
+      aposMudarACobranca(l.lancamento_id, true);
+      toast.sucesso(`${l.descricao} não será cobrada.`, { onDesfazer: () => voltarACobrar.mutate(l) });
+    },
+    onError: (err) =>
+      setErro(err instanceof ApiError ? err.message : "Não foi possível tirar a despesa da cobrança."),
+  });
+
   function alternar(lancamentoId: string) {
     setDesmarcados((atuais) =>
       atuais.includes(lancamentoId)
@@ -176,15 +214,34 @@ export default function ModalDeEmissao({ cliente, onFechar, onEmitida }: ModalDe
                     </Text>
                   )}
                 </Table.Cell>
-                <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">
-                  <Text fontSize="12.5px" fontFamily="mono" whiteSpace="nowrap">
-                    {formatarData(l.data_vencimento)}
+                {/* ⚠️ `whiteSpace="normal"` NA CÉLULA, e não no texto: a `Tabela` põe nowrap em toda célula. Medido
+                    no Chrome, com a coluna do "Não cobrar" a tabela dava 723px numa caixa de 706 e cortava o botão;
+                    é a data que pode quebrar ("adiantada em" em cima, a data embaixo). */}
+                <Table.Cell p="13px 14px" whiteSpace="normal" borderBottomWidth="1px" borderBottomColor="border.subtle">
+                  {/* ⚠️ "adiantada em" na despesa paga: é quando o ESCRITÓRIO pagou -- "paga em" se lia como pago
+                      pelo cliente. */}
+                  <Text fontSize="12.5px">
+                    {eDespesa && l.data_efetivacao
+                      ? `adiantada em ${formatarData(l.data_efetivacao)}`
+                      : `vence ${formatarData(l.data_vencimento)}`}
                   </Text>
                 </Table.Cell>
                 <Table.Cell p="13px 14px" textAlign="right" borderBottomWidth="1px" borderBottomColor="border.subtle">
                   <Text fontSize="13px" fontFamily="mono" whiteSpace="nowrap">
                     R$ {formatarCentavos(l.valor_centavos)}
                   </Text>
+                </Table.Cell>
+                <Table.Cell p="13px 14px" w="1%" whiteSpace="nowrap" textAlign="right" borderBottomWidth="1px" borderBottomColor="border.subtle">
+                  {eDespesa && (
+                    <Botao
+                      variante="ghost"
+                      aria-label={`Não cobrar ${l.descricao}`}
+                      disabled={naoCobrar.isPending}
+                      onClick={() => naoCobrar.mutate(l)}
+                    >
+                      Não cobrar
+                    </Botao>
+                  )}
                 </Table.Cell>
               </Table.Row>
             );
@@ -222,8 +279,9 @@ export default function ModalDeEmissao({ cliente, onFechar, onEmitida }: ModalDe
     >
       <form id="form-da-fatura" onSubmit={handleSubmit}>
         <Text fontSize="13px" color="fg.subtle" mb="14px">
-          A fatura junta os lançamentos abaixo num documento só, com número
-          sequencial do escritório. Desmarque o que não entra desta vez.
+          A fatura junta os lançamentos abaixo num documento só, com número sequencial do escritório.{" "}
+          <Text as="strong" fontWeight="700">Desmarque</Text> o que fica para a próxima fatura; use{" "}
+          <Text as="strong" fontWeight="700">Não cobrar</Text> para tirar uma despesa de vez.
         </Text>
 
         {previa}

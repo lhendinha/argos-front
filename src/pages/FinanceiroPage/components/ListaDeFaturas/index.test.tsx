@@ -6,6 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   listarAFaturar: vi.fn(),
   listarAFaturarDoCliente: vi.fn(),
+  listarNaoCobradas: vi.fn(),
+  naoCobrarLancamento: vi.fn(),
+  voltarACobrarLancamento: vi.fn(),
   listarFaturas: vi.fn(),
   listarClientes: vi.fn(),
   emitirFatura: vi.fn(),
@@ -51,6 +54,20 @@ const DO_CLIENTE = {
   ],
 };
 
+/** Uma despesa marcada para "não cobrar", como `GET /faturas/nao-cobradas` a devolve. */
+const NAO_COBRADAS = {
+  lancamentos: [
+    {
+      lancamento_id: "d9", descricao: "Diligência do oficial de justiça", cliente_id: "cli1",
+      cliente_nome: "Construtora Alfa", valor_centavos: 9_500, data_vencimento: "2026-09-02",
+      data_efetivacao: "2026-09-03", nao_cobrar_por: "ana@x.com", nao_cobrar_por_nome: "chefe",
+      nao_cobrar_em: "2026-09-05",
+    },
+  ],
+  total: 1,
+  total_paginas: 1,
+};
+
 const FATURAS = {
   faturas: [
     {
@@ -92,6 +109,7 @@ function montar(rota = "/financeiro?aba=faturas") {
       <Routes>
         <Route path="/financeiro" element={<ListaDeFaturas />} />
         <Route path="/financeiro/faturas/:id" element={<div>documento da fatura</div>} />
+        <Route path="/financeiro/lancamentos/:id" element={<div>detalhe do lançamento</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -104,6 +122,9 @@ beforeEach(() => {
   vi.setSystemTime(new Date(`${HOJE}T12:00:00`));
   mocks.listarAFaturar.mockResolvedValue(A_FATURAR);
   mocks.listarAFaturarDoCliente.mockResolvedValue(DO_CLIENTE);
+  mocks.listarNaoCobradas.mockResolvedValue(NAO_COBRADAS);
+  mocks.naoCobrarLancamento.mockResolvedValue({});
+  mocks.voltarACobrarLancamento.mockResolvedValue({});
   mocks.listarFaturas.mockResolvedValue(FATURAS);
   mocks.listarClientes.mockResolvedValue({
     clientes: [{ cliente_id: "cli1", nome: "Construtora Alfa" }],
@@ -329,5 +350,69 @@ describe("emitir", () => {
     mocks.listarAFaturar.mockResolvedValue({ clientes: [], total: 0, total_paginas: 0, total_centavos: 0 });
     montar();
     expect(await screen.findByText(/Nada a faturar/)).toBeInTheDocument();
+  });
+});
+
+describe("as não cobradas", () => {
+  /** 🔴 A terceira seção (artefato do "Não cobrar"): as despesas tiradas de "A faturar" de vez. O escritório já pagou
+   * por elas, e a contagem na pílula é o que não deixa esse dinheiro sumir de vista. */
+
+  it("🔴 a pílula mostra a CONTAGEM em qualquer seção", async () => {
+    montar();
+    expect(await screen.findByRole("button", { name: /Não cobradas.*1/ })).toBeInTheDocument();
+    expect(mocks.listarNaoCobradas).toHaveBeenCalledWith(expect.objectContaining({ pagina: 1 }));
+  });
+
+  it("sem nenhuma, a pílula não mostra número -- o par negativo", async () => {
+    mocks.listarNaoCobradas.mockResolvedValue({ lancamentos: [], total: 0, total_paginas: 0 });
+    montar();
+    await screen.findByText("Construtora Alfa");
+    await waitFor(() => expect(mocks.listarNaoCobradas).toHaveBeenCalled());
+    expect(screen.getByRole("button", { name: "Não cobradas" })).toBeInTheDocument();
+  });
+
+  it("⚠️ fora da seção, a pílula pede a PRIMEIRA página, mesmo com outra página no endereço", async () => {
+    montar("/financeiro?aba=faturas&pagina=2");
+    await waitFor(() => expect(mocks.listarNaoCobradas).toHaveBeenCalled());
+    expect(mocks.listarNaoCobradas).not.toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 }));
+  });
+
+  it("a seção mostra a despesa, o cliente, quem marcou e quando, a data em que foi adiantada e o valor", async () => {
+    montar("/financeiro?aba=faturas&secao=nao-cobradas");
+    expect(await screen.findByText("Diligência do oficial de justiça")).toBeInTheDocument();
+    expect(screen.getByText("Construtora Alfa · marcada por chefe em 05/09/2026")).toBeInTheDocument();
+    expect(screen.getByText("03/09/2026")).toBeInTheDocument();
+    expect(screen.getByText("R$ 95,00")).toBeInTheDocument();
+    expect(screen.getByText(/O escritório já pagou por elas/)).toBeInTheDocument();
+  });
+
+  it("pede a página do endereço quando está na seção", async () => {
+    montar("/financeiro?aba=faturas&secao=nao-cobradas&pagina=2");
+    await waitFor(() =>
+      expect(mocks.listarNaoCobradas).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 })),
+    );
+  });
+
+  it("clicar na linha abre o detalhe do lançamento", async () => {
+    montar("/financeiro?aba=faturas&secao=nao-cobradas");
+    await userEvent.click(await screen.findByText("Diligência do oficial de justiça"));
+    await waitFor(() => expect(url()).toBe("/financeiro/lancamentos/d9"));
+  });
+
+  it("🔴 'Voltar a cobrar' chama o servidor, NÃO abre o detalhe, e o aviso traz o Desfazer", async () => {
+    montar("/financeiro?aba=faturas&secao=nao-cobradas");
+    await userEvent.click(await screen.findByRole("button", { name: "Voltar a cobrar" }));
+
+    await waitFor(() => expect(mocks.voltarACobrarLancamento).toHaveBeenCalledWith("d9"));
+    expect(url()).toContain("secao=nao-cobradas");
+    expect(await screen.findByText('Diligência do oficial de justiça voltou para "A faturar".')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Desfazer" }));
+    await waitFor(() => expect(mocks.naoCobrarLancamento).toHaveBeenCalledWith("d9"));
+  });
+
+  it("sem nenhuma, a seção diz isso", async () => {
+    mocks.listarNaoCobradas.mockResolvedValue({ lancamentos: [], total: 0, total_paginas: 0 });
+    montar("/financeiro?aba=faturas&secao=nao-cobradas");
+    expect(await screen.findByText("Nenhuma despesa marcada como não cobrar.")).toBeInTheDocument();
   });
 });

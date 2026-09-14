@@ -15,6 +15,7 @@ import type {
   AtendimentoResumido,
   CentroDeCusto,
   ClienteAFaturar,
+  NaoCobrada,
   Fatura,
   Cliente,
   ColunaDoQuadro,
@@ -221,6 +222,12 @@ export interface RespostaDeMembroAdicionado extends RespostaDeMensagem {
 export interface RespostaAFaturar extends ContagemDaPagina {
   clientes: ClienteAFaturar[];
   total_centavos: number;
+}
+
+/** `GET /faturas/nao-cobradas` -- as despesas marcadas para "não cobrar", da marca mais recente para a mais
+ * antiga. ⚠️ `total` é a contagem da pílula. */
+export interface RespostaDeNaoCobradas extends ContagemDaPagina {
+  lancamentos: NaoCobrada[];
 }
 
 /** `GET /faturas/a-faturar/{cliente_id}` -- os lançamentos de um cliente que

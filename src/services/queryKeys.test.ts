@@ -76,6 +76,16 @@ describe("o prefixo de 'a faturar' alcança a página E o cliente aberto", () =>
   });
 });
 
+describe("o prefixo das não cobradas alcança a página", () => {
+  it("marcar e voltar a cobrar invalidam o prefixo, e a página (com a contagem da pílula) cai junto", () => {
+    expect(invalidaria(qk.naoCobradasPagina({ pagina: 2, tamanhoPagina: 20 }), qk.naoCobradas())).toBe(true);
+  });
+
+  it("⚠️ e não derruba 'a faturar' -- o par negativo", () => {
+    expect(invalidaria(qk.aFaturarPagina({ pagina: 1 }), qk.naoCobradas())).toBe(false);
+  });
+});
+
 describe("nenhuma invalidação usa chave de PÁGINA", () => {
   /**
    * ⚠️ O teste acima prova que o prefixo funciona; este prova que ele é
@@ -89,7 +99,7 @@ describe("nenhuma invalidação usa chave de PÁGINA", () => {
    */
   const PAGINADAS = [
     "opcoesProcesso", "clientes", "subgrupos", "processos", "historico", "atendimentos",
-    "aFaturarPagina", "aFaturarDoCliente",
+    "aFaturarPagina", "aFaturarDoCliente", "naoCobradasPagina",
   ];
 
   it("todo invalidateQueries usa prefixo, nunca a chave paginada", () => {

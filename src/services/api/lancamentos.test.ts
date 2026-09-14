@@ -14,6 +14,8 @@ import {
   atualizarLancamento,
   criarHonorario,
   efetivarLancamento,
+  naoCobrarLancamento,
+  voltarACobrarLancamento,
   excluirLancamento,
   listarLancamentos,
 } from "./lancamentos";
@@ -128,5 +130,14 @@ describe("efetivar e excluir", () => {
     await excluirLancamento("l1", "futuros");
     expect(opcoes().method).toBe("DELETE");
     expect(query().escopo).toBe("futuros");
+  });
+});
+
+describe("não cobrar", () => {
+  it("marcar e voltar a cobrar são POST na rota do lançamento, sem corpo", async () => {
+    await naoCobrarLancamento("l1");
+    expect(mocks.chamar).toHaveBeenCalledWith("/lancamentos/l1/nao-cobrar", { method: "POST" });
+    await voltarACobrarLancamento("l1");
+    expect(mocks.chamar).toHaveBeenLastCalledWith("/lancamentos/l1/voltar-a-cobrar", { method: "POST" });
   });
 });
