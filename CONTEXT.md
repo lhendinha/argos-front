@@ -71,6 +71,22 @@ Nenhuma edição de código é feita direto na `main`. O fluxo, sem exceção:
    comparar o nome do arquivo gerado pelo `yarn build` antes e depois é o que
    diz se alguém vai ver diferença.
 
+9. 🔴 **A lista pede só o que mostra; o detalhe do item carrega ao abrir**
+   (14/09/2026, decidido pelo usuário; desenho e medições no
+   `PLANO_LER_SO_O_NECESSARIO.md` da API, regra 8 do `CONTEXT.md` de lá). É o
+   padrão de toda tela nova; as que já existem entram pelo plano.
+
+   - A linha usa só os campos que desenha. O que só aparece ao abrir -- o
+     texto da movimentação, os registros do atendimento -- vem da rota do
+     item, com o estado de carregando dentro do modal ou da página.
+   - ⚠️ **O item da lista não preenche detalhe nem formulário de edição:** a
+     lista não traz tudo. Quem abre o item pede o item.
+   - ⚠️ **Detalhe pesado não se relê a cada volta à janela:** fica guardado
+     por alguns minutos, e as edições da própria pessoa invalidam na hora.
+   - ⚠️ **Ordem ao tirar um campo da lista:** a API ganha a rota do item, o
+     front passa a usá-la, e só então a API tira o campo. Na ordem inversa a
+     tela lê `undefined`.
+
 ⚠️ **O que a `main` recebe direto**: só documento (`CONTEXT.md`, `README.md`)
 que não altera código nem teste.
 
