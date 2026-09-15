@@ -47,7 +47,8 @@ export const GRUPO_DE_ABAS = "financeiro";
  *
  * ⚠️ A última é `""` de propósito: é a coluna das ações, que no artifact é
  * um `<th></th>` -- o cabeçalho existe para a contagem de colunas bater,
- * mas não tem nome. Mesma convenção de `COLUNAS_CLIENTES`.
+ * mas não tem nome. Mesma convenção de `colunasDeClientes`, que monta as
+ * colunas da tabela de Clientes conforme o filtro.
  */
 export const COLUNAS_DE_CATEGORIAS = ["Categoria", "Natureza", ""] as const;
 /** ⚠️ O saldo fica à ESQUERDA como todo o resto: a coluna vazia das ações,

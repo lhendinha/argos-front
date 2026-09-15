@@ -33,7 +33,7 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    `PLANO_LER_SO_O_NECESSARIO` trouxe `NaoCobrada`, a despesa marcada para
    "não cobrar" como a lista a recebe. O número é o guarda: tipo novo sem
    pensar não passa. */
-const TIPOS_NO_PACOTE = 131;
+const TIPOS_NO_PACOTE = 132;
 
 const dominios = readdirSync(PASTA)
   .filter((a) => a.endsWith(".ts") && !FORA_DO_INDICE.has(a))

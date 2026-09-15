@@ -119,7 +119,8 @@ export const qk = {
   naoLidosDoHistorico: () => ["historico", "nao-lidos"] as const,
   detalhesProcesso: (numeroProcesso: string) => ["detalhesProcesso", numeroProcesso] as const,
   detalheCliente: (clienteId: string) => ["cliente", clienteId] as const,
-  clientes: (params: { pagina?: number; tamanhoPagina?: number; busca?: string } = {}) => ["clientes", params] as const,
+  clientes: (params: { pagina?: number; tamanhoPagina?: number; busca?: string; estado?: string } = {}) =>
+    ["clientes", params] as const,
   opcoesProcesso: (tipo: "fase" | "situacao", params: { pagina?: number; tamanhoPagina?: number } = {}) =>
     ["opcoesProcesso", tipo, params] as const,
 

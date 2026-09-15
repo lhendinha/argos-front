@@ -1,26 +1,38 @@
-import { Flex, Heading, Input } from "@chakra-ui/react";
+import { Box, Flex, Heading, Input, Text } from "@chakra-ui/react";
 import { useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 
-import { Botao, Campo, CamposDeEndereco, Cartao, IconeLixeira } from "../../../../components";
+import { Botao, Campo, CamposDeEndereco, Cartao, Etiqueta, Faixa } from "../../../../components";
 import { useToast } from "../../../../contexts/ToastContext";
 import { atualizarCliente } from "../../../../services";
 import { toastErroMutation } from "../../../../services/queryClient";
-import { apenasDigitos, emailValido, mascararCep, mascararCpfCnpj, mascararTelefone } from "../../../../utils";
+import { apenasDigitos, emailValido, formatarDataDeInstante, mascararCep, mascararCpfCnpj, mascararTelefone } from "../../../../utils";
 import type { EnderecoDoCliente } from "../../../../types";
 import { TAMANHO_MAXIMO_DO_NOME_DE_CLIENTE } from "../../../../constants";
 import type { FormularioClienteProps } from "./types";
 
+/** Cinza de estado neutro, o mesmo da linha da listagem: "Arquivado" não é
+ * bom nem ruim, é um lugar onde o cliente está. */
+const CORES_DO_ARQUIVADO = {
+  bg: "border.subtle",
+  color: "fg.muted",
+  borderColor: "border",
+} as const;
+
 /** Cabeçalho + formulário de edição do cliente, como no artifact: o nome
  * como título, as ações à direita da mesma linha, e os campos num cartão.
  *
- * Excluir só aparece pra `admin` -- é a mesma régua do backend, que recusa
- * a exclusão abaixo disso. Mostrar um botão que a API vai negar é pior que
- * não mostrar.
+ * Arquivar e reativar só aparecem pra `manager`+ -- é a mesma régua do
+ * backend, que recusa abaixo disso. Mostrar um botão que a API vai negar é
+ * pior que não mostrar.
  *
  * E EDITAR só pra `manager`+, pela mesma razão: `PATCH /clientes` é
  * `manager`, e campos habilitados pra qualquer um dariam o 403 só depois de a
  * pessoa digitar tudo.
+ *
+ * ⚠️ O cliente ARQUIVADO continua editável -- decisão do usuário, e a API
+ * aceita o PATCH nele. O que muda na tela é o que ele é, não o que dá pra
+ * fazer: a etiqueta, a faixa e o botão que agora diz "Reativar".
  *
  * ⚠️ Campos em `readOnly`, não escondidos nem desabilitados: `GET /clientes`
  * é `user`, então quem não pode gravar ainda tem direito a VER o que está
@@ -38,7 +50,16 @@ import type { FormularioClienteProps } from "./types";
  * participando do formulário (o `disabled` não participava), então esconder
  * o botão não basta como guarda -- só como aviso.
  */
-export default function FormularioCliente({ cliente, podeEditar, podeExcluir, onSalvo, onRemover }: FormularioClienteProps) {
+export default function FormularioCliente({
+  cliente,
+  podeEditar,
+  podeArquivar,
+  arquivando,
+  reativando,
+  onSalvo,
+  onArquivar,
+  onReativar,
+}: FormularioClienteProps) {
   const [nome, setNome] = useState(cliente.nome);
   const [cpfCnpj, setCpfCnpj] = useState(mascararCpfCnpj(cliente.cpf_cnpj || ""));
   const [telefone, setTelefone] = useState(mascararTelefone(cliente.telefone || ""));
@@ -57,6 +78,7 @@ export default function FormularioCliente({ cliente, podeEditar, podeExcluir, on
   const toast = useToast();
 
   const emailInvalido = email.trim() !== "" && !emailValido(email);
+  const arquivado = Boolean(cliente.arquivado_em);
 
   const salvarMutation = useMutation({
     mutationFn: () =>
@@ -80,16 +102,32 @@ export default function FormularioCliente({ cliente, podeEditar, podeExcluir, on
   return (
     <form onSubmit={handleSubmit}>
       <Flex align="flex-start" justify="space-between" gap="16px" mb="18px">
-        <Heading as="h1" fontSize="23px" fontWeight="800" letterSpacing="-0.01em">
-          {cliente.nome}
-        </Heading>
-        <Flex gap="8px" flexShrink={0}>
-          {podeExcluir && (
-            <Botao variante="perigoContorno" onClick={onRemover}>
-              <IconeLixeira />
-              Excluir
-            </Botao>
+        <Box>
+          <Heading as="h1" fontSize="23px" fontWeight="800" letterSpacing="-0.01em">
+            {cliente.nome}
+          </Heading>
+          {/* Quem arquivou e quando ficam ao lado da etiqueta, como no
+              artefato: a etiqueta diz O QUE é, a linha diz de onde veio. */}
+          {arquivado && (
+            <Flex align="center" gap="8px" mt="6px">
+              <Etiqueta cores={CORES_DO_ARQUIVADO}>Arquivado</Etiqueta>
+              <Text fontSize="12.5px" color="fg.subtle">
+                {`Por ${cliente.arquivado_por ?? "—"} em ${formatarDataDeInstante(cliente.arquivado_em ?? "")}`}
+              </Text>
+            </Flex>
           )}
+        </Box>
+        <Flex gap="8px" flexShrink={0}>
+          {podeArquivar &&
+            (arquivado ? (
+              <Botao variante="ghost" disabled={reativando} onClick={onReativar}>
+                {reativando ? "Reativando…" : "Reativar"}
+              </Botao>
+            ) : (
+              <Botao variante="ghost" disabled={arquivando} onClick={onArquivar}>
+                {arquivando ? "Arquivando…" : "Arquivar"}
+              </Botao>
+            ))}
           {podeEditar && (
             <Botao
               type="submit"
@@ -100,6 +138,18 @@ export default function FormularioCliente({ cliente, podeEditar, podeExcluir, on
           )}
         </Flex>
       </Flex>
+
+      {/* A faixa explica o que "arquivado" significa AQUI: some da lista e
+          dos seletores, e o histórico continua com o nome dele. Sem ela, a
+          etiqueta sozinha deixa a pessoa adivinhando o que perdeu. */}
+      {arquivado && (
+        <Box mb="14px">
+          <Faixa tom="aviso" aEsquerda>
+            Cliente arquivado: fica fora da lista e dos seletores, e o histórico (faturas, lançamentos, atendimentos)
+            continua com o nome dele. Os dados continuam editáveis.
+          </Faixa>
+        </Box>
+      )}
 
       <Cartao>
         <Campo rotulo="Nome" para="nome-cliente-edicao" obrigatorio>

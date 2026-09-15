@@ -8,11 +8,13 @@ import { chamar } from "./client";
  * pagina/tamanhoPagina -- é uma busca pontual, não paginada (mesmo corte
  * que clientes_router.py usa). */
 export function listarClientes(opcoes: OpcoesListarClientes = {}) {
-  const { pagina, tamanhoPagina, busca } = opcoes;
+  const { pagina, tamanhoPagina, busca, estado } = opcoes;
   const query: Record<string, string | undefined> = busca
     ? { busca }
     : { pagina: pagina ? String(pagina) : undefined, tamanho_pagina: tamanhoPagina ? String(tamanhoPagina) : undefined };
-  return chamar("/clientes", { query });
+  /* ⚠️ Vale nos DOIS ramos: a busca também respeita o estado, e sem ele
+     procurar por um cliente arquivado não acharia nada. */
+  return chamar("/clientes", { query: { ...query, estado } });
 }
 
 /** Um cliente por id -- é o que hidrata a página de detalhe num F5 ou num
@@ -43,6 +45,13 @@ export function atualizarCliente(clienteId: string, campos: CamposCliente) {
   });
 }
 
-export function removerCliente(clienteId: string) {
-  return chamar(`/clientes/${clienteId}`, { method: "DELETE" });
+/** `POST`, não `DELETE`: o cliente continua existindo, só sai da lista e dos
+ * seletores. `409` com `motivos` (lista) enquanto houver processo,
+ * atendimento em andamento, fatura em aberto ou cobrança pendente. */
+export function arquivarCliente(clienteId: string) {
+  return chamar(`/clientes/${clienteId}/arquivar`, { method: "POST" });
+}
+
+export function reativarCliente(clienteId: string) {
+  return chamar(`/clientes/${clienteId}/reativar`, { method: "POST" });
 }
