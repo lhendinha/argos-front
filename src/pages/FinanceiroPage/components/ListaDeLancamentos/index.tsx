@@ -10,6 +10,7 @@ import {
   Tabela,
 } from "../../../../components";
 import { usePaginacaoDaLista } from "../../../../hooks/usePaginacaoDaLista";
+import { useValorComEspera } from "../../../../hooks/useValorComEspera";
 import { useSubgruposBuscaveis } from "../../../../hooks/useSubgruposBuscaveis";
 import { lerCatalogoFinanceiro, listarLancamentos } from "../../../../services";
 import { useToastOnQueryError } from "../../../../services/queryClient";
@@ -41,6 +42,11 @@ export default function ListaDeLancamentos() {
   const { filtros, intervalo, mudar } = useFiltrosDeLancamentos();
   const { pagina, setPagina, tamanhoPagina, setTamanhoPagina } = usePaginacaoDaLista();
   const departamentos = useSubgruposBuscaveis(true);
+  /* 🔴 A consulta usa a busca DEPOIS da espera entre teclas; o campo mostra o
+     que se escreve na hora (vem da URL). Sem isto cada tecla era uma
+     requisição -- e, em "Todos os períodos", uma lista guardada montada no
+     servidor para cada letra. É a mesma espera de Clientes e do Histórico. */
+  const busca = useValorComEspera(filtros.busca);
 
   const parametros = {
     /* 🔴 Com `vencendo` ligado, o período NÃO vai: do lado do servidor ele
@@ -60,7 +66,7 @@ export default function ListaDeLancamentos() {
        precisar; enquanto isso, escolher dois filtra pelo primeiro, o que é
        melhor que ignorar a escolha inteira. */
     subgrupo_id: filtros.departamentoIds[0] || undefined,
-    busca: filtros.busca || undefined,
+    busca: busca || undefined,
     pagina,
     tamanhoPagina,
   };
@@ -100,6 +106,7 @@ export default function ListaDeLancamentos() {
         onMudar={mudar}
         contas={catalogo.data?.contas ?? []}
         departamentos={departamentos}
+        buscando={filtros.busca !== busca || query.isPlaceholderData}
       />
 
       {query.isPending ? (

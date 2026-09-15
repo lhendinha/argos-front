@@ -29,7 +29,7 @@ import type { FiltrosDeLancamentosProps } from "./types";
  * ➡️ `pages/FinanceiroPage/index.test.tsx`.
  */
 export default function FiltrosDeLancamentos({
-  filtros, onMudar, contas, departamentos,
+  filtros, onMudar, contas, departamentos, buscando,
 }: FiltrosDeLancamentosProps) {
   const opcoesDeDepartamento = comOpcoesEscolhidas(
     departamentos.opcoes,
@@ -142,10 +142,16 @@ export default function FiltrosDeLancamentos({
            `lancamentos_consulta._casa_com_a_busca`, não suposto. Prometer
            categoria ou conta faria a pessoa digitar o que está vendo na
            coluna e receber "nenhum lançamento"; e prometer MENOS do que o
-           servidor faz esconderia um caminho que existe. */
+           servidor faz esconderia um caminho que existe.
+
+           🔴 Pelo COMEÇO de cada palavra, desde o passo 3.7b do plano de ler só
+           o necessário: "banc" acha "Banco", "anco" não; os dígitos do
+           documento acham por qualquer pedaço. É como se digita, e por isso o
+           placeholder não precisou mudar. */
         placeholder="Descrição, contraparte ou documento"
         valor={filtros.busca}
         onMudar={(busca) => onMudar({ busca })}
+        buscando={buscando}
       />
     </Flex>
   );

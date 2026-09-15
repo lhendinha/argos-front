@@ -10,4 +10,6 @@ export interface FiltrosDeLancamentosProps {
   contas: ContaFinanceira[];
   /** Os departamentos, buscáveis: são os subgrupos do escritório. */
   departamentos: OpcoesBuscaveis;
+  /** O texto escrito ainda não é o buscado: a espera entre teclas ou a consulta em voo. */
+  buscando?: boolean;
 }
