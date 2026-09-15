@@ -922,3 +922,34 @@ describe("o botão de novo lançamento", () => {
     expect(screen.getByText("Nova transferência")).toBeInTheDocument();
   });
 });
+
+describe("a busca de lançamentos espera a pessoa parar de digitar", () => {
+  const buscasPedidas = () =>
+    mocks.listarLancamentos.mock.calls
+      .map(([parametros]) => (parametros as { busca?: string } | undefined)?.busca)
+      .filter((busca): busca is string => Boolean(busca));
+
+  it("🔴 pede a lista com a palavra inteira, e não uma vez por letra", async () => {
+    /* Sem a espera, digitar "custas" eram seis requisições -- e, em "Todos os
+       períodos", seis listas guardadas montadas no servidor. A URL recebe cada
+       letra na hora (o campo mostra o que se escreve); a consulta, não. */
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText("Honorários Alfa");
+    await user.type(screen.getByLabelText("Buscar lançamentos"), "custas");
+    await waitFor(() => expect(buscasPedidas()).toContain("custas"));
+    expect(buscasPedidas().filter((busca) => busca !== "custas")).toEqual([]);
+  });
+
+  it("o par negativo: apagar a busca volta a pedir a lista sem ela", async () => {
+    const user = userEvent.setup();
+    montar("/financeiro?busca=custas");
+    await waitFor(() => expect(buscasPedidas()).toContain("custas"));
+    const antes = mocks.listarLancamentos.mock.calls.length;
+    await user.clear(screen.getByLabelText("Buscar lançamentos"));
+    await waitFor(() => expect(mocks.listarLancamentos.mock.calls.length).toBeGreaterThan(antes));
+    const chamadas = mocks.listarLancamentos.mock.calls;
+    const ultima = chamadas[chamadas.length - 1]?.[0] as { busca?: string } | undefined;
+    expect(ultima?.busca).toBeUndefined();
+  });
+});
