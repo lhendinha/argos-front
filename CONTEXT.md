@@ -4902,3 +4902,34 @@ despesa de cliente sai de "A faturar" de vez, e volta só por "Voltar a cobrar";
   (706 de 706), a despesa saindo na hora, o Desfazer do aviso, a pílula de 0 para 1, a seção com quem marcou, o detalhe
   com a etiqueta e voltar a cobrar. 14 de 14, limpeza com resíduo zero, os lançamentos do escritório real intactos e os
   logs da `api` sem erro (200 execuções na janela). Sem apelido, a pessoa de teste aparece pelo e-mail, como previsto.
+
+## A busca de lançamentos espera parar de digitar (15/09/2026)
+
+Passo 3.7c da etapa 3 do `PLANO_LER_SO_O_NECESSARIO.md` da API, o último da etapa. A API passou a buscar pelo começo da
+palavra nos passos 3.7a e 3.7b; a tela só precisou deixar de pedir a lista a cada letra.
+
+- 🔴 **A consulta usa a busca depois da espera entre teclas** (`useValorComEspera`, `ESPERA_DA_BUSCA_MS`), como Clientes e o
+  Histórico: o campo mostra o que se escreve na hora, porque vem da URL, e a lista só é pedida quando a pessoa para. Antes,
+  digitar "custas" eram seis requisições -- e, em "Todos os períodos", seis listas guardadas montadas no servidor.
+- O campo mostra "buscando…" nas duas fases em que o que se vê ainda não é o que se escreveu: a espera e a consulta em voo
+  (`isPlaceholderData`), o mesmo critério de Clientes.
+- O comentário do campo diz que a busca é pelo COMEÇO de cada palavra ("banc" acha "Banco", "anco" não; os dígitos do
+  documento acham por qualquer pedaço). O placeholder não mudou: é como se digita.
+
+**Testes.** Dois na página do Financeiro: digitar "custas" pede a lista uma vez, com a palavra inteira, e nenhuma com um
+pedaço; apagar a busca volta a pedir a lista sem ela. A mutação (a consulta com o texto sem espera) deixou o primeiro
+vermelho. Suíte 2.697; `tsc -b`, `yarn build` e `eslint src` limpos. ⚠️ A primeira rodada da suíte teve uma falha no sino
+("Enter na morta marca lida"), que passou sozinho duas vezes e na suíte seguinte: instável sob carga, sem ligação com a busca.
+
+**Chrome, contra o offline.** "honorarios" digitado letra a letra em "Todos os períodos": uma requisição com a busca, com a
+palavra inteira; o "buscando…" aparece na espera e some com a lista; a URL guarda a busca; apagar volta à lista sem ela.
+
+**Produção.** Merge fd37ec2, publicado pela Vercel às 05:09 UTC de 15/09 (status do commit pela API do GitHub). Num
+escritório de teste criado por bootstrap, com 6 lançamentos (3 honorários) e pessoa em `.invalid`, em Chrome com janela e
+uma entrada pela tela: a lista abriu em "Todos os períodos"; "honorarios" digitado letra a letra fez UMA requisição, com a
+palavra inteira; a API devolveu os 3 e a tabela mostrou os 3; o "buscando…" apareceu e sumiu; nenhum erro de página nem
+resposta 4xx/5xx. Limpeza com resíduo zero e o escritório real intacto.
+
+⚠️ **O que a limpeza achou:** o roteiro de apagar grupo passou antes de o Stream processar as exclusões, e o consumidor
+das palavras subiu a versão das listas guardadas daquele escritório, recriando o item `versao#lancamentos`. Uma segunda
+passada do roteiro o tirou; a correção do roteiro está na API.
