@@ -211,9 +211,12 @@ export default function OpcoesLista({ tipo, titulo, nomeSingular }: OpcoesListaP
   return (
     <>
       {/* ⚠️ Em linha PRÓPRIA acima do cartão, e não dentro dele: esta aba não
-          tem barra de busca onde encaixar o chip, e é o que o artefato
-          validado desenha. */}
-      <Flex justify="flex-end" mb="10px">
+          tem barra de busca onde encaixar o chip.
+
+          🔴 À ESQUERDA, como toda linha de filtro do projeto (a de Clientes, a
+          de Atendimentos, as pílulas de seção do Financeiro): o olho procura
+          filtro no começo da linha, e só esta tela o jogava para a direita. */}
+      <Flex mb="10px">
         <PilulaDeMenu
           opcoes={OPCOES_DE_ESTADO.map((o) => ({ id: o.id, rotulo: o.rotulo }))}
           selecionado={estado}
