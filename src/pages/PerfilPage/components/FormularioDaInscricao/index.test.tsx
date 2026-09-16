@@ -75,10 +75,19 @@ it("🔴 salvar a inscrição NÃO manda o nome junto", async () => {
   /* O servidor trata campo ausente como "não mexer", e mandar o apelido aqui o
      reescreveria. Desde as abas isso é ESTRUTURAL -- este componente nem
      conhece o campo do nome --, e o teste fixa a garantia. */
+  /* ⚠️ `setup()`, e conferindo o CAMPO antes de salvar.
+     Este caso falhou uma vez em dez rodadas da suíte cheia (15/09/2026) e
+     nunca isolado: ele afirmava o corpo exato do PATCH sem antes garantir
+     que a digitação tinha chegado ao campo. Com a máquina carregada, clicar
+     em cima de um valor a meio caminho manda outro corpo, e o erro aparece
+     na asserção -- longe da causa. `setup()` é o que 44 arquivos daqui já
+     usam; a conferência do campo é o que tira o tempo da conta. */
+  const user = userEvent.setup();
   await montar();
-  await userEvent.clear(numero());
-  await userEvent.type(numero(), "999");
-  await userEvent.click(salvar());
+  await user.clear(numero());
+  await user.type(numero(), "999");
+  expect(numero()).toHaveValue("999");
+  await user.click(salvar());
 
   await waitFor(() => expect(mocks.atualizarMeuPerfil).toHaveBeenCalled());
   /* ⚠️ Igualdade EXATA, e é ela que prova a garantia: um `objectContaining`
