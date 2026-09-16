@@ -5025,3 +5025,38 @@ e um centro, em Chrome com janela: as duas telas abrindo em Ativos, o diálogo d
 Ativos e aparecendo em Arquivados com a etiqueta certa em cada gênero, o servidor confirmando o recorte dos centros, a
 reativação conferida pela API e o "Todos" das categorias. Nenhum erro de página nem resposta inesperada; limpeza com
 resíduo zero em três tabelas e o catálogo do escritório real intacto.
+
+## Dois ajustes do filtro de arquivados, pedidos pelo usuário (16/09/2026)
+
+Os dois vieram do uso, depois do passo 4.4e em produção -- e o segundo era um defeito de verdade, não um ajuste de
+gosto.
+
+**1. O chip de estado em Fases e Situações foi para a ESQUERDA.** Estava em `justify="flex-end"`, o único do projeto
+jogado para a direita: Clientes, Atendimentos e as pílulas de seção do Financeiro põem o filtro no começo da linha. O
+alinhamento é MEDIDO por coordenada nos roteiros de Chrome (folga até a borda esquerda do conteúdo contra a que sobra à
+direita), e não conferido a olho -- e Situações é comparada com Fases, porque são duas montagens do mesmo componente.
+
+**2. 🔴 Configurações do Financeiro "às vezes não abria Categorias, e o filtro sempre aparecia".** Uma causa só para as
+duas queixas: as quatro abas dividem UM endereço, e duas delas guardavam `?secao=` com valores próprios -- `emitidas`,
+`a-faturar` e `nao-cobradas` em Faturas; `categorias`, `contas` e `centros` em Configurações. Vindo de Faturas, o
+catálogo lia `secao=emitidas`, nenhum dos três blocos casava, **nada renderizava**, e sobrava só a linha das pílulas com
+o chip -- que é o "filtro sempre é mostrado" do relato. Sem lista e sem erro, que é pior do que um erro.
+
+O conserto tem duas metades, e as duas são necessárias:
+
+- `FinanceiroPage.mudarAba` passou a apagar também `secao` e `estado`, ao lado de `pagina`, `tamanho` e `busca`;
+- cada tela VALIDA a seção na leitura (`abaValida`), porque a limpeza não alcança endereço colado ou editado à mão.
+
+⚠️ **A lição vale para todo estado de URL com valores fechados:** `lerParametroDaUrl` devolve texto CRU de propósito (a
+faixa válida é de quem declara o estado), então `useEstadoNaUrl<T>` tipa como `T` sem garantir nada em execução -- a
+tipagem mente, e o defeito aparece como tela vazia. Ler enum da URL sem validar é a armadilha; `abaValida` e
+`estadoDeArquivamentoValido` são os moldes.
+
+**Testes.** Seção de outra aba caindo em Categorias; a ida-e-volta de aba abrindo Categorias com o filtro de volta em
+Ativos -- conferido pelo que a tela PEDE ao servidor, e não só pelo que mostra; e o par negativo do lado das Faturas,
+onde `secao=categorias` cai em "A faturar". Suíte 2.726; `tsc`, `eslint` e `vite build` verdes; 3 mutações, 3
+vermelhas.
+
+**Produção.** Merge fe79389, publicado pela Vercel em 60 s. Dez checagens em Chrome com janela, SOMENTE LEITURA: o
+roteiro só clica em aba e em pílula, nunca numa linha de dado real, e não cria nem apaga nada -- resíduo zero por
+construção. Nenhum erro de página nem resposta inesperada.
