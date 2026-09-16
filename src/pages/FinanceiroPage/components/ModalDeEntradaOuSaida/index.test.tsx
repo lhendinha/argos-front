@@ -270,11 +270,11 @@ describe("o que vai para o servidor", () => {
       <ModalDeEntradaOuSaida
         natureza="entrada"
         catalogo={CATALOGO}
-        erro="Conta desativada: escolha outra"
+        erro="Conta arquivada: escolha outra"
         onSalvar={onSalvar}
         onFechar={onFechar}
       />,
     );
-    expect(screen.getByText("Conta desativada: escolha outra")).toBeInTheDocument();
+    expect(screen.getByText("Conta arquivada: escolha outra")).toBeInTheDocument();
   });
 });

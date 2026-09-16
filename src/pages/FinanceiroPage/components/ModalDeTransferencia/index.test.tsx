@@ -144,7 +144,7 @@ describe("envio", () => {
   });
 
   it("a recusa do servidor aparece no formulário", () => {
-    montar("Conta desativada: escolha outra");
-    expect(screen.getByText("Conta desativada: escolha outra")).toBeInTheDocument();
+    montar("Conta arquivada: escolha outra");
+    expect(screen.getByText("Conta arquivada: escolha outra")).toBeInTheDocument();
   });
 });

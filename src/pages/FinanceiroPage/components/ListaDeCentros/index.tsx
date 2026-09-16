@@ -75,7 +75,7 @@ export default function ListaDeCentros({
                       </Text>
                       {!centro.ativo && (
                         <Text fontSize="12px" color="fg.muted">
-                          (Inativo)
+                          (Arquivado)
                         </Text>
                       )}
                     </Flex>

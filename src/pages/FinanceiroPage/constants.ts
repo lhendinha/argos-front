@@ -1,3 +1,11 @@
+import {
+  ESTADO_ARQUIVADOS,
+  ESTADO_ATIVOS,
+  ESTADO_TODOS,
+  ESTADOS_DE_ARQUIVAMENTO,
+} from "../../constants";
+import type { EstadoDeArquivamento } from "../../types";
+
 import type { OpcaoDeNovoLancamento } from "./components/MenuDeNovoLancamento/types";
 import {
   NATUREZA_ENTRADA,
@@ -298,3 +306,25 @@ export const COLUNAS_NAO_COBRADAS = [
  * e aí o número da linha deixaria de bater com a lista que ela abre.
  */
 export const DIAS_DO_A_PAGAR = 7;
+
+/** As três opções do chip de arquivamento, na ordem do artefato: "Todos"
+ * primeiro, e a tela abrindo em "Ativos".
+ *
+ * ⚠️ `rotulo` é texto de tela; o `id` é a palavra que vai para a API (ou que
+ * filtra na memória). Ficaram lado a lado de propósito. */
+export const OPCOES_DE_ESTADO = [
+  { id: ESTADO_TODOS, rotulo: "Todos" },
+  { id: ESTADO_ATIVOS, rotulo: "Ativos" },
+  { id: ESTADO_ARQUIVADOS, rotulo: "Arquivados" },
+] as const;
+
+/** O estado que veio da URL, ou "Ativos".
+ *
+ * 🔴 A URL é digitável: um valor inventado chegaria à API como filtro
+ * desconhecido e voltaria 422, com a tela dizendo só "não foi possível
+ * carregar". Aqui o desconhecido vira o padrão. */
+export function estadoDeArquivamentoValido(valor: string): EstadoDeArquivamento {
+  return (ESTADOS_DE_ARQUIVAMENTO as readonly string[]).includes(valor)
+    ? (valor as EstadoDeArquivamento)
+    : ESTADO_ATIVOS;
+}

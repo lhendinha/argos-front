@@ -11,6 +11,7 @@ export * from "./subgrupos";
 export * from "./suporte";
 export * from "./prioridade";
 export * from "./atendimento";
+export * from "./arquivamento";
 export * from "./cliente";
 export * from "./historico";
 export * from "./canal";

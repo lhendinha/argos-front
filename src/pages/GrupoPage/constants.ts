@@ -1,3 +1,11 @@
+import {
+  ESTADO_ARQUIVADOS,
+  ESTADO_ATIVOS,
+  ESTADO_TODOS,
+  ESTADOS_DE_ARQUIVAMENTO,
+} from "../../constants";
+import type { EstadoDeArquivamento } from "../../types";
+
 /** As colunas da tabela de inscrições avulsas, na ordem do artifact.
  *
  * ⚠️ A última é `""` porque no artifact a coluna de ações é `<th></th>`: o
@@ -20,3 +28,25 @@ export const CORES_DO_CONTADOR_DE_INSCRICOES = {
   color: "brand.darker",
   borderColor: "brand.tint2",
 } as const;
+
+/** As três opções do chip de arquivamento, na ordem do artefato: "Todos"
+ * primeiro, e a tela abrindo em "Ativos".
+ *
+ * ⚠️ `rotulo` é texto de tela; o `id` é a palavra que vai para a API (ou que
+ * filtra na memória). Ficaram lado a lado de propósito. */
+export const OPCOES_DE_ESTADO = [
+  { id: ESTADO_TODOS, rotulo: "Todos" },
+  { id: ESTADO_ATIVOS, rotulo: "Ativos" },
+  { id: ESTADO_ARQUIVADOS, rotulo: "Arquivados" },
+] as const;
+
+/** O estado que veio da URL, ou "Ativos".
+ *
+ * 🔴 A URL é digitável: um valor inventado chegaria à API como filtro
+ * desconhecido e voltaria 422, com a tela dizendo só "não foi possível
+ * carregar". Aqui o desconhecido vira o padrão. */
+export function estadoDeArquivamentoValido(valor: string): EstadoDeArquivamento {
+  return (ESTADOS_DE_ARQUIVAMENTO as readonly string[]).includes(valor)
+    ? (valor as EstadoDeArquivamento)
+    : ESTADO_ATIVOS;
+}

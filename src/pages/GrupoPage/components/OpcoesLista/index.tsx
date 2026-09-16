@@ -1,4 +1,4 @@
-import { Text } from "@chakra-ui/react";
+import { Flex, Text } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -17,9 +17,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
-import { CartaoDeTabela, EstadoVazio, EstadoDeErro, Esqueleto, ModalDeConfirmacao } from "../../../../components";
+import { CartaoDeTabela, EstadoVazio, EstadoDeErro, Esqueleto, ModalDeConfirmacao, PilulaDeMenu } from "../../../../components";
 import { useToast } from "../../../../contexts/ToastContext";
-import { TETO_POR_PAGINA } from "../../../../constants";
+import { ESTADO_ATIVOS, ESTADO_ARQUIVADOS, ESTADO_TODOS, TETO_POR_PAGINA } from "../../../../constants";
+import { OPCOES_DE_ESTADO } from "../../constants";
 import {
   atualizarOpcaoProcesso,
   criarOpcaoProcesso,
@@ -33,7 +34,7 @@ import { qk } from "../../../../services/queryKeys";
 import { calcularOrdemAposMover } from "../../../../utils";
 import FormularioNovaOpcao from "../FormularioNovaOpcao";
 import LinhaDeOpcao from "../LinhaDeOpcao";
-import type { OpcaoProcesso } from "../../../../types";
+import type { EstadoDeArquivamento, OpcaoProcesso } from "../../../../types";
 import type { RenomearOpcao } from "../../types";
 import type {
   RespostaDeOpcoesPaginada,
@@ -43,8 +44,9 @@ import type { OpcoesListaProps } from "./types";
 /** CRUD de uma lista (Fases OU Situações).
  *
  * Ao contrário do seletor do processo, que só mostra as ativas, esta tela
- * lista TODAS, inclusive as inativas, com ação de reativar -- desativar aqui
- * é soft delete (`ativo`), e não exclusão.
+ * tem o chip Todos · Ativos · Arquivados e abre em Ativos -- arquivar aqui é
+ * soft delete (`ativo`), e não exclusão, e o arquivado se reativa na mesma
+ * linha (passo 4.4e).
  *
  * A ordem é por arrastar, e não dá pra arrastar entre páginas: a lista vem
  * inteira com `TETO_POR_PAGINA` em vez de paginar. Mesma premissa do
@@ -55,6 +57,15 @@ export default function OpcoesLista({ tipo, titulo, nomeSingular }: OpcoesListaP
   const [paraDesativar, setParaDesativar] = useState<OpcaoProcesso | null>(null);
   const [erroAoCriar, setErroAoCriar] = useState("");
   const [ordemLocal, setOrdemLocal] = useState<OpcaoProcesso[] | null>(null);
+  /* 🔴 Estado LOCAL, e não na URL -- ao contrário de Clientes e do catálogo.
+     Três razões, e a primeira sozinha já decide: este componente é montado
+     DUAS vezes na mesma tela (Fases e Situações), e uma chave só na URL faria
+     um chip mexer no outro; a aba já mora num parâmetro de `GrupoPage`, e um
+     terceiro nível de estado no endereço não ajuda ninguém a voltar; e o
+     projeto já trata recorte de tela de configuração como estado local (ver
+     `ConfiguracoesFinanceiras`, onde a seção só foi para a URL quando a
+     PÁGINA passou a depender dela). */
+  const [estado, setEstado] = useState<EstadoDeArquivamento>(ESTADO_ATIVOS);
   const toast = useToast();
   const queryClient = useQueryClient();
 
@@ -71,7 +82,16 @@ export default function OpcoesLista({ tipo, titulo, nomeSingular }: OpcoesListaP
   });
   useToastOnQueryError(query.error, `Não foi possível carregar ${titulo.toLowerCase()}.`);
   const opcoesServidor = [...(query.data?.opcoes || [])].sort((a, b) => a.ordem - b.ordem);
-  const opcoes = ordemLocal ?? opcoesServidor;
+  const todas = ordemLocal ?? opcoesServidor;
+  /* 🔴 O filtro é NA TELA, e não no servidor: esta lista já vem inteira (é o
+     que permite arrastar entre todas), e pedir um recorte ao servidor
+     quebraria a reordenação, que precisa dos vizinhos. Arrastar continua
+     valendo em qualquer chip -- a ordem nova é a média dos vizinhos
+     VISÍVEIS, que é o que `calcularOrdemAposMover` já faz. */
+  const opcoes =
+    estado === ESTADO_TODOS
+      ? todas
+      : todas.filter((o) => o.ativo === (estado === ESTADO_ATIVOS));
 
   function invalidar() {
     // 🔴 PREFIXO, não `qk.opcoesProcesso(tipo)`.
@@ -190,6 +210,18 @@ export default function OpcoesLista({ tipo, titulo, nomeSingular }: OpcoesListaP
 
   return (
     <>
+      {/* ⚠️ Em linha PRÓPRIA acima do cartão, e não dentro dele: esta aba não
+          tem barra de busca onde encaixar o chip, e é o que o artefato
+          validado desenha. */}
+      <Flex justify="flex-end" mb="10px">
+        <PilulaDeMenu
+          opcoes={OPCOES_DE_ESTADO.map((o) => ({ id: o.id, rotulo: o.rotulo }))}
+          selecionado={estado}
+          ativo={estado !== ESTADO_ATIVOS}
+          onEscolher={(id) => setEstado(id as EstadoDeArquivamento)}
+        />
+      </Flex>
+
       <CartaoDeTabela>
         {podeGerenciar ? (
           <FormularioNovaOpcao
@@ -212,7 +244,17 @@ export default function OpcoesLista({ tipo, titulo, nomeSingular }: OpcoesListaP
         )}
 
         {opcoes.length === 0 ? (
-          <EstadoVazio mensagem="Nenhuma opção ainda." />
+          /* Vazio por FILTRO é diferente de vazio de verdade: "nenhuma opção
+             ainda" seria falso numa aba que só esconde as arquivadas. */
+          <EstadoVazio
+            mensagem={
+              todas.length === 0
+                ? "Nenhuma opção ainda."
+                : estado === ESTADO_ARQUIVADOS
+                  ? "Nenhuma arquivada."
+                  : "Nenhuma ativa."
+            }
+          />
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext
@@ -247,7 +289,7 @@ export default function OpcoesLista({ tipo, titulo, nomeSingular }: OpcoesListaP
 
       {paraDesativar && (
         <ModalDeConfirmacao
-          titulo={`Desativar ${nomeSingular}`}
+          titulo={`Arquivar ${nomeSingular}`}
           mensagem={
             <>
               <strong>{paraDesativar.rotulo}</strong> deixa de aparecer como opção nova.
@@ -256,7 +298,7 @@ export default function OpcoesLista({ tipo, titulo, nomeSingular }: OpcoesListaP
           /* O medo aqui é perder dado, e não é isso que acontece: quem já usa
              a opção continua mostrando o valor. */
           aviso="Os processos que já usam essa opção continuam mostrando o valor. Nada é perdido."
-          rotulo="Desativar"
+          rotulo="Arquivar"
           /* Reversível: existe "Reativar" na mesma tela. Some a lixeira e o
              "não pode ser desfeita", que aqui seriam mentira. */
           reversivel

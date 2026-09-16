@@ -1,4 +1,4 @@
-import { Stack, Text } from "@chakra-ui/react";
+import { Box, Stack, Text } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -8,7 +8,11 @@ import {
   EstadoDeErro,
   EstadoVazio,
   PilulaDeFiltro,
+  PilulaDeMenu,
 } from "../../../../components";
+import { ESTADO_ARQUIVADOS, ESTADO_ATIVOS, ESTADO_TODOS } from "../../../../constants";
+import type { EstadoDeArquivamento } from "../../../../types";
+import { OPCOES_DE_ESTADO, estadoDeArquivamentoValido } from "../../constants";
 import { useEstadoNaUrl } from "../../../../hooks/useEstadoNaUrl";
 import { usePaginacaoDaLista } from "../../../../hooks/usePaginacaoDaLista";
 import { useToast } from "../../../../contexts/ToastContext";
@@ -83,8 +87,36 @@ export default function ConfiguracoesFinanceiras() {
       tambemApaga: ["pagina"],
     },
   );
+  /* O chip vai para a URL junto com a seção, e trocá-lo APAGA a página: a 3
+     de Ativos não existe em Arquivados, e a tabela apareceria vazia até o
+     `Pagination` corrigir. */
+  const [estadoNaUrl, setEstado] = useEstadoNaUrl("estado", ESTADO_ATIVOS as string, {
+    tambemApaga: ["pagina"],
+  });
+  const estado: EstadoDeArquivamento = estadoDeArquivamentoValido(estadoNaUrl);
   const { pagina, setPagina, tamanhoPagina, setTamanhoPagina } =
     usePaginacaoDaLista();
+  /** As categorias do chip.
+   *
+   * 🔴 O filtro delas é NA TELA, e não no servidor (decidido pelo usuário no
+   * passo 4.4d): a lista vem inteira porque a ordem é hierárquica -- cada
+   * filha logo abaixo da mãe --, e paginar ou recortar no servidor separaria
+   * as duas.
+   *
+   * ⚠️ A MÃE ARQUIVADA SEGURA AS FILHAS ATIVAS: escondê-la deixaria as filhas
+   * recuadas embaixo de nada, lendo como se fossem de outra mãe. Em "Ativos",
+   * uma mãe arquivada com filha ativa continua aparecendo; é ela que dá
+   * sentido ao recuo, e a etiqueta "(Arquivada)" já diz o que ela é. */
+  function noEstado(categoria: CategoriaFinanceira, todas: CategoriaFinanceira[]): boolean {
+    if (estado === ESTADO_TODOS) return true;
+    const querArquivadas = estado === ESTADO_ARQUIVADOS;
+    if (categoria.ativa !== querArquivadas) return true;
+    return (
+      !querArquivadas &&
+      todas.some((filha) => filha.agrupador_id === categoria.categoria_id && filha.ativa)
+    );
+  }
+
   /** `null` = fechado; `undefined` dentro dele = criando. */
   const [categoriaNoModal, setCategoriaNoModal] = useState<{
     categoria?: CategoriaFinanceira;
@@ -122,8 +154,8 @@ export default function ConfiguracoesFinanceiras() {
   /** ⚠️ `enabled` pela seção: montar as três de uma vez dispararia duas
    * leituras que ninguém vai ver, e a tela mostra UMA lista por vez. */
   const paginaDeContas = useQuery<RespostaDeContasPaginada>({
-    queryKey: qk.contasFinanceiras({ pagina, tamanhoPagina }),
-    queryFn: () => listarContas({ pagina, tamanhoPagina }),
+    queryKey: qk.contasFinanceiras({ pagina, tamanhoPagina, estado }),
+    queryFn: () => listarContas({ pagina, tamanhoPagina, estado }),
     enabled: secao === "contas",
     placeholderData: (anterior) => anterior,
   });
@@ -133,8 +165,8 @@ export default function ConfiguracoesFinanceiras() {
   );
 
   const paginaDeCentros = useQuery<RespostaDeCentrosPaginada>({
-    queryKey: qk.centrosDeCusto({ pagina, tamanhoPagina }),
-    queryFn: () => listarCentrosDeCusto({ pagina, tamanhoPagina }),
+    queryKey: qk.centrosDeCusto({ pagina, tamanhoPagina, estado }),
+    queryFn: () => listarCentrosDeCusto({ pagina, tamanhoPagina, estado }),
     enabled: secao === "centros",
     placeholderData: (anterior) => anterior,
   });
@@ -254,6 +286,10 @@ export default function ConfiguracoesFinanceiras() {
   }
 
   const catalogo = query.data;
+  const categoriasDoEstado = (catalogo?.categorias ?? []).filter((c) =>
+    noEstado(c, catalogo?.categorias ?? []),
+  );
+
   const vazio =
     catalogo.contas.length === 0 &&
     catalogo.categorias.length === 0 &&
@@ -278,7 +314,9 @@ export default function ConfiguracoesFinanceiras() {
 
   return (
     <Stack gap="14px" mt="14px">
-      <Stack direction="row" gap="8px" wrap="wrap">
+      {/* O chip fica NA LINHA DAS PÍLULAS DE SEÇÃO -- é o que o artefato
+          validado desenha, e é onde a tela já tem uma barra de filtro. */}
+      <Stack direction="row" gap="8px" wrap="wrap" align="center">
         {SECOES_DO_CATALOGO.map((s) => (
           <PilulaDeFiltro
             key={s.id}
@@ -288,6 +326,15 @@ export default function ConfiguracoesFinanceiras() {
             {s.rotulo}
           </PilulaDeFiltro>
         ))}
+        <Box w="1px" alignSelf="stretch" bg="border.subtle" mx="2px" aria-hidden="true" />
+        <PilulaDeMenu
+          opcoes={OPCOES_DE_ESTADO.map((o) => ({ id: o.id, rotulo: o.rotulo }))}
+          selecionado={estado}
+          /* Aceso fora do padrão: "Ativos" é o que a tela mostra sem ninguém
+             escolher nada. */
+          ativo={estado !== ESTADO_ATIVOS}
+          onEscolher={(id) => setEstado(id)}
+        />
       </Stack>
 
       {vazio ? (
@@ -298,7 +345,7 @@ export default function ConfiguracoesFinanceiras() {
         <>
           {secao === "categorias" && (
             <ListaDeCategorias
-              categorias={catalogo.categorias}
+              categorias={categoriasDoEstado}
               podeEscrever={podeEscrever}
               onNova={() => {
                 setErroDoModal("");

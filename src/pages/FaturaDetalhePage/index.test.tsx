@@ -198,11 +198,11 @@ describe("registrar pagamento", () => {
 
   it("⚠️ a recusa do servidor fica no MODAL, junto do campo de que ela fala", async () => {
     const { ApiError } = await import("../../services/api/client");
-    mocks.pagarFatura.mockRejectedValue(new ApiError("Conta desativada: escolha outra", 400));
+    mocks.pagarFatura.mockRejectedValue(new ApiError("Conta arquivada: escolha outra", 400));
     await abrirPagamento();
     const botoes = await screen.findAllByRole("button", { name: /Registrar pagamento/ });
     await userEvent.click(botoes[botoes.length - 1]);
-    expect(await screen.findByText("Conta desativada: escolha outra")).toBeInTheDocument();
+    expect(await screen.findByText("Conta arquivada: escolha outra")).toBeInTheDocument();
     expect(screen.getByText(/Registrar pagamento · 2026-0007/)).toBeInTheDocument();
   });
 

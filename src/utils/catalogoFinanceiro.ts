@@ -18,7 +18,7 @@ import type { CatalogoFinanceiro, Lancamento, Membro, OpcaoDeSelect } from "../t
  * ⚠️ **A filha aparece como "Agrupadora › Filha"**, como no artefato: fora do
  * contexto da lista hierárquica, "DAS" sozinho não diz que é imposto.
  *
- * ⚠️ Inativa fica de fora: ela existe para o histórico não perder o nome, não
+ * ⚠️ Arquivada fica de fora: ela existe para o histórico não perder o nome, não
  * para receber lançamento novo.
  */
 export function opcoesDeCategoria(
@@ -40,12 +40,12 @@ export function opcoesDeCategoria(
 
 /** As contas em que o dinheiro pode entrar ou sair.
  *
- * ⚠️ Desativada fica de fora: o servidor responde "Conta desativada: escolha
+ * ⚠️ Arquivada fica de fora: o servidor responde "Conta arquivada: escolha
  * outra", e a tela não deve oferecer o que ele nega.
  *
  * ⚠️ **Diferente do FILTRO da lista**, que inclui as inativas de propósito --
  * lá a pergunta é "quais lançamentos usaram esta conta", e um lançamento
- * antigo aponta para uma conta desativada. Aqui a pergunta é "onde este
+ * antigo aponta para uma conta arquivada. Aqui a pergunta é "onde este
  * dinheiro vai se mover", e essa não tem resposta numa conta fechada. */
 export function opcoesDeConta(catalogo: CatalogoFinanceiro | undefined): OpcaoDeSelect[] {
   return (catalogo?.contas ?? [])

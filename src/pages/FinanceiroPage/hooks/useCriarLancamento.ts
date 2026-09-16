@@ -21,7 +21,7 @@ import type { FormaDeLancamento } from "../types";
  * onde ele importa.
  *
  * 🔴 **A recusa do servidor vai para o FORMULÁRIO, não para um toast.** Ela
- * fala de um campo que está na tela ("Conta desativada: escolha outra",
+ * fala de um campo que está na tela ("Conta arquivada: escolha outra",
  * "Informe o cliente OU o nome de quem pagou/recebeu"), e um toast que some
  * em cinco segundos leva o recado embora antes de a pessoa achar o campo.
  *

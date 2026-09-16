@@ -102,7 +102,7 @@ describe("o interruptor", () => {
 
   it("diz o estado por ESCRITO, e não só pela posição", async () => {
     /* Cor e posição sozinhas não contam o estado a quem não as distingue --
-       mesma régua de "(Inativa)" em `LinhaDeOpcao`. */
+       mesma régua de "(Arquivada)" em `LinhaDeOpcao`. */
     montar(LIGADA);
     expect(screen.getByText("Ligada")).toBeInTheDocument();
     expect(screen.queryByText("Desligada")).not.toBeInTheDocument();

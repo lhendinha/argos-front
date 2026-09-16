@@ -146,7 +146,7 @@ export default function LancamentoDetalhePage() {
       toast.sucesso("Lançamento salvo.");
     },
     /* A recusa vai para o FORMULÁRIO: ela fala de um campo que está na tela
-       ("Conta desativada: escolha outra"), e um toast leva o recado embora
+       ("Conta arquivada: escolha outra"), e um toast leva o recado embora
        antes de a pessoa achar o campo. */
     onError: (err) => {
       setConfirmandoSalvar(null);

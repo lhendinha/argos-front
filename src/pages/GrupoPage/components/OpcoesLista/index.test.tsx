@@ -103,14 +103,14 @@ describe("OpcoesLista", () => {
     );
   });
 
-  it("desativar pede confirmação, e o diálogo diz que nada se perde", async () => {
+  it("arquivar pede confirmação, e o diálogo diz que nada se perde", async () => {
     // O medo aqui é perder dado. Como não é isso que acontece, o diálogo é
     // reversível: sem lixeira e sem "não pode ser desfeita".
     mocks.desativarOpcaoProcesso.mockResolvedValue({});
     const user = userEvent.setup();
     montar();
 
-    await user.click(await screen.findByRole("button", { name: "Desativar Conhecimento" }));
+    await user.click(await screen.findByRole("button", { name: "Arquivar Conhecimento" }));
 
     const dialogo = within(await screen.findByRole("dialog"));
     expect(
@@ -120,30 +120,71 @@ describe("OpcoesLista", () => {
     ).toBeInTheDocument();
     expect(dialogo.queryByText("Essa ação não pode ser desfeita.")).not.toBeInTheDocument();
 
-    await user.click(dialogo.getByRole("button", { name: "Desativar" }));
+    await user.click(dialogo.getByRole("button", { name: "Arquivar" }));
 
     await waitFor(() => expect(mocks.desativarOpcaoProcesso).toHaveBeenCalledWith("fase", "f1"));
   });
 
-  it("reativa uma inativa -- esta lista mostra as duas", async () => {
-    // O seletor do processo só mostra ativas; aqui a inativa precisa
-    // aparecer, senão não há como trazê-la de volta.
+  it("🔴 a lista abre em ATIVOS, e o chip é que traz a arquivada de volta", async () => {
+    /* Antes esta lista mostrava as duas de uma vez. Com o chip (passo 4.4e)
+       ela abre em Ativos, como as outras telas que arquivam -- e a arquivada
+       continua alcançável, que é o que permite trazê-la de volta. */
     mocks.listarOpcoesProcesso.mockResolvedValue({
-      opcoes: [{ ...CONHECIMENTO, rotulo: "Especiais", ativo: false }],
-      total: 1,
+      opcoes: [CONHECIMENTO, { ...CONHECIMENTO, opcao_id: "f2", rotulo: "Especiais", ativo: false }],
+      total: 2,
       total_paginas: 1,
     });
     mocks.reativarOpcaoProcesso.mockResolvedValue({});
     const user = userEvent.setup();
     montar();
 
+    expect(await screen.findByText("Conhecimento")).toBeInTheDocument();
+    expect(screen.queryByText("Especiais")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Ativos" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Arquivados" }));
+
     expect(await screen.findByText("Especiais")).toBeInTheDocument();
-    // Cor E texto: cinza sozinho não conta a história pra quem não o
-    // distingue.
-    expect(screen.getByText("(Inativa)")).toBeInTheDocument();
+    expect(screen.queryByText("Conhecimento")).not.toBeInTheDocument();
+    // Cor E texto: cinza sozinho não conta a história pra quem não o distingue.
+    expect(screen.getByText("(Arquivada)")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Reativar Especiais" }));
 
-    await waitFor(() => expect(mocks.reativarOpcaoProcesso).toHaveBeenCalledWith("fase", "f1"));
+    await waitFor(() => expect(mocks.reativarOpcaoProcesso).toHaveBeenCalledWith("fase", "f2"));
+  });
+
+  it("🔴 o filtro é NA TELA: trocar de chip não pede nada ao servidor", async () => {
+    /* A lista já vem inteira (é o que permite arrastar entre todas), e pedir
+       um recorte ao servidor quebraria a reordenação, que precisa dos
+       vizinhos. */
+    mocks.listarOpcoesProcesso.mockResolvedValue({
+      opcoes: [CONHECIMENTO, { ...CONHECIMENTO, opcao_id: "f2", rotulo: "Especiais", ativo: false }],
+      total: 2,
+      total_paginas: 1,
+    });
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText("Conhecimento");
+    const antes = mocks.listarOpcoesProcesso.mock.calls.length;
+
+    await user.click(screen.getByRole("button", { name: "Ativos" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Todos" }));
+
+    expect(await screen.findByText("Especiais")).toBeInTheDocument();
+    expect(screen.getByText("Conhecimento")).toBeInTheDocument();
+    expect(mocks.listarOpcoesProcesso.mock.calls.length).toBe(antes);
+  });
+
+  it("vazio por FILTRO não diz que a lista está vazia", async () => {
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText("Conhecimento");
+
+    await user.click(screen.getByRole("button", { name: "Ativos" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Arquivados" }));
+
+    expect(await screen.findByText("Nenhuma arquivada.")).toBeInTheDocument();
+    expect(screen.queryByText("Nenhuma opção ainda.")).not.toBeInTheDocument();
   });
 
   it("sem admin, a lista é só leitura e diz por quê", async () => {
