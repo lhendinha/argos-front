@@ -1,18 +1,16 @@
-/** O estado de um cliente na listagem: ativo, arquivado, ou os dois.
+/** O estado de um cliente na listagem -- apelidos do vocabulário geral.
  *
- * ⚠️ São as palavras que a API recebe em `GET /clientes?estado=` -- mudar
- * qualquer uma aqui é mudar o contrato com o servidor, não um rótulo. O
- * rótulo do chip fica em `ClientesPage/constants.ts`, que é texto de tela.
- *
- * ⚠️ "Todos" é uma opção de verdade do servidor, e não a ausência do
- * parâmetro: sem estado a API devolve só os ATIVOS, que é o que o seletor de
- * cliente precisa. A tela manda sempre o que está no chip.
+ * ⚠️ Os nomes ficam porque a tela de Clientes já os usa e eles se leem melhor lá ("estado DE CLIENTE"). O valor é o
+ * mesmo de `constants/arquivamento.ts`, que é quem manda: duas listas independentes divergiriam no primeiro ajuste.
  */
-export const ESTADO_DE_CLIENTE_ATIVOS = "ativos";
-export const ESTADO_DE_CLIENTE_ARQUIVADOS = "arquivados";
-export const ESTADO_DE_CLIENTE_TODOS = "todos";
-export const ESTADOS_DE_CLIENTE = [
-  ESTADO_DE_CLIENTE_TODOS,
-  ESTADO_DE_CLIENTE_ATIVOS,
-  ESTADO_DE_CLIENTE_ARQUIVADOS,
-] as const;
+import {
+  ESTADO_ARQUIVADOS,
+  ESTADO_ATIVOS,
+  ESTADO_TODOS,
+  ESTADOS_DE_ARQUIVAMENTO,
+} from "./arquivamento";
+
+export const ESTADO_DE_CLIENTE_ATIVOS = ESTADO_ATIVOS;
+export const ESTADO_DE_CLIENTE_ARQUIVADOS = ESTADO_ARQUIVADOS;
+export const ESTADO_DE_CLIENTE_TODOS = ESTADO_TODOS;
+export const ESTADOS_DE_CLIENTE = ESTADOS_DE_ARQUIVAMENTO;

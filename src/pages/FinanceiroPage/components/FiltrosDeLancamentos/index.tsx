@@ -102,7 +102,7 @@ export default function FiltrosDeLancamentos({
         variante="chip"
         placeholder="Todas as contas"
         /* ⚠️ As INATIVAS entram: um lançamento antigo aponta para uma conta
-           que foi desativada, e sem ela na lista não há como filtrar por ele
+           que foi arquivada, e sem ela na lista não há como filtrar por ele
            -- o filtro esconderia justamente o que se quer achar. */
         opcoes={contas.map((c) => ({ value: c.conta_id, label: c.nome }))}
         valor={filtros.contaId}

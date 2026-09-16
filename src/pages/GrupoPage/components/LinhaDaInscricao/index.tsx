@@ -97,7 +97,7 @@ export default function LinhaDaInscricao({
           </Switch.Control>
           {/* 🔴 A palavra ao lado, e não só o interruptor: cor e posição
               sozinhas não contam o estado a quem não as distingue -- a mesma
-              régua de "(Inativa)" em `LinhaDeOpcao`. Desligada em `fg.subtle`
+              régua de "(Arquivada)" em `LinhaDeOpcao`. Desligada em `fg.subtle`
               porque é o estado neutro; ligada herda a cor do texto. */}
           <Switch.Label id={idDoEstado} fontSize="12.5px" color={ligada ? undefined : "fg.subtle"}>
             {ligada ? "Ligada" : "Desligada"}

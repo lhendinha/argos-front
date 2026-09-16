@@ -76,8 +76,8 @@ export default function LinhaDoCatalogo({
           <BotaoQuadrado
             type="button"
             tom={ativo ? "perigo" : "neutro"}
-            title={ativo ? "Desativar" : "Reativar"}
-            aria-label={`${ativo ? "Desativar" : "Reativar"} ${nome}`}
+            title={ativo ? "Arquivar" : "Reativar"}
+            aria-label={`${ativo ? "Arquivar" : "Reativar"} ${nome}`}
             disabled={ocupada}
             onClick={(e) => {
               e.stopPropagation();

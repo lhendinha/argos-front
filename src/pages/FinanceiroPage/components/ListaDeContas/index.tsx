@@ -127,7 +127,7 @@ function detalheDaConta(conta: ListaDeContasProps["contas"][number]) {
     : ["dinheiro em espécie"];
   const vivas = partes.filter(Boolean);
   const desde = conta.inicio ? `desde ${formatarData(conta.inicio)}` : "";
-  return [...vivas, desde, conta.ativa ? "" : "(Inativa)"]
+  return [...vivas, desde, conta.ativa ? "" : "(Arquivada)"]
     .filter(Boolean)
     .join(" · ");
 }

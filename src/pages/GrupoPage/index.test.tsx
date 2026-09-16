@@ -180,6 +180,10 @@ describe("GrupoPage", () => {
     renderComRota(<GrupoPage />);
 
     await user.click(await screen.findByRole("tab", { name: "Fases" }));
+    /* ⚠️ As duas do cenário estão ARQUIVADAS, e a lista abre em Ativos desde o
+       chip (passo 4.4e): sem escolher o filtro, não haveria linha nenhuma. */
+    await user.click(await screen.findByRole("button", { name: "Ativos" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Arquivados" }));
     await user.click(await screen.findByRole("button", { name: "Reativar Inicial" }));
 
     expect(screen.getByRole("button", { name: "Reativar Inicial" })).toBeDisabled();

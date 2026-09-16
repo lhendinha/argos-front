@@ -1,5 +1,5 @@
 import { chamar } from "./client";
-import type { OpcoesDePaginacao } from "../../types";
+import type { OpcoesDeListaDoCatalogo } from "../../types";
 import type {
   CamposDaCategoria,
   CamposDaConta,
@@ -33,11 +33,12 @@ export function lerCatalogoFinanceiro() {
  * ⚠️ No servidor isto lê o índice estreito `GrupoOrdemIndex`, e não a
  * partição inteira -- é o mecanismo do `api/PLANO_PAGINACAO.md`.
  */
-export function listarContas({ pagina, tamanhoPagina }: OpcoesDePaginacao = {}) {
+export function listarContas({ pagina, tamanhoPagina, estado }: OpcoesDeListaDoCatalogo = {}) {
   return chamar("/financeiro/contas", {
     query: {
       pagina: pagina ? String(pagina) : undefined,
       tamanho_pagina: tamanhoPagina ? String(tamanhoPagina) : undefined,
+      estado,
     },
   });
 }
@@ -46,12 +47,15 @@ export function listarContas({ pagina, tamanhoPagina }: OpcoesDePaginacao = {}) 
  *
  * ⚠️ **Não existe `listarCategorias`**, e não é esquecimento: a ordem das
  * categorias é hierárquica (filha logo abaixo da mãe, indentada na tela) e a
- * quebra de página separaria as duas. A lista delas vem inteira. */
-export function listarCentrosDeCusto({ pagina, tamanhoPagina }: OpcoesDePaginacao = {}) {
+ * quebra de página separaria as duas. A lista delas vem inteira -- e é por
+ * isso que o filtro de estado DELAS é na tela, e não no servidor (passo
+ * 4.4d, decidido pelo usuário). */
+export function listarCentrosDeCusto({ pagina, tamanhoPagina, estado }: OpcoesDeListaDoCatalogo = {}) {
   return chamar("/financeiro/centros-de-custo", {
     query: {
       pagina: pagina ? String(pagina) : undefined,
       tamanho_pagina: tamanhoPagina ? String(tamanhoPagina) : undefined,
+      estado,
     },
   });
 }

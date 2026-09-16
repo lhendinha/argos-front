@@ -261,14 +261,14 @@ describe("FinanceiroPage", () => {
     expect(screen.getByText("Padrão")).toBeVisible();
   });
 
-  it("mostra a conta inativa, apagada, em vez de escondê-la", async () => {
+  it("mostra a conta arquivada, apagada, em vez de escondê-la", async () => {
     montarConfiguracoes();
     await screen.findByText("Honorários");
     await userEvent.click(screen.getByRole("button", { name: "Contas" }));
     // 🔴 Some da lista seria pior: o nome continua ocupado, e recriá-la daria
     // um 409 que ninguém entenderia.
     expect(await screen.findByText("Caixa antigo")).toBeVisible();
-    expect(screen.getByText(/\(Inativa\)/)).toBeVisible();
+    expect(screen.getByText(/\(Arquivada\)/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Reativar Caixa antigo" })).toBeVisible();
   });
 
@@ -278,7 +278,7 @@ describe("FinanceiroPage", () => {
     montarConfiguracoes();
     await screen.findByText("Honorários");
     expect(screen.queryByRole("button", { name: /^Renomear/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /^Desativar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Arquivar/ })).not.toBeInTheDocument();
     expect(
       screen.getByText("Só quem administra o grupo pode alterar o catálogo."),
     ).toBeVisible();
@@ -289,7 +289,7 @@ describe("FinanceiroPage", () => {
        que fica na linha é o olho de desativar, porque o clique carrega uma
        ação só e estas linhas têm duas. */
     montarConfiguracoes();
-    expect(await screen.findByRole("button", { name: "Desativar Honorários" })).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Arquivar Honorários" })).toBeVisible();
     expect(
       screen.queryByText("Só quem administra o grupo pode alterar o catálogo."),
     ).not.toBeInTheDocument();
@@ -458,10 +458,10 @@ describe("FinanceiroPage", () => {
       );
     });
 
-    it("desativar e reativar chamam o serviço certo", async () => {
+    it("arquivar e reativar chamam o serviço certo", async () => {
       montarConfiguracoes();
       await screen.findByText("Honorários");
-      await userEvent.click(screen.getByRole("button", { name: "Desativar Honorários" }));
+      await userEvent.click(screen.getByRole("button", { name: "Arquivar Honorários" }));
       await waitFor(() =>
         expect(mocks.desativarItemFinanceiro).toHaveBeenCalledWith("categorias", "cat1"),
       );
@@ -595,7 +595,7 @@ describe("FinanceiroPage", () => {
          de renomeá-la por cima -- dois gestos num clique só. */
       montarConfiguracoes();
       await screen.findByText("Honorários");
-      await userEvent.click(screen.getByRole("button", { name: "Desativar Honorários" }));
+      await userEvent.click(screen.getByRole("button", { name: "Arquivar Honorários" }));
 
       await waitFor(() => expect(mocks.desativarItemFinanceiro).toHaveBeenCalled());
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -615,6 +615,133 @@ describe("FinanceiroPage", () => {
       montarConfiguracoes();
       await screen.findByText("Honorários");
       expect(screen.getByText("Honorários").closest("tr")).toHaveAttribute("tabindex", "0");
+    });
+  });
+
+  describe("o chip Todos · Ativos · Arquivados", () => {
+    /** 🔴 Duas metades com regras diferentes, e é o desenho: contas e centros
+     * pedem o recorte ao SERVIDOR (paginam); categorias filtram NA TELA,
+     * porque a lista delas vem inteira com a filha logo abaixo da mãe. */
+
+    it("🔴 contas: o chip vai na chamada, e trocar de chip APAGA a página", async () => {
+      mocks.listarContas.mockResolvedValue(envelope("contas", CATALOGO.contas));
+      const user = userEvent.setup();
+      montar("/financeiro?aba=configuracoes&secao=contas&pagina=2");
+      await screen.findByRole("button", { name: "Ativos" });
+
+      await user.click(screen.getByRole("button", { name: "Ativos" }));
+      await user.click(await screen.findByRole("menuitem", { name: "Arquivados" }));
+
+      await waitFor(() =>
+        expect(mocks.listarContas).toHaveBeenLastCalledWith(
+          expect.objectContaining({ estado: "arquivados", pagina: 1 }),
+        ),
+      );
+    });
+
+    it("centros de custo também pedem o recorte ao servidor", async () => {
+      mocks.listarCentrosDeCusto.mockResolvedValue(envelope("centros_de_custo", CATALOGO.centros_de_custo));
+      const user = userEvent.setup();
+      montar("/financeiro?aba=configuracoes&secao=centros");
+      await screen.findByRole("button", { name: "Ativos" });
+
+      await user.click(screen.getByRole("button", { name: "Ativos" }));
+      await user.click(await screen.findByRole("menuitem", { name: "Todos" }));
+
+      await waitFor(() =>
+        expect(mocks.listarCentrosDeCusto).toHaveBeenLastCalledWith(
+          expect.objectContaining({ estado: "todos" }),
+        ),
+      );
+    });
+
+    it("🔴 categorias filtram NA TELA -- nenhuma chamada nova", async () => {
+      const user = userEvent.setup();
+      montarConfiguracoes();
+      await screen.findByText("Honorários");
+      const leituras = mocks.lerCatalogoFinanceiro.mock.calls.length;
+
+      await user.click(screen.getByRole("button", { name: "Ativos" }));
+      await user.click(await screen.findByRole("menuitem", { name: "Arquivados" }));
+
+      /* Todas as três categorias da fixture estão ativas: em Arquivados a
+         lista fica vazia, sem pedir nada ao servidor. */
+      await waitFor(() => expect(screen.queryByText("Honorários")).not.toBeInTheDocument());
+      expect(mocks.lerCatalogoFinanceiro.mock.calls.length).toBe(leituras);
+    });
+
+    it("🔴 o centro ARQUIVADO diz '(Arquivado)', no masculino", async () => {
+      /* Achado da verificação em Chrome: contas e categorias já diziam
+         "(Arquivada)", e o centro continuava em "(Inativo)" -- outro arquivo,
+         outro gênero, e nenhuma asserção sobre ele. Cor sozinha não conta o
+         estado a quem não a distingue, então a palavra é parte do produto. */
+      mocks.listarCentrosDeCusto.mockResolvedValue(
+        envelope("centros_de_custo", [{ centro_id: "ce2", nome: "Filial velha", ativo: false }]),
+      );
+      montar("/financeiro?aba=configuracoes&secao=centros&estado=arquivados");
+
+      expect(await screen.findByText("Filial velha")).toBeInTheDocument();
+      expect(screen.getByText("(Arquivado)")).toBeInTheDocument();
+      expect(screen.queryByText("(Inativo)")).not.toBeInTheDocument();
+    });
+
+    it("🔴 estado desconhecido na URL vira Ativos, em vez de ir para a API", async () => {
+      /* A URL é digitável, e um valor inventado chegaria à API como filtro
+         inválido: 422, e a tela diria só "não foi possível carregar". */
+      mocks.listarContas.mockResolvedValue(envelope("contas", CATALOGO.contas));
+      montar("/financeiro?aba=configuracoes&secao=contas&estado=apagados");
+
+      await waitFor(() =>
+        expect(mocks.listarContas).toHaveBeenCalledWith(
+          expect.objectContaining({ estado: "ativos" }),
+        ),
+      );
+    });
+
+    it("o chip nasce APAGADO em Ativos e ACENDE fora dele", async () => {
+      /* O estado ligado só existe como cor, e `data-ativo` é o que deixa
+         afirmá-lo sem comparar hexadecimal. Chip aceso no padrão diria que há
+         filtro onde não há. */
+      const user = userEvent.setup();
+      montarConfiguracoes();
+
+      expect(await screen.findByRole("button", { name: "Ativos" })).not.toHaveAttribute("data-ativo");
+
+      await user.click(screen.getByRole("button", { name: "Ativos" }));
+      await user.click(await screen.findByRole("menuitem", { name: "Arquivados" }));
+
+      expect(await screen.findByRole("button", { name: "Arquivados" })).toHaveAttribute("data-ativo", "true");
+    });
+
+    it("🔴 a mãe ARQUIVADA segura a filha ativa em Ativos", async () => {
+      /* Escondê-la deixaria "DAS" recuada embaixo de nada, lendo como se
+         fosse de outra mãe -- e o recuo é o que conta a hierarquia. A
+         etiqueta "(Arquivada)" já diz o que a mãe é. */
+      mocks.lerCatalogoFinanceiro.mockResolvedValue({
+        ...CATALOGO,
+        categorias: CATALOGO.categorias.map((c) =>
+          c.categoria_id === "cat2" ? { ...c, ativa: false } : c,
+        ),
+      });
+      montarConfiguracoes();
+
+      expect(await screen.findByText("DAS")).toBeInTheDocument();
+      expect(screen.getByText("Impostos")).toBeInTheDocument();
+      expect(screen.getByText(/\(Arquivada\)/)).toBeInTheDocument();
+    });
+
+    it("⚠️ o par negativo: mãe arquivada SEM filha ativa some de Ativos", async () => {
+      mocks.lerCatalogoFinanceiro.mockResolvedValue({
+        ...CATALOGO,
+        categorias: CATALOGO.categorias.map((c) =>
+          c.categoria_id === "cat2" || c.categoria_id === "cat3" ? { ...c, ativa: false } : c,
+        ),
+      });
+      montarConfiguracoes();
+
+      await screen.findByText("Honorários");
+      expect(screen.queryByText("Impostos")).not.toBeInTheDocument();
+      expect(screen.queryByText("DAS")).not.toBeInTheDocument();
     });
   });
 
@@ -728,7 +855,7 @@ describe("FinanceiroPage", () => {
       expect(screen.queryByText("Conta 00")).not.toBeInTheDocument();
     });
 
-    it("🔴 desativar uma conta releva a PÁGINA, não só o catálogo", async () => {
+    it("🔴 arquivar uma conta releva a PÁGINA, não só o catálogo", async () => {
       /* São três chaves de cache para o mesmo dado. Invalidar só a do
          catálogo atualizava o select do lançamento e deixava a TABELA da
          tela com a lista velha -- defeito que só aparece para quem está com
@@ -739,7 +866,7 @@ describe("FinanceiroPage", () => {
       mocks.listarContas.mockClear();
       mocks.lerCatalogoFinanceiro.mockClear();
 
-      await userEvent.click(screen.getAllByRole("button", { name: /Desativar/ })[0]);
+      await userEvent.click(screen.getAllByRole("button", { name: /Arquivar/ })[0]);
 
       await waitFor(() => expect(mocks.desativarItemFinanceiro).toHaveBeenCalled());
       await waitFor(() => expect(mocks.listarContas).toHaveBeenCalled());

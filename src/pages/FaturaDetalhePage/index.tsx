@@ -114,7 +114,7 @@ export default function FaturaDetalhePage() {
       toast.sucesso("Pagamento registrado.");
     },
     /* A recusa vai para o MODAL: ela fala de um campo que está lá ("Conta
-       desativada: escolha outra"), e um toast leva o recado embora antes de
+       arquivada: escolha outra"), e um toast leva o recado embora antes de
        a pessoa achar o campo. */
     onError: (err) =>
       setErroDoPagamento(

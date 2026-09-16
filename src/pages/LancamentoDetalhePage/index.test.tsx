@@ -372,13 +372,13 @@ describe("salvar", () => {
   it("🔴 a recusa do servidor aparece no FORMULÁRIO", async () => {
     const { ApiError } = await import("../../services/api/client");
     mocks.atualizarLancamento.mockRejectedValue(
-      new ApiError("Conta desativada: escolha outra", 400),
+      new ApiError("Conta arquivada: escolha outra", 400),
     );
     montar();
     await carregada();
     await userEvent.type(screen.getByLabelText(/^Descrição/), " x");
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-    expect(await screen.findByText("Conta desativada: escolha outra")).toBeInTheDocument();
+    expect(await screen.findByText("Conta arquivada: escolha outra")).toBeInTheDocument();
   });
 });
 

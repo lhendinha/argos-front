@@ -139,7 +139,7 @@ function detalheDaCategoria(
     quantasFilhas > 0
       ? `agrupador de ${contar(quantasFilhas, "categoria", "categorias")}`
       : "",
-    categoria.ativa ? "" : "(Inativa)",
+    categoria.ativa ? "" : "(Arquivada)",
   ]
     .filter(Boolean)
     .join(" · ");

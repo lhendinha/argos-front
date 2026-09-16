@@ -77,9 +77,12 @@ export const qk = {
   /** ⚠️ Chaves SEPARADAS da do catálogo: são leituras diferentes, com donos
    * diferentes. Quem escreve no catálogo invalida as três -- ver
    * `ConfiguracoesFinanceiras`. */
-  contasFinanceiras: (params: { pagina?: number; tamanhoPagina?: number } = {}) =>
+  /* ⚠️ `estado` entra na CHAVE (passo 4.4e): sem ele, Ativos e Arquivados
+     dividiriam o mesmo cache e a lista mostraria o recorte do chip anterior
+     até o refetch chegar. */
+  contasFinanceiras: (params: { pagina?: number; tamanhoPagina?: number; estado?: string } = {}) =>
     ["contas-financeiras", params] as const,
-  centrosDeCusto: (params: { pagina?: number; tamanhoPagina?: number } = {}) =>
+  centrosDeCusto: (params: { pagina?: number; tamanhoPagina?: number; estado?: string } = {}) =>
     ["centros-de-custo", params] as const,
   tarefas: (params: Record<string, unknown> = {}) => ["tarefas", params] as const,
   tarefasDoProcesso: (numeroProcesso: string) =>

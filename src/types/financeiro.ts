@@ -9,6 +9,9 @@
  * "R$ 1.234,56" é trabalho de `utils`, na borda da tela.
  */
 
+import type { ESTADOS_DE_ARQUIVAMENTO } from "../constants/arquivamento";
+
+
 import type { OpcoesDePaginacao } from "./api";
 
 /** Onde o dinheiro entra e de onde sai. `GET /financeiro/catalogo`. */
@@ -390,3 +393,16 @@ export interface OpcoesDoFluxo {
   conta_id?: string;
   subgrupo_id?: string;
 }
+
+/** O que as listas paginadas do catálogo aceitam: a página e o estado do chip.
+ *
+ * ⚠️ Só contas e centros: categorias não paginam nem filtram no servidor --
+ * a lista delas vem inteira, com a filha logo abaixo da mãe. */
+export interface OpcoesDeListaDoCatalogo {
+  pagina?: number;
+  tamanhoPagina?: number;
+  estado?: EstadoDeArquivamento;
+}
+
+/** Ativos, arquivados ou todos -- o vocabulário de `constants/arquivamento.ts`. */
+export type EstadoDeArquivamento = (typeof ESTADOS_DE_ARQUIVAMENTO)[number];

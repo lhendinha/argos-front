@@ -79,8 +79,8 @@ export default function LinhaDeOpcao({
                 <BotaoQuadrado
                   type="button"
                   tom="perigo"
-                  title="Desativar"
-                  aria-label={`Desativar ${opcao.rotulo}`}
+                  title="Arquivar"
+                  aria-label={`Arquivar ${opcao.rotulo}`}
                   disabled={emAndamento}
                   onClick={onDesativar}
                 >
@@ -101,8 +101,8 @@ export default function LinhaDeOpcao({
           )
         }
       >
-        {/* Inativa fica em cinza E escrito: cor sozinha não conta a história
-            pra quem não a distingue, e "(Inativa)" é curto o bastante pra
+        {/* Arquivada fica em cinza E escrito: cor sozinha não conta a história
+            pra quem não a distingue, e "(Arquivada)" é curto o bastante pra
             caber na linha. */}
         <Flex align="center" gap="6px" color={opcao.ativo ? undefined : "fg.subtle"}>
           <NomeEditavel
@@ -118,7 +118,7 @@ export default function LinhaDeOpcao({
           />
           {!opcao.ativo && !editando && (
             <Text fontSize="12px" fontWeight="600">
-              (Inativa)
+              (Arquivada)
             </Text>
           )}
         </Flex>
