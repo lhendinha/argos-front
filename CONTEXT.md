@@ -4980,3 +4980,48 @@ nem resposta inesperada; limpeza com resíduo zero em sete tabelas e o escritór
 vez em dez rodadas da suíte cheia e nunca isolado. A hipótese de a releitura do perfil apagar o que estava digitado foi
 TESTADA e DESCARTADA; a causa exata não foi provada, porque o log da falha original se perdeu. O conserto entrou antes
 deste passo, e é de determinismo: `userEvent.setup()` e conferir o campo antes de salvar.
+
+## O chip de arquivados em fases, situações e no catálogo (16/09/2026)
+
+Passo 4.4e do `PLANO_LER_SO_O_NECESSARIO.md`, o front do arquivar nas listas de configuração. A API é o passo 4.4d.
+
+**Como fica:**
+
+- o vocabulário de estado virou GERAL (`constants/arquivamento.ts`): nasceu em clientes e agora serve contas, centros,
+  categorias, fases e situações. O de cliente ficou como apelido do mesmo valor -- duas listas independentes divergiriam
+  no primeiro ajuste;
+- **catálogo do Financeiro**: chip ao lado das pílulas de seção, com o estado na URL (ali a seção já mora nela, porque a
+  página depende dela). Contas e centros pedem o recorte ao SERVIDOR, e o estado entra na CHAVE DE CACHE -- sem isso,
+  Ativos e Arquivados dividiriam a mesma entrada e a lista mostraria o recorte do chip anterior até o refetch chegar;
+- 🔴 **categorias filtram NA TELA**, e é a decisão do usuário no passo 4.4d: a lista delas vem inteira, com a filha logo
+  abaixo da mãe. E **mãe arquivada com filha ATIVA continua aparecendo em Ativos** -- escondê-la deixaria a filha
+  recuada embaixo de nada, lendo como se fosse de outra mãe. O par negativo está no teste: mãe arquivada sem filha
+  ativa some;
+- **fases e situações**: chip em linha própria acima do cartão (a aba não tem busca onde encaixá-lo), filtrando na tela
+  -- a lista já vem inteira, e é isso que permite arrastar para reordenar entre todas. ⚠️ O estado é LOCAL, e não na
+  URL: a MESMA tela é montada duas vezes (Fases e Situações), e uma chave só faria um chip mexer no outro;
+- **vocabulário**: "(Inativa)"/"(Inativo)" viraram "(Arquivada)"/"(Arquivado)", e "Desativar" virou "Arquivar" nas
+  quatro telas. As frases da API citadas em testes e comentários acompanharam a mudança do passo 4.4d ("Conta arquivada:
+  escolha outra").
+
+**Testes.** O chip nas duas telas (inclusive aceso, por `data-ativo`), o estado inválido na URL caindo em Ativos, o
+filtro na tela sem pedir nada ao servidor, o vazio por FILTRO que não mente ("Nenhuma arquivada." em vez de "Nenhuma
+opção ainda."), a hierarquia das categorias com o par negativo, e o texto de cada etiqueta. `src/services/api/financeiroCatalogo.test.ts`
+é novo: só um teste de serviço pega o estado sumindo da chamada, porque os testes de tela simulam o módulo inteiro.
+Suíte 2.723.
+
+**Mutações.** 17, todas vermelhas. Três só depois de ganhar teste: o estado inválido na URL do catálogo, o chip nunca
+aceso e a etiqueta do centro de custo.
+
+⚠️ **Achado da verificação em Chrome:** o centro de custo continuava dizendo "(Inativo)" -- outro arquivo, outro gênero,
+e nenhuma asserção sobre ele; a mutação daquele texto só cobria contas. Ganhou teste e mutação. É o tipo de defeito que
+a foto pega e a suíte não.
+
+⚠️ **E a aba de Grupo NÃO mora na URL**: `?aba=fases` é ignorado e a tela abre em Subgrupos, calado. Em roteiro de
+Chrome, chega-se nessas abas clicando; no Financeiro, `?aba=` e `?secao=` são endereçáveis de verdade.
+
+**Produção.** Merge 60f00c3, publicado pela Vercel em 60 s. Num escritório de teste criado por bootstrap, com uma fase
+e um centro, em Chrome com janela: as duas telas abrindo em Ativos, o diálogo dizendo "Arquivar", o item saindo de
+Ativos e aparecendo em Arquivados com a etiqueta certa em cada gênero, o servidor confirmando o recorte dos centros, a
+reativação conferida pela API e o "Todos" das categorias. Nenhum erro de página nem resposta inesperada; limpeza com
+resíduo zero em três tabelas e o catálogo do escritório real intacto.
