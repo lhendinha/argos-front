@@ -240,6 +240,36 @@ describe("FinanceiroPage", () => {
     expect(screen.getByText(/agrupador de 2 categorias$/)).toBeVisible();
   });
 
+  it("🔴 seção de OUTRA aba na URL abre Categorias, e não uma tela sem lista", async () => {
+    /* Faturas e Configurações usam o MESMO `secao`, com valores diferentes.
+       Vindo de "Emitidas", o catálogo lia `secao=emitidas` -- que não é
+       nenhuma das três seções dele -- e a tela ficava só com as pílulas e o
+       chip: sem lista e sem erro, que é o pior dos dois mundos. */
+    montar("/financeiro?aba=configuracoes&secao=emitidas");
+    expect(await screen.findByText("Honorários")).toBeVisible();
+    expect(screen.queryByText("Saldo atual")).not.toBeInTheDocument();
+  });
+
+  it("trocar de aba e voltar abre Categorias, e o filtro volta a Ativos", async () => {
+    /* A limpeza da troca de aba é a outra metade do conserto: sem ela, a
+       seção e o estado da visita anterior atravessam para a aba seguinte. */
+    montar("/financeiro?aba=configuracoes&secao=contas&estado=arquivados");
+    expect(await screen.findByText("Conta corrente Itaú")).toBeVisible();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Lançamentos" }));
+    await userEvent.click(await screen.findByRole("tab", { name: "Configurações" }));
+
+    expect(await screen.findByText("Honorários")).toBeVisible();
+    expect(screen.queryByText("Saldo atual")).not.toBeInTheDocument();
+
+    mocks.listarContas.mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "Contas" }));
+    await screen.findByText("Conta corrente Itaú");
+    expect(mocks.listarContas).toHaveBeenCalledWith(
+      expect.objectContaining({ estado: "ativos" }),
+    );
+  });
+
   it("troca de lista pelas pílulas", async () => {
     montarConfiguracoes();
     await screen.findByText("Honorários");

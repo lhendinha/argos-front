@@ -64,11 +64,17 @@ export default function FinanceiroPage() {
    * As quatro abas dividem UM endereço, e as listagens guardam página,
    * tamanho e busca com as mesmas chaves em toda tela. Sem esta limpeza, ir
    * para a página 3 de Lançamentos e trocar para Faturas abriria Faturas na
-   * página 3 -- provavelmente vazia, sem nada na tela explicando por quê. */
+   * página 3 -- provavelmente vazia, sem nada na tela explicando por quê.
+   *
+   * 🔴 `secao` e `estado` entraram na lista depois, e o defeito era pior que
+   * página errada: Faturas e Configurações usam o MESMO `secao` com valores
+   * diferentes ("emitidas" lá, "categorias" aqui). Vindo de Faturas, o
+   * catálogo abria com uma seção que não existe nele -- nenhuma lista na
+   * tela, só a linha das pílulas e o chip, sem erro nenhum para explicar. */
   function mudarAba(nova: AbaDoFinanceiro) {
     const proximos = new URLSearchParams(params);
     proximos.set(PARAM_DA_ABA, nova);
-    for (const chave of ["pagina", "tamanho", "busca"]) proximos.delete(chave);
+    for (const chave of ["pagina", "tamanho", "busca", "secao", "estado"]) proximos.delete(chave);
     setParams(proximos, { replace: true });
   }
 

@@ -13,6 +13,7 @@ import { listarAFaturar, listarFaturas, listarNaoCobradas, naoCobrarLancamento, 
 import { ApiError } from "../../../../services/api/client";
 import { qk } from "../../../../services/queryKeys";
 import { intervaloDoPeriodo } from "../../../../utils";
+import { abaValida } from "../../../../utils/abas";
 import { SECOES_DE_FATURAS } from "../../constants";
 import ModalDeEmissao from "../ModalDeEmissao";
 import SecaoAFaturar from "../SecaoAFaturar";
@@ -51,9 +52,14 @@ export default function ListaDeFaturas() {
   const navegar = useNavigate();
   /* ⚠️ Trocar de seção apaga a página: as duas paginam, e a 3ª de "Emitidas"
      não tem nada a ver com a 3ª de "A faturar". */
-  const [secao, setSecao] = useEstadoNaUrl<SecaoDeFaturas>("secao", "a-faturar", {
+  const [secaoNaUrl, setSecao] = useEstadoNaUrl<string>("secao", "a-faturar", {
     tambemApaga: ["pagina"],
   });
+  /* 🔴 VALIDADA na leitura: `secao` é o mesmo nome que a aba Configurações usa
+     com os valores DELA ("categorias", "contas", "centros"), e o endereço das
+     quatro abas é um só. Valor que não é uma das seções daqui cai na
+     primeira, em vez de deixar a aba sem lista nenhuma. */
+  const secao: SecaoDeFaturas = abaValida(SECOES_DE_FATURAS, secaoNaUrl);
   /* ⚠️ Trocar o período volta para a primeira página: a 4ª de "todos" quase
      nunca existe em "este mês", e o servidor devolveria vazio. É a mesma
      régua que `usePaginacaoDaLista` aplica ao tamanho. */

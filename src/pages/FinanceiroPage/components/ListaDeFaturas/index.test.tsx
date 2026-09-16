@@ -138,6 +138,14 @@ describe("as duas seções", () => {
     expect(screen.getByText(/clique no cliente para emitir/)).toBeInTheDocument();
   });
 
+  it("🔴 seção da aba de Configurações na URL cai em 'A faturar' -- o par", async () => {
+    /* O mesmo `secao` serve as duas abas. `secao=categorias` não é seção
+       daqui, e a aba não pode ficar sem lista nenhuma por causa disso. */
+    montar("/financeiro?aba=faturas&secao=categorias");
+    expect(await screen.findByText("Construtora Alfa")).toBeInTheDocument();
+    expect(screen.getByText(/clique no cliente para emitir/)).toBeInTheDocument();
+  });
+
   it("cada cliente mostra a quantidade e o vencimento MAIS ANTIGO", async () => {
     /* A quantidade sozinha não diz há quanto tempo o dinheiro espera. */
     montar();

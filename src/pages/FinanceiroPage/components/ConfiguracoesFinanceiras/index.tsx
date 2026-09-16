@@ -14,6 +14,7 @@ import { ESTADO_ARQUIVADOS, ESTADO_ATIVOS, ESTADO_TODOS } from "../../../../cons
 import type { EstadoDeArquivamento } from "../../../../types";
 import { OPCOES_DE_ESTADO, estadoDeArquivamentoValido } from "../../constants";
 import { useEstadoNaUrl } from "../../../../hooks/useEstadoNaUrl";
+import { abaValida } from "../../../../utils/abas";
 import { usePaginacaoDaLista } from "../../../../hooks/usePaginacaoDaLista";
 import { useToast } from "../../../../contexts/ToastContext";
 import {
@@ -80,13 +81,14 @@ export default function ConfiguracoesFinanceiras() {
    * ⚠️ Era estado local, com a razão escrita de que "a Área de trabalho não
    * linka para dentro deles". Continua verdade; o que mudou é que agora há
    * um segundo parâmetro que depende deste para fazer sentido. */
-  const [secao, setSecao] = useEstadoNaUrl<SecaoDoCatalogo>(
-    "secao",
-    "categorias",
-    {
-      tambemApaga: ["pagina"],
-    },
-  );
+  const [secaoNaUrl, setSecao] = useEstadoNaUrl<string>("secao", "categorias", {
+    tambemApaga: ["pagina"],
+  });
+  /* 🔴 VALIDADA na leitura, nunca usada crua -- e a limpeza da troca de aba
+     não basta sozinha: a URL é editável à mão e chega colada de qualquer
+     lugar. Valor que não é uma das três seções cai em Categorias, em vez de
+     deixar a tela sem lista nenhuma. */
+  const secao: SecaoDoCatalogo = abaValida(SECOES_DO_CATALOGO, secaoNaUrl);
   /* O chip vai para a URL junto com a seção, e trocá-lo APAGA a página: a 3
      de Ativos não existe em Arquivados, e a tabela apareceria vazia até o
      `Pagination` corrigir. */
