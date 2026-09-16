@@ -4933,3 +4933,50 @@ resposta 4xx/5xx. Limpeza com resíduo zero e o escritório real intacto.
 ⚠️ **O que a limpeza achou:** o roteiro de apagar grupo passou antes de o Stream processar as exclusões, e o consumidor
 das palavras subiu a versão das listas guardadas daquele escritório, recriando o item `versao#lancamentos`. Uma segunda
 passada do roteiro o tirou; a correção do roteiro está na API.
+
+## Arquivar e reativar cliente na tela (15/09/2026)
+
+Passo 4.4c do `PLANO_LER_SO_O_NECESSARIO.md`, o front do arquivar; a API é o 4.4b. Cliente deixou de ser excluído e
+passou a ser arquivado -- decisão do usuário --, e esta tela é onde isso aparece.
+
+**Como fica:**
+
+- **Chip com menu** (`PilulaDeMenu`) na linha da busca, com Todos · Ativos · Arquivados, abrindo em Ativos e aceso fora
+  dele. O estado mora na URL (`useEstadoNaUrl`), e `estadoDeClienteValido` derruba o que não for um dos três: a URL é
+  digitável, e um valor inventado chegaria à API como filtro inválido, com a tela dizendo só "não foi possível
+  carregar";
+- **as colunas mudam com o filtro** (`colunasDeClientes`): em Arquivados a coluna Processos sai -- cliente com processo
+  não se arquiva, e a coluna seria uma fileira de zeros -- e entra a de ação, onde mora o "Reativar"; em Todos as duas
+  aparecem, e o arquivado ganha a etiqueta. Sob o nome, quem arquivou e quando;
+- 🔴 **"Reativar" na própria linha**, como o artefato validado desenha: a lista de Arquivados existe para trazer alguém
+  de volta, e abrir cada ficha seria um clique a mais por cliente. O clique do botão PARA de subir para a linha, senão
+  reativa e abre a ficha junto;
+- **na ficha**, "Excluir" deu lugar a "Arquivar" e "Reativar" (`manager`+, o piso da API), com a etiqueta, a `Faixa` que
+  diz o que o arquivamento preserva, e o cadastro ainda editável -- cliente arquivado se edita;
+- 🔴 **o bloqueio vem do 409**: os motivos que o servidor manda viram uma lista no `ModalDeAviso`, um por linha, sem
+  botão que insista no que já foi negado. Não há pré-checagem na tela, e é uma leitura a menos: só o servidor sabe de
+  fatura em aberto e cobrança pendente, e perguntar antes envelheceria entre a pergunta e o clique;
+- **avisos com Desfazer** nos dois sentidos. ⚠️ Desfazer uma reativação é arquivar de novo, e isso PODE ser recusado --
+  o erro avisa e recarrega a lista, em vez de a tela afirmar o contrário do que houve;
+- a função de excluir cliente saiu daqui; a rota continua na API até o passo 4.4f.
+
+**Testes.** `ClientesPage` e `ClienteDetalhePage` cobrem o chip (inclusive aceso, por `data-ativo`), o valor inválido na
+URL, as colunas por filtro, a etiqueta só em Todos, o "Reativar" da linha e o fato de ele não abrir a ficha, o bloqueio
+com os motivos, o erro SEM motivos que cai no aviso de sempre, a ficha arquivada e o piso de papel. `src/services/api/clientes.test.ts`
+é novo e existe por uma razão: os testes de tela simulam o módulo de serviços inteiro, e sem ele a busca ignorando o
+estado e a rota de arquivar trocada pela de reativar passavam despercebidas. Suíte 2.708.
+
+**Mutações.** 23, todas vermelhas -- cinco só depois de ganhar teste: a busca sem estado, o chip nunca aceso, a célula
+de processos sobrando na linha, o clique que abria a ficha e a rota trocada.
+
+**Chrome.** 21 checagens contra o `yarn offline` e 15 contra produção, com fotos das três listas e da ficha arquivada.
+
+**Produção.** Merge 4b8731f, publicado pela Vercel. Num escritório de teste criado por bootstrap, com três clientes e um
+honorário para a trava, em Chrome com janela: as três listas, a etiqueta, o "Reativar" da linha com Desfazer (conferido
+na API dos dois lados), o bloqueio com o motivo do servidor e o arquivar pela ficha com Desfazer. Nenhum erro de página
+nem resposta inesperada; limpeza com resíduo zero em sete tabelas e o escritório real intacto.
+
+⚠️ **Um teste instável apareceu no caminho**, em `FormularioDaInscricao` (Perfil), sem relação com clientes: falhou uma
+vez em dez rodadas da suíte cheia e nunca isolado. A hipótese de a releitura do perfil apagar o que estava digitado foi
+TESTADA e DESCARTADA; a causa exata não foi provada, porque o log da falha original se perdeu. O conserto entrou antes
+deste passo, e é de determinismo: `userEvent.setup()` e conferir o campo antes de salvar.
