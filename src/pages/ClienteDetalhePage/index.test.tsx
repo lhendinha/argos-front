@@ -8,7 +8,8 @@ import { renderComProviders } from "../../test/queryTestUtils";
 const mocks = vi.hoisted(() => ({
   detalheCliente: vi.fn(),
   atualizarCliente: vi.fn(),
-  removerCliente: vi.fn(),
+  arquivarCliente: vi.fn(),
+  reativarCliente: vi.fn(),
   listarProcessos: vi.fn(),
   listarSubgrupos: vi.fn(),
   listarClientes: vi.fn(),
@@ -188,77 +189,103 @@ describe("ClienteDetalhePage", () => {
     expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
   });
 
-  it("excluir pede confirmação no diálogo do sistema e volta pra listagem", async () => {
-    // `window.confirm` não serve: é do navegador, não dá pra pôr o nome do
-    // cliente em destaque nem avisar sobre os processos vinculados, e em
-    // alguns navegadores dá pra silenciá-lo.
-    mocks.removerCliente.mockResolvedValue({});
+  it("arquivar pede confirmação e FICA na ficha, com Desfazer que reativa", async () => {
+    /* `window.confirm` não serve: é do navegador, não dá pra pôr o nome do
+       cliente em destaque nem dizer o que o arquivamento preserva, e em
+       alguns navegadores dá pra silenciá-lo.
+
+       🔴 E FICA na ficha, ao contrário da exclusão, que voltava pra lista: o
+       cliente continua existindo, e quem arquivou pode querer conferir o que
+       sobrou -- a etiqueta e a faixa aparecem ali mesmo. */
+    mocks.arquivarCliente.mockResolvedValue({});
+    mocks.reativarCliente.mockResolvedValue({});
     const user = userEvent.setup();
     montar();
 
-    await user.click(await screen.findByRole("button", { name: "Excluir" }));
+    await user.click(await screen.findByRole("button", { name: "Arquivar" }));
     const dialogo = within(await screen.findByRole("dialog"));
-    await user.click(dialogo.getByRole("button", { name: "Excluir" }));
+    await user.click(dialogo.getByRole("button", { name: "Arquivar" }));
 
-    await waitFor(() => expect(mocks.removerCliente).toHaveBeenCalledWith("c1"));
-    expect(await screen.findByText("lista de clientes")).toBeInTheDocument();
+    await waitFor(() => expect(mocks.arquivarCliente).toHaveBeenCalledWith("c1"));
+    expect(screen.queryByText("lista de clientes")).not.toBeInTheDocument();
+
+    /* O "Desfazer" REATIVA -- e reativar não é recusado por nada, que é o
+       que torna a promessa honesta. */
+    await user.click(await screen.findByRole("button", { name: "Desfazer" }));
+    await waitFor(() => expect(mocks.reativarCliente).toHaveBeenCalledWith("c1"));
   });
 
-  it("🔴 o diálogo diz que a exclusão está BLOQUEADA, não que os processos perdem o cliente", async () => {
-    /* O texto antigo descrevia o desfecho de DESVINCULAR, que só vale pra
-     * atendimento. Pra processo o servidor sempre recusa (409 `ClienteEmUso`),
-     * então a pessoa confirmava esperando uma coisa e recebia um erro. */
-    mocks.listarProcessos.mockResolvedValue({
-      processos: [
-        { subgrupo_id: "sg1", numero_processo: "00002668720218130559", apelido: "x" },
-      ],
+  it("🔴 o arquivado mostra etiqueta, quem arquivou, a faixa e o botão de reativar", async () => {
+    mocks.detalheCliente.mockResolvedValue({
+      ...CLIENTE,
+      arquivado_em: "2026-09-15T18:30:00+00:00",
+      arquivado_por: "chefe@argos.invalid",
     });
+    mocks.reativarCliente.mockResolvedValue({});
     const user = userEvent.setup();
     montar();
 
-    await user.click(await screen.findByRole("button", { name: "Excluir" }));
+    expect(await screen.findByText("Arquivado")).toBeVisible();
+    expect(screen.getByText(/Por chefe@argos.invalid em 15\/09\/2026/)).toBeVisible();
+    expect(screen.getByText(/fica fora da lista e dos seletores/)).toBeVisible();
+    /* Continua EDITÁVEL: decisão do usuário, e a API aceita o PATCH nele. */
+    expect(screen.getByLabelText(/Nome/)).not.toHaveAttribute("readonly");
+    expect(screen.queryByRole("button", { name: "Arquivar" })).not.toBeInTheDocument();
 
-    expect(await screen.findByText(/está vinculado a 1 processo/)).toBeInTheDocument();
-
-    /* 🔴 E o botão de confirmar NÃO existe.
-     *
-     * A versão anterior mostrava o impedimento no `aviso` de um
-     * `ModalDeConfirmacao`, cujo "Excluir" continuava ativo: confirmar
-     * disparava um DELETE que o servidor recusa com 409. O teste antigo
-     * conferia só o TEXTO, então passava com o botão ativo -- prometer
-     * impossibilidade e deixar o caminho aberto é pior que não avisar.
-     *
-     * `SubgruposPage` já usava `ModalDeAviso` (sem botão) pro mesmo caso. */
-    /* ⚠️ Escopado ao DIÁLOGO: o "Excluir" do cabeçalho da página continua
-     * existindo -- é ele que abre este modal. Procurar na tela inteira
-     * encontraria aquele e o teste passaria sem provar nada. */
-    const dialogo = await screen.findByRole("dialog");
-    expect(within(dialogo).queryByRole("button", { name: /^Excluir$/ })).not.toBeInTheDocument();
-    expect(within(dialogo).getByRole("button", { name: "Entendi" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Reativar" }));
+    await waitFor(() => expect(mocks.reativarCliente).toHaveBeenCalledWith("c1"));
   });
 
-  it("cliente em uso por processo mostra a mensagem que a API deu", async () => {
-    // O backend bloqueia (`ClienteEmUso`) pra não deixar `cliente_id` solto
-    // apontando pra nada. A tela repassa o motivo, não inventa outro.
-    mocks.removerCliente.mockRejectedValue(
-      new ApiError("Cliente ainda vinculado a um processo", 409),
+  it("🔴 o bloqueio mostra os MOTIVOS que o servidor mandou, um por linha", async () => {
+    /* Os motivos vêm do 409, e não de uma pré-checagem na tela: só o servidor
+     * sabe de fatura em aberto e cobrança pendente, e perguntar antes seria
+     * uma leitura a mais que ainda assim envelheceria entre a pergunta e o
+     * clique. */
+    mocks.arquivarCliente.mockRejectedValue(
+      new ApiError("Não dá para arquivar: o cliente está associado a 1 processo -- resolva antes.", 409, {
+        motivos: ["está associado a 1 processo", "tem fatura em aberto"],
+      }),
     );
     const user = userEvent.setup();
     montar();
 
-    await user.click(await screen.findByRole("button", { name: "Excluir" }));
-    const dialogo = within(await screen.findByRole("dialog"));
-    await user.click(dialogo.getByRole("button", { name: "Excluir" }));
+    await user.click(await screen.findByRole("button", { name: "Arquivar" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Arquivar" }));
 
-    expect(await screen.findByText("Cliente ainda vinculado a um processo")).toBeInTheDocument();
+    expect(await screen.findByText("está associado a 1 processo")).toBeInTheDocument();
+    expect(screen.getByText("tem fatura em aberto")).toBeInTheDocument();
+
+    /* 🔴 E o botão de confirmar NÃO existe: o servidor já recusou, e deixar o
+     * caminho aberto faria a pessoa insistir num 409.
+     *
+     * ⚠️ Escopado ao DIÁLOGO: o "Arquivar" do cabeçalho da página continua
+     * existindo -- é ele que abre este fluxo. Procurar na tela inteira
+     * encontraria aquele e o teste passaria sem provar nada. */
+    const dialogo = await screen.findByRole("dialog");
+    expect(within(dialogo).queryByRole("button", { name: /^Arquivar$/ })).not.toBeInTheDocument();
+    expect(within(dialogo).getByRole("button", { name: "Entendi" })).toBeInTheDocument();
   });
 
-  it("sem permissão de admin, não mostra o botão de excluir", async () => {
+  it("🔴 erro SEM motivos cai no aviso de sempre, com a mensagem da API", async () => {
+    /* O par negativo do bloqueio: nem todo 409 traz lista. Sem isto, um erro
+       qualquer abriria um diálogo de bloqueio vazio. */
+    mocks.arquivarCliente.mockRejectedValue(new ApiError("Esse cliente foi alterado ao mesmo tempo", 409));
+    const user = userEvent.setup();
+    montar();
+
+    await user.click(await screen.findByRole("button", { name: "Arquivar" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Arquivar" }));
+
+    expect(await screen.findByText("Esse cliente foi alterado ao mesmo tempo")).toBeInTheDocument();
+    expect(screen.queryByText("Não dá pra arquivar ainda")).not.toBeInTheDocument();
+  });
+
+  it("sem permissão de manager, não mostra o botão de arquivar", async () => {
     mocks.papelAtende.mockReturnValue(false);
     montar();
     await screen.findByLabelText(/Nome/);
 
-    expect(screen.queryByRole("button", { name: "Excluir" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Arquivar" })).not.toBeInTheDocument();
   });
 
   it("🔴 `user` vê o cadastro, mas não consegue editar -- a API recusa o PATCH", async () => {
@@ -384,21 +411,14 @@ describe("ClienteDetalhePage", () => {
         }),
     );
 
-    const user = userEvent.setup();
     montar();
+    await irParaProcessos();
 
-    await user.click(await screen.findByRole("button", { name: "Excluir" }));
-
-    /* ⚠️ Reconsulta o diálogo DENTRO do `waitFor`.
-     *
-     * A frase é quebrada por `<strong>`, então precisa de `toHaveTextContent`
-     * -- mas guardar o elemento antes fazia a asserção olhar um nó já
-     * desmontado: enquanto os dados não chegam, `processosLigados` é 0 e o
-     * diálogo mostrado é o de CONFIRMAÇÃO; quando chegam, ele é trocado
-     * pelo de bloqueio. A referência velha nunca muda de conteúdo. */
-    await waitFor(() =>
-      expect(screen.getByRole("dialog")).toHaveTextContent(/125 processos/),
-    );
+    /* O cartão mostra os processos das DUAS páginas: 100 + 25.
+       ⚠️ Pela CONTAGEM, e não por um apelido: os dois lotes simulados
+       repetem os nomes ("Caso 0" abre as duas páginas), e procurar um só
+       acharia dois elementos. */
+    expect(await screen.findAllByText(/^Caso /)).toHaveLength(125);
     // Pediu a 2ª página -- é isso que a versão truncada não fazia.
     expect(
       mocks.listarProcessos.mock.calls.some(
@@ -440,22 +460,23 @@ describe("ClienteDetalhePage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("🔴 abrir o diálogo REBUSCA a contagem em vez de usar a do cache", async () => {
-    /* A query fica montada (o cartão a usa), então abrir o diálogo não
-     * disparava busca nenhuma: ele decidia com o que estivesse no cache.
-     * Contagem velha e não-zero bloqueia uma exclusão legítima -- e o
-     * diálogo de aviso nem tem botão pra insistir. */
+  it("🔴 arquivar NÃO consulta os processos: o motivo vem do 409", async () => {
+    /* A exclusão pré-checava os processos para decidir qual diálogo mostrar,
+     * e a contagem em cache podia bloquear uma exclusão legítima. Aqui quem
+     * decide é o servidor, que conhece também fatura e cobrança -- e a tela
+     * deixou de pagar uma leitura que nunca ia bastar. */
     mocks.listarProcessos.mockResolvedValue({ processos: [], total: 0, total_paginas: 1 });
+    mocks.arquivarCliente.mockResolvedValue({});
     const user = userEvent.setup();
     montar();
     await screen.findByText("Nenhum processo vinculado a este cliente.");
 
     const antes = mocks.listarProcessos.mock.calls.length;
-    await user.click(await screen.findByRole("button", { name: "Excluir" }));
+    await user.click(await screen.findByRole("button", { name: "Arquivar" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Arquivar" }));
 
-    await waitFor(() =>
-      expect(mocks.listarProcessos.mock.calls.length).toBeGreaterThan(antes),
-    );
+    await waitFor(() => expect(mocks.arquivarCliente).toHaveBeenCalledWith("c1"));
+    expect(mocks.listarProcessos.mock.calls.length).toBe(antes);
   });
 });
 

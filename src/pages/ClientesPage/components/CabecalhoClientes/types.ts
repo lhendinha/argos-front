@@ -1,3 +1,5 @@
+import type { EstadoDeCliente } from "../../../../types";
+
 export interface CabecalhoClientesProps {
   carregando: boolean;
   total: number;
@@ -20,6 +22,9 @@ export interface CabecalhoClientesProps {
   exibidos: number;
   busca: string;
   onBuscar: (valor: string) => void;
+  /** Qual chip está escolhido: ativos (o padrão), arquivados ou todos. */
+  estado: EstadoDeCliente;
+  onMudarEstado: (estado: EstadoDeCliente) => void;
   /** O que a tabela mostra ainda não corresponde ao que está escrito no
    * campo -- espera entre teclas ou consulta em voo. */
   buscando?: boolean;

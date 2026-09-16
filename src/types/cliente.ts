@@ -1,5 +1,7 @@
 /** Cliente e endereço. */
 
+import type { ESTADOS_DE_CLIENTE } from "../constants/cliente";
+
 export interface Cliente {
   grupo_id: string;
   cliente_id: string;
@@ -14,6 +16,11 @@ export interface Cliente {
   processos?: number;
   telefone?: string | null;
   email?: string | null;
+  /** Quando e por quem o cliente foi ARQUIVADO -- `null` no ativo. Arquivado
+   * ele sai da lista e dos seletores e continua existindo: os vínculos, o
+   * histórico e o CPF/CNPJ reservado ficam. */
+  arquivado_em?: string | null;
+  arquivado_por?: string | null;
   /** Endereço -- opcional inteiro, e PLANO como na API (um objeto aninhado
    * exigiria uma segunda semântica de PATCH). Ausente em cliente cadastrado
    * antes de o endereço existir, e quem lê trata `null`/`undefined` como
@@ -73,7 +80,14 @@ export interface OpcoesListarClientes {
   pagina?: number;
   tamanhoPagina?: number;
   busca?: string;
+  /** Ativos, arquivados ou todos. Sem ele a API devolve só os ativos, que é
+   * o que todo seletor de cliente quer. */
+  estado?: EstadoDeCliente;
 }
+
+/** O tipo sai da lista de constantes, como em `constants/prioridade.ts`:
+ * assim os dois não podem divergir. */
+export type EstadoDeCliente = (typeof ESTADOS_DE_CLIENTE)[number];
 
 /** O andamento da consulta de CEP, como a tela precisa vê-lo. */
 export interface EstadoDoCep {

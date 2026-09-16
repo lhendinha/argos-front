@@ -1,6 +1,8 @@
 import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 
-import { Botao, CampoDeBusca } from "../../../../components";
+import { Botao, CampoDeBusca, PilulaDeMenu } from "../../../../components";
+import { ESTADO_DE_CLIENTE_ATIVOS } from "../../../../constants";
+import { OPCOES_DE_ESTADO } from "../../constants";
 import { contar } from "../../../../utils";
 import type { CabecalhoClientesProps } from "./types";
 
@@ -13,6 +15,8 @@ export default function CabecalhoClientes({
   exibidos,
   busca,
   onBuscar,
+  estado,
+  onMudarEstado,
   podeCriar,
   onNovoCliente,
 }: CabecalhoClientesProps) {
@@ -34,7 +38,10 @@ export default function CabecalhoClientes({
         )}
       </Flex>
 
-      <Flex gap="10px" mb="10px">
+      {/* O chip fica na LINHA DA BUSCA, como o status em Atendimentos: é
+          onde a tela já tem uma barra de filtro, e o artefato validado o
+          desenha ali. */}
+      <Flex gap="10px" mb="10px" align="center" wrap="wrap">
         <CampoDeBusca
           rotulo="Pesquisar cliente"
           placeholder="Pesquisar cliente"
@@ -42,6 +49,14 @@ export default function CabecalhoClientes({
           onMudar={onBuscar}
           larguraMaxima="420px"
           buscando={buscando}
+        />
+        <PilulaDeMenu
+          opcoes={OPCOES_DE_ESTADO.map((o) => ({ id: o.id, rotulo: o.rotulo }))}
+          selecionado={estado}
+          /* Aceso fora do padrão: "Ativos" é o que a tela mostra sem ninguém
+             escolher nada, e pílula acesa nesse caso diria que há filtro. */
+          ativo={estado !== ESTADO_DE_CLIENTE_ATIVOS}
+          onEscolher={(id) => onMudarEstado(id as typeof estado)}
         />
       </Flex>
 

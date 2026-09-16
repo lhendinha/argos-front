@@ -21,6 +21,8 @@ function montar(props: Partial<Parameters<typeof CabecalhoClientes>[0]> = {}) {
       exibidos={50}
       busca="silveira"
       onBuscar={vi.fn()}
+      estado="ativos"
+      onMudarEstado={vi.fn()}
       podeCriar={false}
       onNovoCliente={vi.fn()}
       {...props}

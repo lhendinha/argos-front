@@ -8,6 +8,8 @@ import { renderComProviders } from "../../test/queryTestUtils";
 const mocks = vi.hoisted(() => ({
   listarClientes: vi.fn(),
   criarCliente: vi.fn(),
+  arquivarCliente: vi.fn(),
+  reativarCliente: vi.fn(),
   papelAtende: vi.fn(),
 }));
 
@@ -23,9 +25,9 @@ function EspiaoDeRota() {
   return <div>{`detalhe ${clienteId}`}</div>;
 }
 
-function montar() {
+function montar(rota = "/clientes") {
   return renderComProviders(
-    <MemoryRouter initialEntries={["/clientes"]}>
+    <MemoryRouter initialEntries={[rota]}>
       <Routes>
         <Route path="/clientes" element={<ClientesPage />} />
         <Route path="/clientes/:clienteId" element={<EspiaoDeRota />} />
@@ -52,13 +54,17 @@ beforeEach(() => {
 });
 
 describe("ClientesPage", () => {
-  it("mostra a lista depois de carregar, com pagina/tamanhoPagina", async () => {
+  it("mostra a lista depois de carregar, com pagina/tamanhoPagina e o estado padrão", async () => {
     montar();
 
     expect(await screen.findByText("Fulano")).toBeInTheDocument();
+    /* 🔴 `estado` vai SEMPRE, e não só quando a pessoa escolhe: sem ele a API
+       devolve os ativos por padrão, mas a tela ficaria dependendo desse
+       padrão para dizer o que está mostrando. */
     expect(mocks.listarClientes).toHaveBeenCalledWith({
       pagina: 1,
       tamanhoPagina: 10,
+      estado: "ativos",
     });
   });
 
@@ -84,7 +90,7 @@ describe("ClientesPage", () => {
     await user.type(screen.getByLabelText("Pesquisar cliente"), "ciclana");
 
     await waitFor(() =>
-      expect(mocks.listarClientes).toHaveBeenCalledWith({ busca: "ciclana" }),
+      expect(mocks.listarClientes).toHaveBeenCalledWith({ busca: "ciclana", estado: "ativos" }),
     );
     expect(screen.queryByText("Por página")).not.toBeInTheDocument();
   });
@@ -198,6 +204,118 @@ describe("ClientesPage", () => {
     expect(
       await screen.findByText("Esse CPF/CNPJ já é de outro cliente"),
     ).toBeInTheDocument();
+  });
+
+  it("o chip troca o estado, e Arquivados pede a lista do servidor", async () => {
+    const user = userEvent.setup();
+    montar();
+    await screen.findByText("Fulano");
+
+    /* 🔴 O chip nasce APAGADO em "Ativos": é o que a tela mostra para quem
+       não escolheu nada, e pílula acesa aí diria que há filtro. O estado
+       ligado só existe como cor, e `data-ativo` é o que deixa afirmá-lo sem
+       comparar hexadecimal. */
+    expect(screen.getByRole("button", { name: "Ativos" })).not.toHaveAttribute("data-ativo");
+
+    await user.click(screen.getByRole("button", { name: "Ativos" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Arquivados" }));
+    expect(await screen.findByRole("button", { name: "Arquivados" })).toHaveAttribute("data-ativo", "true");
+
+    await waitFor(() =>
+      expect(mocks.listarClientes).toHaveBeenCalledWith({
+        pagina: 1,
+        tamanhoPagina: 10,
+        estado: "arquivados",
+      }),
+    );
+  });
+
+  it("🔴 estado desconhecido na URL vira Ativos, em vez de ir para a API", async () => {
+    /* A URL é digitável, e `?estado=apagados` chegaria à API como filtro
+       inválido: 422, e a tela diria só "não foi possível carregar". */
+    montar("/clientes?estado=apagados");
+
+    await screen.findByText("Fulano");
+    expect(mocks.listarClientes).toHaveBeenCalledWith({
+      pagina: 1,
+      tamanhoPagina: 10,
+      estado: "ativos",
+    });
+  });
+
+  it("em Arquivados a coluna Processos sai e a linha ganha Reativar", async () => {
+    /* Cliente com processo não se arquiva, então a coluna inteira seria uma
+       fileira de zeros -- é o artefato validado que a tira. */
+    mocks.listarClientes.mockResolvedValue({
+      clientes: [
+        {
+          cliente_id: "1",
+          nome: "Fulano",
+          cpf_cnpj: "12345678901",
+          arquivado_em: "2026-09-15T18:30:00+00:00",
+          arquivado_por: "chefe@argos.invalid",
+        },
+      ],
+      total: 1,
+      total_paginas: 1,
+    });
+    mocks.reativarCliente.mockResolvedValue({});
+    mocks.arquivarCliente.mockResolvedValue({});
+    const user = userEvent.setup();
+    montar("/clientes?estado=arquivados");
+
+    expect(await screen.findByText("Fulano")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Processos" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Arquivado por chefe@argos.invalid em 15\/09\/2026/)).toBeVisible();
+    /* A etiqueta é só de "Todos": aqui o filtro já disse o que cada linha é. */
+    expect(screen.queryByText("Arquivado", { selector: "span" })).not.toBeInTheDocument();
+
+    /* 🔴 A célula da coluna some junto com o cabeçalho: conferir só o `th`
+       deixava passar uma linha com uma célula a mais, que desalinha a tabela
+       inteira a partir dali. */
+    expect(screen.getAllByRole("cell")).toHaveLength(4);
+
+    await user.click(screen.getByRole("button", { name: "Reativar" }));
+    /* 🔴 E NÃO abre a ficha: o clique da linha inteira está no `<tr>`, e sem
+       parar a propagação o botão reativa e navega junto -- a pessoa perde a
+       lista de vista no meio da ação. */
+    expect(screen.queryByText("detalhe 1")).not.toBeInTheDocument();
+    await waitFor(() => expect(mocks.reativarCliente).toHaveBeenCalledWith("1"));
+
+    /* O "Desfazer" arquiva de novo -- e essa volta PODE ser recusada, então
+       o aviso existe justamente para ela aparecer. */
+    await user.click(await screen.findByRole("button", { name: "Desfazer" }));
+    await waitFor(() => expect(mocks.arquivarCliente).toHaveBeenCalledWith("1"));
+  });
+
+  it("em Todos o arquivado vem com a etiqueta", async () => {
+    mocks.listarClientes.mockResolvedValue({
+      clientes: [
+        { cliente_id: "1", nome: "Fulano", processos: 3 },
+        { cliente_id: "2", nome: "Sicrano", arquivado_em: "2026-09-15T18:30:00+00:00", arquivado_por: "chefe" },
+      ],
+      total: 2,
+      total_paginas: 1,
+    });
+    montar("/clientes?estado=todos");
+
+    expect(await screen.findByText("Sicrano")).toBeInTheDocument();
+    expect(screen.getByText("Arquivado")).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "Processos" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Reativar" })).toHaveLength(1);
+  });
+
+  it("sem permissão de manager, o arquivado não ganha Reativar", async () => {
+    mocks.papelAtende.mockReturnValue(false);
+    mocks.listarClientes.mockResolvedValue({
+      clientes: [{ cliente_id: "1", nome: "Fulano", arquivado_em: "2026-09-15T18:30:00+00:00", arquivado_por: "chefe" }],
+      total: 1,
+      total_paginas: 1,
+    });
+    montar("/clientes?estado=arquivados");
+
+    await screen.findByText("Fulano");
+    expect(screen.queryByRole("button", { name: "Reativar" })).not.toBeInTheDocument();
   });
 
   it("sem permissão de manager, não mostra o botão de criar", async () => {

@@ -5,11 +5,11 @@ import { useParams, useSearchParams } from "react-router-dom";
 
 import { Abas, BotaoDeTexto, Cartao, DocumentosVinculados, IconeSeta, Esqueleto, ModalDeAviso, ModalDeConfirmacao, PainelDaAba } from "../../components";
 import { useToast } from "../../contexts/ToastContext";
-import { detalheCliente, papelAtende, removerCliente } from "../../services";
+import { arquivarCliente, detalheCliente, papelAtende, reativarCliente } from "../../services";
 import { toastErroMutation } from "../../services/queryClient";
+import { ApiError } from "../../services/api/client";
 import { qk } from "../../services/queryKeys";
-import { abaValida, contar, PARAM_DA_ABA } from "../../utils";
-import { useProcessosDoCliente } from "./hooks/useProcessosDoCliente";
+import { abaValida, PARAM_DA_ABA } from "../../utils";
 import FormularioCliente from "./components/FormularioCliente";
 import ProcessosDoCliente from "./components/ProcessosDoCliente";
 import { ABAS_DO_CLIENTE, GRUPO_DE_ABAS } from "./constants";
@@ -28,12 +28,17 @@ export default function ClienteDetalhePage() {
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  /* Dois papéis diferentes, e é assim no backend: `PATCH /clientes` é
-     `manager`, `DELETE` é `admin`. Um só booleano aqui deixaria um dos dois
-     mais frouxo ou mais rígido que a API. */
+  /* `PATCH /clientes` e as duas rotas de arquivamento são `manager` -- o
+     mesmo piso, e é assim no backend. Cliente arquivado continua editável,
+     então o formulário não muda de regra por causa do estado. */
   const podeEditar = papelAtende("manager");
-  const podeExcluir = papelAtende("admin");
-  const [confirmandoRemocao, setConfirmandoRemocao] = useState(false);
+  const podeArquivar = papelAtende("manager");
+  const [confirmandoArquivamento, setConfirmandoArquivamento] = useState(false);
+  /* Os motivos vêm do 409 (`motivos`), não de uma pré-checagem: só o
+     servidor sabe de fatura em aberto e cobrança pendente, e perguntar antes
+     seria uma leitura a mais que ainda assim correria o risco de envelhecer
+     entre a pergunta e o clique. */
+  const [motivos, setMotivos] = useState<string[] | null>(null);
 
   /* A aba vive na URL, como no detalhe do processo -- ver `PARAM_DA_ABA`.
      `replace` porque trocar de aba não é um passo do histórico: sem isso,
@@ -46,11 +51,6 @@ export default function ClienteDetalhePage() {
     setParams(proximos, { replace: true });
   };
 
-  /** Mesma consulta do cartão de processos -- serve pra dizer, na hora de
-   * excluir, quantos processos perdem este cliente. */
-  const processosQuery = useProcessosDoCliente(clienteId);
-  const processosLigados = processosQuery.data?.length ?? 0;
-
   const query = useQuery<Cliente>({
     queryKey: qk.detalheCliente(clienteId),
     queryFn: () => detalheCliente(clienteId),
@@ -59,16 +59,44 @@ export default function ClienteDetalhePage() {
   /* ⚠️ Volta no HISTÓRICO -- ver `useVoltarParaLista`. */
   const voltar = useVoltarParaLista("/clientes");
 
-  const removerMutation = useMutation({
-    mutationFn: () => removerCliente(clienteId),
+  const invalidar = () => {
+    queryClient.invalidateQueries({ queryKey: qk.detalheCliente(clienteId) });
+    queryClient.invalidateQueries({ queryKey: ["clientes"] });
+  };
+
+  const reativarMutation = useMutation({
+    mutationFn: () => reativarCliente(clienteId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clientes"] });
-      voltar();
+      invalidar();
+      toast.sucesso(`${query.data?.nome ?? "Cliente"} voltou para a lista de clientes.`);
     },
-    // O backend recusa excluir cliente ainda vinculado a processo
-    // (`ClienteEmUso`) -- a mensagem dele já explica, então não invento
-    // outra por cima.
-    onError: (err) => toastErroMutation(toast, err, "Não foi possível excluir o cliente."),
+    onError: (err) => toastErroMutation(toast, err, "Não foi possível reativar o cliente."),
+  });
+
+  const arquivarMutation = useMutation({
+    mutationFn: () => arquivarCliente(clienteId),
+    onSuccess: () => {
+      setConfirmandoArquivamento(false);
+      invalidar();
+      /* Fica NA FICHA, e não volta para a lista: o cliente continua
+         existindo, e quem arquivou pode querer conferir o que ficou. O
+         "Desfazer" reativa -- e reativar não é recusado por nada. */
+      toast.sucesso(`${query.data?.nome ?? "Cliente"} arquivado.`, {
+        onDesfazer: () => reativarMutation.mutate(),
+      });
+    },
+    onError: (err) => {
+      setConfirmandoArquivamento(false);
+      /* 🔴 O 409 do arquivamento não é "deu erro": é a lista do que falta
+         resolver, e ela vira o diálogo de bloqueio. Qualquer outro erro
+         segue pelo toast de sempre. */
+      const doServidor = err instanceof ApiError ? err.corpo.motivos : null;
+      if (Array.isArray(doServidor) && doServidor.length > 0) {
+        setMotivos(doServidor.map(String));
+        return;
+      }
+      toastErroMutation(toast, err, "Não foi possível arquivar o cliente.");
+    },
   });
 
   if (query.isPending) return <Esqueleto linhas={4} />;
@@ -115,7 +143,9 @@ export default function ClienteDetalhePage() {
         <FormularioCliente
           cliente={query.data}
           podeEditar={podeEditar}
-          podeExcluir={podeExcluir}
+          podeArquivar={podeArquivar}
+          arquivando={arquivarMutation.isPending}
+          reativando={reativarMutation.isPending}
           onSalvo={() => {
             queryClient.invalidateQueries({ queryKey: qk.detalheCliente(clienteId) });
             queryClient.invalidateQueries({ queryKey: ["clientes"] });
@@ -133,23 +163,8 @@ export default function ClienteDetalhePage() {
             queryClient.invalidateQueries({ queryKey: ["atendimentos"] });
             toast.sucesso("Cliente atualizado.");
           }}
-          onRemover={() => {
-            /* 🔴 Rebusca ANTES de decidir o que mostrar.
-             *
-             * A contagem vem de uma query que fica montada (o cartão de
-             * processos a usa), então abrir o diálogo não disparava busca
-             * nenhuma -- ele decidia com o que estivesse no cache. Contagem
-             * velha e não-zero BLOQUEIA uma exclusão legítima, e o diálogo de
-             * aviso nem tem botão pra insistir; contagem velha e zero manda um
-             * DELETE que volta 409, o erro que toda esta pré-verificação
-             * existe pra evitar.
-             *
-             * `useConteudoDoSubgrupo` resolve o mesmo com `gcTime: 0`, mas lá
-             * a query só existe enquanto o diálogo está aberto. Aqui ela
-             * sobrevive, então o gatilho tem que ser explícito. */
-            processosQuery.refetch();
-            setConfirmandoRemocao(true);
-          }}
+          onArquivar={() => setConfirmandoArquivamento(true)}
+          onReativar={() => reativarMutation.mutate()}
         />
       </PainelDaAba>
 
@@ -172,57 +187,43 @@ export default function ClienteDetalhePage() {
         </Cartao>
       </PainelDaAba>
 
-      {/* 🔴 Exclusão BLOQUEADA usa `ModalDeAviso`, sem botão de confirmar.
-          O `ModalDeConfirmacao` não tem como desabilitar o "Excluir": o
-          aviso dizia "Não dá pra excluir... Desvincule antes" e o botão
-          continuava ativo, então confirmar disparava um DELETE que o
-          servidor recusa com 409. Prometer impossibilidade e deixar o
-          caminho aberto é pior que não avisar.
-
-          É o mesmo arranjo de `SubgruposPage`, que já separava
-          "impedimento" de "confirmação" -- porta irmã que ficou aberta. */}
-      {/* ⚠️ Enquanto a rebusca não termina, nenhum dos dois diálogos decide:
-          o de confirmação abaixo cobre a espera com `verificando`, e o de
-          bloqueio só aparece quando a contagem é fresca. */}
-      {confirmandoRemocao && !processosQuery.isFetching && processosLigados > 0 && (
+      {/* 🔴 Arquivamento BLOQUEADO usa `ModalDeAviso`, sem botão de
+          confirmar: o servidor já recusou, e deixar o caminho aberto faria a
+          pessoa insistir num 409. Os motivos vêm em LISTA, um por linha --
+          quatro impedimentos numa frase corrida viram um parágrafo que
+          ninguém conta. */}
+      {motivos && (
         <ModalDeAviso
-          titulo="Não dá pra excluir ainda"
+          titulo="Não dá pra arquivar ainda"
           mensagem={
             <>
-              <strong>{query.data.nome}</strong> está vinculado a{" "}
-              {contar(processosLigados, "processo", "processos")}.
+              <strong>{query.data.nome}</strong>:
             </>
           }
-          detalhe="Desvincule o cliente desses processos antes de excluir."
-          onFechar={() => setConfirmandoRemocao(false)}
+          itens={motivos}
+          detalhe="Resolva cada um antes de arquivar: desvincule dos processos, feche os atendimentos, receba ou cancele as faturas, e fature ou marque as cobranças para não cobrar."
+          onFechar={() => setMotivos(null)}
         />
       )}
 
-      {confirmandoRemocao && (processosQuery.isFetching || processosLigados === 0) && (
+      {confirmandoArquivamento && (
         <ModalDeConfirmacao
-          titulo="Excluir cliente"
+          titulo="Arquivar cliente"
           mensagem={
             <>
-              O cliente <strong>{query.data.nome}</strong> será removido.
+              O cliente <strong>{query.data.nome}</strong> sai da lista de clientes e dos seletores.
             </>
           }
-          /* O aviso é a consequência da exclusão, e confirmar antes de ele
-             chegar é decidir às cegas. Em falha a contagem cai pra 0 -- e
-             aí o modal de impedimento acima nem apareceria --, então a
-             espera precisa cobrir os dois casos. */
-          /* `isFetching`, não só `isPending`: com a query montada, a rebusca
-             ao abrir não passa por `isPending`, e sem isto o botão
-             "Excluir" ficaria clicável em cima da contagem velha. */
-          verificando={processosQuery.isFetching || processosQuery.isError}
-          falhouAVerificacao={processosQuery.isError}
-          mensagemDeEspera={
-            processosQuery.isError
-              ? "Não foi possível conferir o que está vinculado a este cliente. Recarregue a página antes de excluir."
-              : "Conferindo o que está vinculado a este cliente…"
-          }
-          confirmando={removerMutation.isPending}
-          onConfirmar={() => removerMutation.mutate()}
-          onFechar={() => setConfirmandoRemocao(false)}
+          /* Reversível: some a lixeira e o "não pode ser desfeita", que
+             mentiriam -- reativar traz o cliente de volta inteiro. */
+          reversivel
+          varianteDoBotao="primario"
+          rotulo="Arquivar"
+          rotuloConfirmando="Arquivando…"
+          nota="O histórico continua com o nome dele, e o CPF/CNPJ fica reservado. Dá para reativar em Clientes › Arquivados."
+          confirmando={arquivarMutation.isPending}
+          onConfirmar={() => arquivarMutation.mutate()}
+          onFechar={() => setConfirmandoArquivamento(false)}
         />
       )}
     </Box>
