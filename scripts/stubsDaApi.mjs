@@ -204,6 +204,101 @@ const RESPOSTAS = [
   ],
   [/\/situacoes/, () => opcoes(SITUACOES, "situacao")],
   [/\/fases/, () => opcoes(FASES, "fase")],
+  /* 🔴 Os quatro abaixo têm a forma CAPTURADA da API rodando em
+     `yarn offline`, e não deduzida da tela. Medi: a versão que escrevi de
+     cabeça errava em quase todo campo -- `inscricoes_oab` no lugar de
+     `numero_oab`/`uf_oab`, `documento` no lugar de `cpf_cnpj`, endereço
+     aninhado onde a resposta traz campos planos, e três campos (`grupo_id`,
+     `grupo_nome`, `telefone`) que o `/me` simplesmente não devolve.
+     Stub inventado mede uma tela que não existe. */
+  [
+    /\/me$/,
+    () => ({
+      email: "ana@argos.local",
+      apelido: "Ana Paula",
+      papel: "admin",
+      numero_oab: null,
+      uf_oab: null,
+      importacao_automatica: false,
+      subgrupos_destino: [],
+      subgrupos: [
+        { id: "sg-civel", nome: "Cível" },
+        { id: "sg-fam", nome: "Família" },
+        { id: "sg-trab", nome: "Trabalhista" },
+      ],
+    }),
+  ],
+  [
+    /\/financeiro\/catalogo/,
+    () => ({
+      contas: [
+        { conta_id: "ct-1", nome: "Banco do Brasil - movimento", tipo: "corrente",
+          banco: "001", agencia: "1234-5", numero: "45678-9",
+          inicio: "2026-01-01", saldo_inicial_centavos: 0, saldo_centavos: 535500, ativa: true },
+      ],
+      categorias: [
+        { categoria_id: "cat-1", nome: "Honorários contratuais", natureza: "entrada", cor: "#1f9d55", agrupador_id: "", ativa: true },
+        { categoria_id: "cat-2", nome: "Custas processuais", natureza: "saida", cor: "#d64550", agrupador_id: "", ativa: true },
+      ],
+      centros_de_custo: [{ centro_id: "cc-1", nome: "Cível", ativo: true }],
+      conta_padrao_id: "ct-1",
+      cores_disponiveis: ["#1f9d55", "#4d7c0f", "#d64550"],
+    }),
+  ],
+  [
+    /\/lancamentos/,
+    () => {
+      const lancamentos = [
+        { lancamento_id: "lan-1", tipo: "honorario", descricao: "Honorários de êxito",
+          valor_centavos: 250000, data_vencimento: "2026-09-25", natureza: "entrada",
+          situacao: "aberto", conta_id: "ct-1", categoria_id: "cat-1", centro_id: "",
+          cliente_id: "cli-2", cliente_nome: "Construtora Alfa", contraparte: "",
+          subgrupo_id: "", numero_processo: "", atendimento_id: "", responsavel: "",
+          documento_numero: "", parcela: "", rateio: [],
+          criado_por: "ana@argos.local", criado_em: "2026-09-01T10:00:00+00:00" },
+        { lancamento_id: "lan-2", tipo: "saida", descricao: "Custas processuais",
+          valor_centavos: 32000, data_vencimento: "2026-09-10", natureza: "saida",
+          situacao: "atrasado", conta_id: "ct-1", categoria_id: "cat-2", centro_id: "",
+          cliente_id: "", cliente_nome: "", contraparte: "Transportes Beta",
+          subgrupo_id: "", numero_processo: "", atendimento_id: "", responsavel: "",
+          documento_numero: "", parcela: "", rateio: [],
+          criado_por: "ana@argos.local", criado_em: "2026-09-01T10:00:00+00:00" },
+      ];
+      return {
+        lancamentos, pagina: 1, tamanho_pagina: 10, total: 2, total_paginas: 1,
+        totais: {
+          a_receber_centavos: 250000, a_receber_quantidade: 1,
+          a_pagar_centavos: 32000, a_pagar_quantidade: 1,
+          atrasado_centavos: 32000, atrasado_quantidade: 1,
+        },
+      };
+    },
+  ],
+  /* ⚠️ ANTES da listagem: `/\/clientes/` casa com o detalhe também, e
+     devolver o envelope da lista no lugar do item quebrava a tela de
+     detalhe com "reading 'trim'" -- que não parece erro de stub. */
+  [
+    /\/clientes\/[^/]+$/,
+    (url) => ({
+      cliente_id: url.pathname.split("/").pop(),
+      nome: "Construtora Alfa",
+      cpf_cnpj: "12.345.678/0001-90",
+      telefone: "7133334444",
+      email: "contato@alfa.com.br",
+      cep: "40000-000",
+      logradouro: "Av. Tancredo Neves",
+      numero: "1000",
+      complemento: "Sala 10",
+      bairro: "Caminho das Árvores",
+      cidade: "Salvador",
+      uf: "BA",
+      arquivado_em: null,
+      arquivado_por: null,
+      processos: 2,
+      criado_por: "ana@argos.local",
+      criado_em: "2026-01-10T10:00:00+00:00",
+    }),
+  ],
   [
     /\/clientes/,
     (url) => {
