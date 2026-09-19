@@ -40,8 +40,12 @@ export default function CabecalhoProcessos({
 }: CabecalhoProcessosProps) {
   return (
     <Box mb="14px">
-      <Flex align="flex-start" justify="space-between" gap="16px" mb="18px">
-        <Box>
+      {/* ⚠️ Esta faixa é uma CÓPIA do `CabecalhoDePagina`, com um recuo de
+          baixo próprio (18px contra 20px). As duas correções abaixo são as
+          mesmas que ele levou, e precisaram ser feitas duas vezes -- se um
+          dia os 2px deixarem de importar, esta cópia sai. */}
+      <Flex align="flex-start" justify="space-between" wrap="wrap" gap="12px 16px" mb="18px">
+        <Box flex="1 1 240px" minW="0">
           {/* 23px / -0.01em / 13px: medidos no artifact, não estimados. */}
           <Heading as="h1" fontSize="23px" fontWeight="800" letterSpacing="-0.01em">
             Processos
@@ -50,7 +54,10 @@ export default function CabecalhoProcessos({
             Monitoramento automático de movimentações
           </Text>
         </Box>
-        <Flex gap="9px" flexShrink={0} flexWrap="wrap">
+        {/* 🔴 Sem `flexShrink: 0`: com ele o grupo não estreita abaixo da
+            soma dos botões numa linha, e o `flexWrap` ao lado nunca chega a
+            disparar. Era o que mantinha esta tela em 455px numa de 360. */}
+        <Flex gap="9px" flexWrap="wrap" maxW="100%">
           {/* ⚠️ Dois botões, não um menu: "Novo processo" é uso diário e
               "Importar por OAB" se procura com intenção. Esconder a segunda
               atrás de um clique a mais não ajudaria nenhuma das duas. */}

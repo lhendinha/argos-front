@@ -5,8 +5,22 @@ import type { CabecalhoDePaginaProps } from "./types";
  * a explicação de uma linha embaixo. */
 export default function CabecalhoDePagina({ titulo, subtitulo, acoes }: CabecalhoDePaginaProps) {
   return (
-    <Flex align="flex-start" justify="space-between" gap="16px" mb="20px">
-      <Box>
+    <Flex
+      align="flex-start"
+      justify="space-between"
+      /* 🔴 Quebra quando não couber, e não a partir de uma largura escolhida:
+         o que manda é o espaço, não uma régua. O título tem base de 240px e
+         pode crescer; as ações mantêm a largura natural. Na tela larga a
+         soma cabe e nada muda -- em 1440 o desktop sai pixel a pixel igual
+         ao de antes. Em 360, com 328px de conteúdo, 240 + 308 não cabem e as
+         ações descem inteiras para a linha de baixo.
+         Medido: era este flex, sem `wrap`, que punha `/processos` em 455px e
+         `/documentos` em 365. */
+      wrap="wrap"
+      gap="12px 16px"
+      mb="20px"
+    >
+      <Box flex="1 1 240px" minW="0">
         <Heading
           as="h1"
           fontSize="23px"
@@ -30,7 +44,17 @@ export default function CabecalhoDePagina({ titulo, subtitulo, acoes }: Cabecalh
           quando o Kanban ganhou o "Editar quadro" ao lado do "Nova
           tarefa". */}
       {acoes && (
-        <Flex align="center" gap="8px" flexShrink={0}>
+        /* ⚠️ O grupo também quebra por dentro: o Kanban tem três ações, e em
+           360px elas não cabem numa linha nem depois de descerem.
+
+           🔴 E SEM `flexShrink: 0`, que estava aqui e anulava a quebra: com
+           ele o grupo nunca estreita abaixo da soma dos botões numa linha,
+           então a quebra interna não tinha o que disparar -- o Kanban ficou
+           em 381px até isto sair. Ele existia para o título longo não
+           espremer os botões; com o pai quebrando, quem não cabe desce em
+           vez de ser espremido, que é o mesmo remédio sem o efeito
+           colateral. */
+        <Flex align="center" gap="8px" wrap="wrap" maxW="100%">
           {acoes}
         </Flex>
       )}

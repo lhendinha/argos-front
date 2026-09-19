@@ -74,8 +74,12 @@ export default function FormularioProcesso({
 
   return (
     <form onSubmit={handleSubmit}>
-      <Flex align="flex-start" justify="space-between" gap="16px" mb="18px">
-        <div>
+      {/* ⚠️ Terceira cópia da faixa do `CabecalhoDePagina` (as outras são a
+          dele e a do `CabecalhoProcessos`), e levou as mesmas duas
+          correções: quebrar quando não couber, e não travar o encolhimento
+          do grupo de botões. */}
+      <Flex align="flex-start" justify="space-between" wrap="wrap" gap="12px 16px" mb="18px">
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
           <Heading as="h1" fontFamily="mono" fontSize="19px" fontWeight="800" letterSpacing="-0.01em">
             {mascararNumeroProcesso(processo.numero_processo)}
           </Heading>
@@ -85,7 +89,7 @@ export default function FormularioProcesso({
             {faseRotulo && <EtiquetaDeMetadado>{faseRotulo}</EtiquetaDeMetadado>}
           </Flex>
         </div>
-        <Flex gap="8px" flexShrink={0}>
+        <Flex gap="8px" wrap="wrap" maxW="100%">
           {/* Lixeira + rótulo, como no artifact: só o texto não distingue
               a ação destrutiva das outras à primeira vista. */}
           <Botao variante="perigoContorno" onClick={onRemover}>
