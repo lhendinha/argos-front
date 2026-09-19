@@ -31,10 +31,10 @@ export function useAreaVisivel(ativo: boolean): AreaVisivel {
 
   useEffect(() => {
     const visual = typeof window !== "undefined" ? window.visualViewport : undefined;
-    if (!ativo || !visual) {
-      setArea({ altura: null, deslocamento: 0 });
-      return;
-    }
+    /* ⚠️ Sai sem gravar nada: `setState` síncrono dentro do efeito encadeia
+       renderizações, e o valor devolvido já é derivado de `ativo` lá
+       embaixo -- não há estado velho a limpar aqui. */
+    if (!ativo || !visual) return;
     const medir = () => {
       /* A folga de 1px absorve o arredondamento do zoom que o Safari aplica
          ao campo em foco -- sem ela, a folha reagiria a uma diferença que
@@ -55,5 +55,8 @@ export function useAreaVisivel(ativo: boolean): AreaVisivel {
     };
   }, [ativo]);
 
-  return area;
+  /* 🔴 Derivado, e não lido cru: com o diálogo fechado o estado guardado é
+     o da última medição, e devolvê-lo prenderia a folha a uma altura de
+     teclado que não existe mais. */
+  return ativo ? area : { altura: null, deslocamento: 0 };
 }

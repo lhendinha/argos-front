@@ -4,7 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -18,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 
 import { Botao, Campo, IconePlus, Modal, ModalDeConfirmacao } from "../../../../components";
+import { ATIVACAO_DO_MOUSE, ATIVACAO_DO_TOQUE } from "../../../../constants";
 import { useToast } from "../../../../contexts/ToastContext";
 import {
   atualizarColuna,
@@ -71,7 +73,9 @@ export default function ModalDoQuadro({
   const tarefas = todasQuery.data ?? [];
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(MouseSensor, { activationConstraint: ATIVACAO_DO_MOUSE }),
+    /* No dedo a régua é TEMPO -- ver `constants/arraste`. */
+    useSensor(TouchSensor, { activationConstraint: ATIVACAO_DO_TOQUE }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 

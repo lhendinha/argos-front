@@ -20,7 +20,7 @@ import type { CartaoDeTarefaProps } from "./types";
  * ⚠️ **O que desliga o arraste é NÃO espalhar `attributes`/`listeners`**, não
  * o `disabled`. Medido em Chrome em 10/09/2026, com o mouse descendo,
  * andando e subindo: trocando `disabled` por `false` o cartão continua
- * parado, porque sem os listeners o `PointerSensor` nunca chega a ativar.
+ * parado, porque sem os listeners nenhum sensor chega a ativar.
  * O `disabled` fica assim mesmo (`disabled?: boolean | Disabled`,
  * @dnd-kit/sortable 10.0.0) -- é a mesma escolha de `useArrastarTarefa`, que
  * valida o destino dos dois lados: barato, e é ele que segura o dia em que
@@ -128,6 +128,19 @@ export default function CartaoDeTarefa({ tarefa, responsavel, onAbrir, selecao }
       {...moldura}
       cursor="grab"
       _active={{ cursor: "grabbing" }}
+      /* 🔴 O pressionar-e-segurar que inicia o arraste no dedo é, para o
+         navegador, o começo de uma seleção de texto -- e no iOS também o do
+         menu de "copiar/procurar". Medido no Safari 26.1: os cartões
+         chegavam com `user-select: text`, então segurar selecionava o título
+         em vez de pegar o cartão.
+
+         ⚠️ `touch-action: manipulation`, e NÃO `none`: `none` tiraria a
+         rolagem do dedo sobre o cartão, e a coluna do quadro se rola
+         justamente passando o dedo por cima deles. `manipulation` mantém
+         rolar e dar zoom, e só descarta o toque duplo -- que aqui não
+         significa nada e atrasaria o clique em 300ms. */
+      userSelect="none"
+      css={{ touchAction: "manipulation", WebkitTouchCallout: "none" }}
     >
       {miolo}
     </Box>

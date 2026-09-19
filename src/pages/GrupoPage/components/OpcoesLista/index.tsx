@@ -5,7 +5,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -18,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 
 import { CartaoDeTabela, EstadoVazio, EstadoDeErro, Esqueleto, ModalDeConfirmacao, PilulaDeMenu } from "../../../../components";
+import { ATIVACAO_DO_MOUSE, ATIVACAO_DO_TOQUE } from "../../../../constants";
 import { useToast } from "../../../../contexts/ToastContext";
 import { ESTADO_ATIVOS, ESTADO_ARQUIVADOS, ESTADO_TODOS, TETO_POR_PAGINA } from "../../../../constants";
 import { OPCOES_DE_ESTADO } from "../../constants";
@@ -72,7 +74,9 @@ export default function OpcoesLista({ tipo, titulo, nomeSingular }: OpcoesListaP
   const podeGerenciar = papelAtende("admin");
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(MouseSensor, { activationConstraint: ATIVACAO_DO_MOUSE }),
+    /* No dedo a régua é TEMPO -- ver `constants/arraste`. */
+    useSensor(TouchSensor, { activationConstraint: ATIVACAO_DO_TOQUE }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 

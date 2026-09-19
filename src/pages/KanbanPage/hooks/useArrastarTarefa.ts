@@ -7,12 +7,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Query } from "@tanstack/react-query";
 import {
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+
+import { ATIVACAO_DO_MOUSE, ATIVACAO_DO_TOQUE } from "../../../constants";
 
 import { useToast } from "../../../contexts/ToastContext";
 import { atualizarTarefa } from "../../../services";
@@ -30,7 +33,9 @@ export function useArrastarTarefa(aoAssentar: () => void) {
   const sensors = useSensors(
     /* 4px antes de virar arraste: sem isso, o clique que abre o cartão
        seria engolido pelo início de um arraste de zero pixel. */
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(MouseSensor, { activationConstraint: ATIVACAO_DO_MOUSE }),
+    /* No dedo a régua é TEMPO -- ver `constants/arraste`. */
+    useSensor(TouchSensor, { activationConstraint: ATIVACAO_DO_TOQUE }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
