@@ -11,23 +11,28 @@ import {
   TextoDaComunicacao,
 } from "../../../../components";
 import { TIPO_ENVIO_LEMBRETE } from "../../../../constants";
-import { detalhesProcesso } from "../../../../services";
+import { teorDaMovimentacao } from "../../../../services";
 import { qk } from "../../../../services/queryKeys";
 import { CORES_DO_ENVIO } from "../../../../theme/envio";
 import { formatarDataHora, mascararNumeroProcesso } from "../../../../utils";
-import type {
-  RespostaDeDetalhesDoProcesso,
-} from "../../../../types/respostas";
+import type { Comunicacao } from "../../../../types";
 import type { DetalheHistoricoProps } from "./types";
 
 /** O detalhe de UM envio.
  *
  * Diferente da lista de movimentações de um processo: aqui é só a
- * comunicação que gerou esta notificação. Vem pela MESMA rota que o link do
- * e-mail já abre (`GET /processos/{numero}/detalhes`), filtrada pelo
- * `comunicacao_id` guardado no item -- sem rota nova e sem duplicar o texto
- * no backend. Mesma chave de consulta da página de detalhe do processo, pra
- * dividir o cache.
+ * comunicação que gerou esta notificação, buscada pela ROTA DO ITEM
+ * (`GET /processos/{numero}/comunicacoes/{id}`) -- uma chamada, um item.
+ *
+ * 🔴 **O teor NÃO vem da lista de movimentações do processo.** Ela não o
+ * carrega: medido, o texto é 97% do peso de cada movimentação, e a tela de
+ * processos não o mostra. Ler o teor dali deixava este campo VAZIO, sem erro
+ * nenhum -- e nenhum teste daqui via, porque conferiam apelido e
+ * destinatários, nunca o texto. `o detalhe mostra o TEOR da publicação` é o
+ * guarda disso.
+ *
+ * ⚠️ O `apelido` vem na MESMA resposta, de propósito: era ele que obrigava a
+ * pedir o detalhe INTEIRO do processo para mostrar UMA movimentação.
  */
 export default function DetalheHistorico({ item }: DetalheHistoricoProps) {
   const ehDeTarefa = Boolean(item.tarefa_id);
@@ -41,28 +46,26 @@ export default function DetalheHistorico({ item }: DetalheHistoricoProps) {
    * lá guarda `TAREFA#{id}` porque é chave de partição. */
   const habilitado = !ehDeTarefa;
 
-  const query = useQuery<RespostaDeDetalhesDoProcesso>({
-    queryKey: qk.detalhesProcesso(item.numero_processo),
-    queryFn: () => detalhesProcesso(item.numero_processo),
-    enabled: habilitado,
+  /* ⚠️ Sem `comunicacao_id` não há teor a buscar -- registro antigo não tem o
+     campo, e a tela cai no `item.mensagem`, como sempre caiu. */
+  const temComunicacao = habilitado && item.comunicacao_id != null;
+  const query = useQuery<Comunicacao & { apelido?: string | null }>({
+    queryKey: qk.teorDaMovimentacao(item.numero_processo, item.comunicacao_id ?? ""),
+    queryFn: () => teorDaMovimentacao(item.numero_processo, item.comunicacao_id as number),
+    enabled: temComunicacao,
   });
 
-  const carregando = habilitado && query.isPending;
+  const carregando = temComunicacao && query.isPending;
   const erroAoCarregar =
-    habilitado && query.isError
+    temComunicacao && query.isError
       ? query.error instanceof Error
         ? query.error.message
         : "Não foi possível carregar."
       : null;
-  const comunicacao =
-    item.comunicacao_id != null
-      ? (query.data?.comunicacoes.find(
-          (c) => String(c.comunicacao_id) === String(item.comunicacao_id),
-        ) ?? null)
-      : null;
-  // O detalhe devolve uma linha por subgrupo visível; o apelido é o mesmo em
-  // todas, então a primeira serve.
-  const apelido = query.data?.processos?.[0]?.apelido;
+  const comunicacao = temComunicacao ? (query.data ?? null) : null;
+  // O apelido vem na MESMA resposta desde o conserto -- era ele que obrigava
+  // a pedir o detalhe inteiro do processo.
+  const apelido = query.data?.apelido;
 
   return (
     <Stack gap="16px">
