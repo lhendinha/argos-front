@@ -9,6 +9,7 @@ import {
   TextoDaComunicacao,
 } from "../../../../components";
 import { formatarData } from "../../../../utils";
+import { useTeorDaMovimentacao } from "../../hooks/useTeorDaMovimentacao";
 import type { ModalDeMovimentacaoProps } from "./types";
 
 /** Os detalhes de UMA movimentação.
@@ -35,10 +36,17 @@ import type { ModalDeMovimentacaoProps } from "./types";
  */
 export default function ModalDeMovimentacao({
   comunicacao,
+  numeroProcesso,
   onVerOEnvio,
   onAdicionarTarefa,
   onFechar,
 }: ModalDeMovimentacaoProps) {
+  /* 🔴 O teor é buscado AQUI, e não recebido da lista: a lista mostra tipo,
+     data e órgão, e carregar o texto de todas para mostrar nenhuma custava
+     100 KB no processo mais movimentado do escritório. O modal só monta
+     quando alguém abre -- é exatamente quando o texto passa a ser preciso. */
+  const teor = useTeorDaMovimentacao(numeroProcesso, comunicacao.comunicacao_id);
+
   return (
     <Modal
       descarte="semFormulario"
@@ -91,11 +99,25 @@ export default function ModalDeMovimentacao({
         </CampoDeLeitura>
 
         <CampoDeLeitura rotulo="Teor da publicação">
-          {/* O ramo do texto ausente é explícito: `TextoDaComunicacao` não
-              desenha nada sem conteúdo, e um campo com rótulo e nada
+          {/* 🔴 TRÊS estados, e os três precisam ser distintos: buscando,
+              falhou e chegou. Enquanto o teor vinha na lista havia só dois,
+              e reaproveitar o ramo de "sem texto" para o carregamento faria
+              a tela AFIRMAR que a publicação não tem teor enquanto ele ainda
+              está a caminho -- mentira que some sozinha, que é a pior.
+
+              O ramo do texto ausente continua explícito: `TextoDaComunicacao`
+              não desenha nada sem conteúdo, e um campo com rótulo e nada
               embaixo parece tela quebrada, não publicação sem teor. */}
-          {comunicacao.texto ? (
-            <TextoDaComunicacao inteiro html={comunicacao.texto} />
+          {teor.isPending ? (
+            <Text fontSize="13px" color="fg.subtle">
+              Carregando o teor…
+            </Text>
+          ) : teor.isError ? (
+            <Text fontSize="13px" color="fg.error">
+              Não foi possível carregar o teor desta movimentação.
+            </Text>
+          ) : teor.data?.texto ? (
+            <TextoDaComunicacao inteiro html={teor.data.texto} />
           ) : (
             <Text fontSize="13px" color="fg.subtle">
               Esta movimentação chegou sem o texto da publicação.

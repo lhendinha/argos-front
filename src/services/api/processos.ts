@@ -86,3 +86,16 @@ export function removerProcesso(subgrupoId: string, numeroProcesso: string) {
 export function detalhesProcesso(numeroProcesso: string) {
   return chamar(`/processos/${numeroProcesso}/detalhes`);
 }
+
+/** O TEOR de UMA movimentação.
+ *
+ * 🔴 A lista do detalhe mostra tipo, data e órgão; o teor só quando alguém
+ * abre. Mandá-lo na lista é carregar o que ninguém leu -- medido em
+ * produção, o texto é 80% do peso de cada movimentação, e o processo mais
+ * movimentado devolvia 100 KB onde 6 KB bastam.
+ *
+ * Mesma régua de permissão do detalhe: quem não pode abrir o processo
+ * recebe 403. */
+export function teorDaMovimentacao(numeroProcesso: string, comunicacaoId: number | string) {
+  return chamar(`/processos/${numeroProcesso}/comunicacoes/${comunicacaoId}`);
+}

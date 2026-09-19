@@ -27,6 +27,9 @@ const mocks = vi.hoisted(() => ({
   listarDocumentos: vi.fn(),
   /* Abrir a movimentação com e-mail marca o envio como lido no Histórico. */
   marcarEnvioComoLido: vi.fn(),
+  /* 🔴 O TEOR vem por rota própria desde 18/09/2026: a lista do detalhe traz
+     tipo, data e órgão, e o texto só quando alguém abre a movimentação. */
+  teorDaMovimentacao: vi.fn(),
 }));
 
 vi.mock("../../services", () => mocks);
@@ -320,6 +323,10 @@ const COMUNICACAO = {
 };
 
 function comMovimentacao(extra: Record<string, unknown> = {}) {
+  /* O teor responde pela rota própria. ⚠️ A comunicação que a LISTA devolve
+     continua com `texto` aqui de propósito: enquanto a API ainda o manda, o
+     teste prova que o modal usa o da ROTA, e não o que veio junto. */
+  mocks.teorDaMovimentacao.mockResolvedValue({ ...COMUNICACAO, ...extra });
   mocks.detalhesProcesso.mockResolvedValue({
     numero_processo: NUMERO,
     processos: [PROCESSO],
@@ -512,6 +519,108 @@ describe("o teor da movimentação", () => {
     expect(await screen.findByText("Fica intimada a parte")).toBeVisible();
     expect(screen.queryByRole("link", { name: /tribunal/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: COMUNICACAO.link })).not.toBeInTheDocument();
+  });
+
+  /* ── o TEOR vem por rota própria (18/09/2026) ───────────────────────────
+     🔴 A lista mostra tipo, data e órgão; o texto só quando alguém abre.
+     Enquanto ele vinha junto da lista, abrir a tela carregava o teor de
+     TODAS para mostrar nenhuma -- medido em produção, 80% do peso de cada
+     movimentação, e 100 KB no processo mais movimentado do escritório. */
+
+  it("o teor é buscado só ao ABRIR a movimentação, e pela rota do item", async () => {
+    comMovimentacao();
+    /* ⚠️ Com a ABA, e não só a rota: a página abre em "Detalhes", e sem isto
+       a lista de movimentações nem monta -- o teste passaria a afirmar que
+       ninguém pediu o teor porque não havia lista, não porque a lista não
+       pede. */
+    montar(`/processos/sg1/${NUMERO}?aba=movimentacoes`);
+
+    // A lista está na tela e ninguém pediu teor nenhum.
+    const naLista = await screen.findByText("Intimação", { exact: false });
+    expect(naLista).toBeVisible();
+    expect(mocks.teorDaMovimentacao).not.toHaveBeenCalled();
+
+    await userEvent.click(naLista);
+    expect(await screen.findByText("Fica intimada a parte")).toBeVisible();
+    expect(mocks.teorDaMovimentacao).toHaveBeenCalledWith(NUMERO, 4242);
+  });
+
+  it("mostra o teor da ROTA, e não o que veio na lista", async () => {
+    /* 🔴 O par que prova qual fonte manda. Enquanto a API ainda manda o
+       `texto` na lista, os dois existem -- e o modal tem de usar o da rota.
+       Sem este teste, o passo que tira o teor da lista quebraria a tela e
+       nada acusaria até alguém abrir uma movimentação em produção. */
+    comMovimentacao();
+    mocks.teorDaMovimentacao.mockResolvedValue({
+      ...COMUNICACAO,
+      texto: "<p>O teor que veio pela rota</p>",
+    });
+    montar(`/processos/sg1/${NUMERO}?comunicacao=4242`);
+
+    expect(await screen.findByText("O teor que veio pela rota")).toBeVisible();
+    expect(screen.queryByText("Fica intimada a parte")).not.toBeInTheDocument();
+  });
+
+  it("enquanto o teor não chega, a tela NÃO diz que ele não existe", async () => {
+    /* ⚠️ Três estados, e os três distintos: buscando, falhou e chegou.
+       Reaproveitar o ramo de "sem texto" para o carregamento faria a tela
+       AFIRMAR que a publicação não tem teor enquanto ele está a caminho --
+       mentira que some sozinha, que é a pior de todas. */
+    comMovimentacao();
+    let liberar: (valor: unknown) => void = () => {};
+    mocks.teorDaMovimentacao.mockReturnValue(new Promise((resolve) => { liberar = resolve; }));
+    montar(`/processos/sg1/${NUMERO}?comunicacao=4242`);
+
+    expect(await screen.findByText("Carregando o teor…")).toBeVisible();
+    expect(screen.queryByText("Esta movimentação chegou sem o texto da publicação.")).not.toBeInTheDocument();
+
+    liberar({ ...COMUNICACAO, texto: "<p>Chegou depois</p>" });
+    expect(await screen.findByText("Chegou depois")).toBeVisible();
+  });
+
+  it("teor que FALHA diz que falhou, e não que não existe", async () => {
+    comMovimentacao();
+    mocks.teorDaMovimentacao.mockRejectedValue(new Error("500"));
+    montar(`/processos/sg1/${NUMERO}?comunicacao=4242`);
+
+    expect(await screen.findByText("Não foi possível carregar o teor desta movimentação.")).toBeVisible();
+    expect(screen.queryByText("Esta movimentação chegou sem o texto da publicação.")).not.toBeInTheDocument();
+  });
+
+  it("cada movimentação tem o SEU teor", async () => {
+    /* 🔴 Achado por MUTAÇÃO SOBREVIVENTE: tirar o id da chave da consulta
+       ficava verde. Abrir uma movimentação e depois outra serviria o teor da
+       PRIMEIRA para a segunda -- texto errado, sem erro nenhum, na tela onde
+       o texto é a única coisa que importa. */
+    const outra = { ...COMUNICACAO, comunicacao_id: 777, data_disponibilizacao: "2026-08-19" };
+    mocks.detalhesProcesso.mockResolvedValue({
+      numero_processo: NUMERO,
+      processos: [PROCESSO],
+      comunicacoes: [COMUNICACAO, outra],
+    });
+    mocks.teorDaMovimentacao.mockImplementation((_numero: string, id: number | string) =>
+      Promise.resolve({ ...COMUNICACAO, texto: `<p>teor da ${id}</p>` }));
+
+    /* ⚠️ Na MESMA montagem, abrindo uma e depois a outra: montar duas vezes
+       dá um cache novo a cada vez, e aí a chave da consulta não importa --
+       a mutação sobrevivia por isso. O que se quer provar é justamente o
+       cache SENDO reaproveitado entre as duas. */
+    montar(`/processos/sg1/${NUMERO}?aba=movimentacoes&comunicacao=4242`);
+    expect(await screen.findByText("teor da 4242")).toBeVisible();
+
+    await userEvent.click(screen.getByRole("button", { name: /fechar/i }));
+    await userEvent.click(await screen.findByText("19/08/2026", { exact: false }));
+    expect(await screen.findByText("teor da 777")).toBeVisible();
+  });
+
+  it("movimentação SEM teor continua dizendo isso", async () => {
+    /* O ramo que já existia: publicação que chegou sem texto. Ele não pode
+       sumir no meio dos estados novos. */
+    comMovimentacao();
+    mocks.teorDaMovimentacao.mockResolvedValue({ ...COMUNICACAO, texto: "" });
+    montar(`/processos/sg1/${NUMERO}?comunicacao=4242`);
+
+    expect(await screen.findByText("Esta movimentação chegou sem o texto da publicação.")).toBeVisible();
   });
 });
 
