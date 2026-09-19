@@ -161,14 +161,26 @@ export default function BarraDeSelecao({
              Abaixo de 336: uma coluna, porque duas de 152px não cabem e
              encolher truncaria "Alterar status…" no meio.
 
-             A destrutiva ocupa a linha inteira no fim, sozinha -- é a mesma
-             separação que a ordem do artefato já buscava ao deixá-la na
-             ponta. */
+             🔴 Quem ocupa a linha inteira é o "Cancelar", no TOPO -- e não a
+             destrutiva no fim, que foi a primeira tentativa. Cinco itens em
+             duas colunas deixam um sobrando, e a escolha é de qual: com o
+             "Excluir" esticado, o maior elemento do cartão e o maior alvo de
+             toque passavam a ser a ação mais perigosa e menos usada, em
+             vermelho, mesmo desabilitada com zero selecionadas. A régua é
+             essa: o alvo mais fácil de acertar não pode ser o destrutivo.
+             O "Cancelar" é o oposto disso -- neutro, sempre habilitado, e é
+             a saída do modo; largo ele não custa nada. E o "Excluir" fica no
+             canto, separado pela POSIÇÃO e não pelo tamanho, que é o que a
+             ordem do artefato já buscava.
+
+             ⚠️ Fica assumido o custo: o "Cancelar" vira o elemento mais
+             proeminente sem ser o objetivo de quem entrou no modo. É menos
+             grave que o contrário. */
           css={{
             "@container (max-width: 641px)": {
               display: "grid",
               gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              "& > *:last-child": { gridColumn: "1 / -1" },
+              "& > *:first-child": { gridColumn: "1 / -1" },
             },
             "@container (max-width: 335px)": {
               gridTemplateColumns: "minmax(0, 1fr)",
