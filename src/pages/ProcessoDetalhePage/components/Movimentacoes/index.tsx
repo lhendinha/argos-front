@@ -149,6 +149,7 @@ export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
       {aberta && (
         <ModalDeMovimentacao
           comunicacao={aberta}
+          numeroProcesso={aberta.numero_processo}
           /* 🔴 Só quando houve e-mail. `tem_envio` vem resolvido do servidor
              porque a tela não tem como saber: o robô grava o acervo inteiro
              do processo e só notifica o que está dentro da janela, então a

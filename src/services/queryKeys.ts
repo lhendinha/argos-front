@@ -121,6 +121,11 @@ export const qk = {
   /** O contador do menu. Marcar um envio invalida SÓ esta: a lista não recarrega. */
   naoLidosDoHistorico: () => ["historico", "nao-lidos"] as const,
   detalhesProcesso: (numeroProcesso: string) => ["detalhesProcesso", numeroProcesso] as const,
+  /** O TEOR de UMA movimentação -- chave própria, e não um pedaço do detalhe:
+   * ele é buscado só quando alguém abre a movimentação, e fica no cache por
+   * movimentação, não por processo. */
+  teorDaMovimentacao: (numeroProcesso: string, comunicacaoId: number | string) =>
+    ["teorDaMovimentacao", numeroProcesso, String(comunicacaoId)] as const,
   detalheCliente: (clienteId: string) => ["cliente", clienteId] as const,
   clientes: (params: { pagina?: number; tamanhoPagina?: number; busca?: string; estado?: string } = {}) =>
     ["clientes", params] as const,
