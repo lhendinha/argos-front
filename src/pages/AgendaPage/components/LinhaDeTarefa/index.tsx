@@ -86,8 +86,16 @@ export default function LinhaDeTarefa({
           ⚠️ Este `Flex` tem `flexShrink="0"` e NÃO tem `wrap` -- ao
           contrário do de Atendimentos. Se a etiqueta não couber, ela
           espreme o título em vez de descer. Medido em Chrome antes de
-          fechar. */}
-      <Flex align="center" gap="8px" flexShrink="0">
+          fechar.
+
+          🔴 Mas com TETO, que faltava: `flexShrink: 0` sozinho torna o bloco
+          indivisível, e medido em 360px um nome de subgrupo longo o levava a
+          573px dentro de uma linha de 258 -- a Agenda ia a 640. O teto é
+          proporção da linha, e não pixel, porque o que ele protege é o
+          título: com 60% aqui sobram 40% para ele em qualquer largura. A
+          etiqueta corta com reticências dentro do teto e guarda o nome
+          inteiro no `title`. */}
+      <Flex align="center" gap="8px" flexShrink="0" minW="0" maxW="60%">
         {!semEtiqueta && <EtiquetasDeSubgrupo nomes={[subgrupoNome]} />}
         <Box w="8px" h="8px" borderRadius="full" bg={cor} aria-hidden="true" />
         <Text fontSize="11.5px" fontWeight="700" color="fg.muted" whiteSpace="nowrap">

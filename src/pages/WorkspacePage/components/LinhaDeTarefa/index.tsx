@@ -47,7 +47,13 @@ export default function LinhaDeTarefa({ tarefa, acao, responsavel, subgrupoNome 
           >
             {meta}
           </Text>
-          <Box flexShrink={0}>
+          {/* 🔴 `minW: 0` no lugar de `flexShrink: 0`. O `flexShrink: 0`
+              guardava a etiqueta de ser espremida pelo texto ao lado, e com
+              ele ela ficava INDIVISÍVEL: medido em 360px, um nome de
+              subgrupo longo deixava a caixa com 515px numa linha de 124 e
+              punha a Área de trabalho em 592. Agora ela encolhe e corta com
+              reticências -- o nome inteiro segue no `title`. */}
+          <Box minW="0">
             <EtiquetasDeSubgrupo nomes={[subgrupoNome]} />
           </Box>
         </Flex>

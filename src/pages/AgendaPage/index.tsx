@@ -265,7 +265,17 @@ export default function AgendaPage() {
       {/* 320px na lateral, como o artifact (`.agenda-layout`). Uma coluna só
           abaixo de 980px -- o "Hoje" vira um bloco embaixo em vez de espremer
           o calendário. */}
-      <Grid templateColumns={{ base: "1fr", lg: "1fr 320px" }} gap="20px" alignItems="start">
+      {/* 🔴 `minmax(0, 1fr)` e não `1fr`: o mínimo `auto` do `1fr` impede a
+          trilha de ficar menor que o conteúdo, e o calendário tem célula com
+          título de tarefa dentro. Medido em 360px: a coluna saía com 1075px
+          num container de 328 e punha a Agenda em 1091. O `minW: 0` do `Box`
+          logo abaixo não alcançava isso -- ele é do ITEM, e quem não cedia
+          era a TRILHA. Mesmo idioma de `VisaoPorMes`. */}
+      <Grid
+        templateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 1fr) 320px" }}
+        gap="20px"
+        alignItems="start"
+      >
         <Box minW="0">
           {/* 🔴 No modo atrasadas as setas e o "Hoje" saem: a lista ignora o
               calendário, então navegar período não muda nada. O RÓTULO fica,

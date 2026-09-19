@@ -47,7 +47,10 @@ export default function EtiquetasDeSubgrupo({ nomes }: EtiquetasDeSubgrupoProps)
   }
 
   return (
-    <Flex gap="6px" wrap="wrap" title={nomes.join(", ")}>
+    /* ⚠️ `minW: 0` para a faixa poder estreitar: sem isso ela guarda a
+       largura das etiquetas somadas e o teto de 100% delas resolve contra um
+       container que nunca encolhe. */
+    <Flex gap="6px" wrap="wrap" minW="0" title={nomes.join(", ")}>
       {nomes.length <= TETO_DE_NOMES ? (
         nomes.map((nome) => (
           <Etiqueta key={nome} cores={CORES}>

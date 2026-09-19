@@ -19,6 +19,18 @@ export default function Etiqueta({ cores, children }: EtiquetaProps) {
       p="3px 9px"
       borderRadius="full"
       whiteSpace="nowrap"
+      /* 🔴 Não passa da largura de quem a segura. O `nowrap` acima existe
+         para "Aguardando sentença" não virar duas linhas dentro da pílula,
+         e sem teto ele torna a etiqueta INDIVISÍVEL: medi um nome de
+         subgrupo longo numa linha de Atendimentos e a pílula saiu com 515px
+         numa coluna de 282, empurrando a página inteira para 554 numa tela
+         de 360. Quem resume já carrega o texto completo no `title`
+         (`EtiquetasDeSubgrupo`), então o corte não esconde nada.
+         Rótulo curto -- que é a regra, "Admin", "Enviado" -- não encosta
+         neste teto e continua idêntico. */
+      maxW="100%"
+      overflow="hidden"
+      textOverflow="ellipsis"
       /* Só desenha a linha quando alguém pede a cor dela -- ver `cores`. */
       borderWidth={cores.borderColor ? "1px" : undefined}
       {...cores}

@@ -177,7 +177,17 @@ export default function WorkspacePage() {
         subtitulo="Seu resumo do dia — tarefas, prazos e atividade recente."
       />
 
-      <Grid templateColumns={{ base: "1fr", lg: "1.5fr 1fr" }} gap="20px" alignItems="start">
+      {/* 🔴 `minmax(0, ...)` e não `1fr` seco: `1fr` é `minmax(auto, 1fr)`, e
+          o mínimo `auto` impede a trilha de ficar menor que o conteúdo dela.
+          Medido em 360px: a coluna saía com 848px dentro de um container de
+          328 e empurrava a página para 864 -- a pior tela do sistema com
+          dado real. É o mesmo idioma que `VisaoPorMes` e `VisaoPorSemana` já
+          usam (`repeat(7, minmax(0, 1fr))`), e pelo mesmo motivo. */}
+      <Grid
+        templateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 1.5fr) minmax(0, 1fr)" }}
+        gap="20px"
+        alignItems="start"
+      >
         <Stack gap="20px">
           <CardDeTarefas
             titulo="Minhas tarefas"
