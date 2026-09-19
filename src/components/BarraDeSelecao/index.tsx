@@ -52,7 +52,19 @@ export default function BarraDeSelecao({
   const motivoDoStatus = comAcoes && marcadas > 0 ? motivoParaAlterarStatus(tarefasMarcadas ?? []) : "";
 
   return (
-    <Box mb="4px">
+    /* 🔴 O container das consultas do grupo de ações fica AQUI, e não no
+       próprio grupo. `container-type: inline-size` aplica contenção: a
+       largura do elemento deixa de depender do conteúdo. No grupo -- que é
+       item de um flex e precisa da largura do conteúdo para saber quando
+       descer de linha -- isso o faria nascer com base zero e nunca quebrar.
+       Aqui a largura vem do cartão que segura a barra, então conter é
+       inofensivo.
+
+       ⚠️ E é container query, não media query, pelo motivo de sempre nesta
+       reestruturação: a MESMA barra tem 1091px de espaço no Kanban e 594 no
+       cartão da Área de trabalho, na mesma janela de 1440. Uma régua de
+       viewport daria a mesma resposta para as duas. */
+    <Box mb="4px" containerType="inline-size">
       <Flex
         align="center"
         gap="11px"
@@ -127,7 +139,42 @@ export default function BarraDeSelecao({
             escolha: à esquerda as ações se alinham sob a contagem e formam
             um bloco; à direita ficavam duas fileiras irregulares com a
             destrutiva solta num canto. */}
-        <Flex align="center" gap="8px" rowGap="8px" wrap="wrap" justify="flex-start" minW="0" flex="1 1 auto">
+        <Flex
+          align="center"
+          gap="8px"
+          rowGap="8px"
+          wrap="wrap"
+          justify="flex-start"
+          minW="0"
+          flex="1 1 auto"
+          /* 🔴 Três regimes, e os dois números saem de medição, não de
+             gosto: o botão mais largo é "Alterar status…" com 152px, e os
+             cinco somam 617px com os intervalos. Os 24px a mais em cada
+             limiar são o recuo lateral da barra, que o container inclui.
+
+             Acima de 641: uma fileira, cada botão com a largura do próprio
+             rótulo -- é o Kanban e a Agenda, que têm 1091px de sobra.
+             Entre 336 e 641: DUAS colunas iguais, porque a fileira única
+             não cabe -- é o cartão da Área de trabalho, com 594. Larguras
+             iguais em vez de naturais: em fileiras quebradas os botões de
+             tamanhos diferentes se leem como jogados na caixa.
+             Abaixo de 336: uma coluna, porque duas de 152px não cabem e
+             encolher truncaria "Alterar status…" no meio.
+
+             A destrutiva ocupa a linha inteira no fim, sozinha -- é a mesma
+             separação que a ordem do artefato já buscava ao deixá-la na
+             ponta. */
+          css={{
+            "@container (max-width: 641px)": {
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              "& > *:last-child": { gridColumn: "1 / -1" },
+            },
+            "@container (max-width: 335px)": {
+              gridTemplateColumns: "minmax(0, 1fr)",
+            },
+          }}
+        >
           <Botao variante="ghost" onClick={onCancelar}>
             Cancelar
           </Botao>
