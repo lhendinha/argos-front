@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
      encontrei" para algo que está na seguinte. */
   historicoDoProcesso: vi.fn(),
   detalhesProcesso: vi.fn(),
+  teorDaMovimentacao: vi.fn(),
   listarSubgrupos: vi.fn(),
 }));
 
@@ -28,6 +29,7 @@ vi.mock("../../services", async (importOriginal) => {
     listarHistorico: mocks.listarHistorico,
     historicoDoProcesso: mocks.historicoDoProcesso,
     detalhesProcesso: mocks.detalhesProcesso,
+    teorDaMovimentacao: mocks.teorDaMovimentacao,
     /* ⚠️ Entrou quando a linha passou a mostrar o subgrupo: sem mock, o
        catálogo era uma chamada de rede de verdade dentro do teste. */
     listarSubgrupos: mocks.listarSubgrupos,
@@ -67,6 +69,7 @@ const ITEM = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.detalhesProcesso.mockResolvedValue({ comunicacoes: [], processos: [] });
+  mocks.teorDaMovimentacao.mockResolvedValue({ comunicacao_id: 1, texto: "", apelido: null });
   mocks.listarHistorico.mockResolvedValue({ historico: [ITEM], total: 1, total_paginas: 1 });
   /* A pessoa participa de UM subgrupo. `GET /subgrupos` é escopado, então o
      catálogo já vem recortado -- é ele que define o que ela pode ver. */
@@ -235,9 +238,10 @@ describe("HistoricoPage", () => {
     // 20 dígitos não dizem de que processo se trata; o apelido é o nome que
     // alguém deu pra reconhecê-lo. E a lista de quem recebeu é o que se vem
     // conferir aqui -- uma fila de endereços colada por vírgula não se lê.
-    mocks.detalhesProcesso.mockResolvedValue({
-      comunicacoes: [],
-      processos: [{ subgrupo_id: "sg1", numero_processo: ITEM.numero_processo, apelido: "Ação de cobrança" }],
+    /* ⚠️ O apelido vem da ROTA DO ITEM desde 18/09/2026, e não mais do
+       detalhe do processo -- ver `DetalheHistorico`. */
+    mocks.teorDaMovimentacao.mockResolvedValue({
+      comunicacao_id: ITEM.comunicacao_id, texto: "<p>um teor</p>", apelido: "Ação de cobrança",
     });
     mocks.listarHistorico.mockResolvedValue({
       historico: [{ ...ITEM, destinatarios: ["ana@argos.local", "joao@argos.local"] }],
@@ -253,6 +257,45 @@ describe("HistoricoPage", () => {
     expect(await dialogo.findByText("Ação de cobrança")).toBeInTheDocument();
     expect(dialogo.getByText("ana@argos.local")).toBeInTheDocument();
     expect(dialogo.getByText("joao@argos.local")).toBeInTheDocument();
+  });
+
+  it("o detalhe mostra o TEOR da publicação", async () => {
+    /* 🔴 O teste que FALTAVA, e a regressão que ele teria pego.
+
+       Em 18/09/2026 o teor saiu da lista de movimentações do processo (ele
+       pesava 97% de cada item, e a tela de processos não o mostra). Este
+       painel lia o teor DALI -- e passou a renderizar VAZIO, sem erro nenhum.
+       Nenhum teste percebeu, porque os daqui conferiam apelido e
+       destinatários, e nunca o texto. */
+    mocks.teorDaMovimentacao.mockResolvedValue({
+      comunicacao_id: ITEM.comunicacao_id,
+      texto: "<p>Fica intimada a parte para manifestar-se</p>",
+      apelido: "Ação de cobrança",
+    });
+    mocks.listarHistorico.mockResolvedValue({ historico: [ITEM], total: 1, total_paginas: 1 });
+    const user = userEvent.setup();
+    renderComRota(<HistoricoPage />);
+
+    await user.click(await screen.findByText("Intimação", { exact: false }));
+    const dialogo = within(await screen.findByRole("dialog"));
+
+    expect(await dialogo.findByText("Fica intimada a parte para manifestar-se")).toBeInTheDocument();
+    expect(mocks.teorDaMovimentacao).toHaveBeenCalledWith(ITEM.numero_processo, ITEM.comunicacao_id);
+  });
+
+  it("o detalhe NÃO carrega a lista de movimentações do processo", async () => {
+    /* ⚠️ O outro lado do conserto: o painel pedia o detalhe INTEIRO para
+       pegar o teor e o apelido. Agora os dois vêm numa chamada só. */
+    mocks.teorDaMovimentacao.mockResolvedValue({
+      comunicacao_id: ITEM.comunicacao_id, texto: "<p>um teor</p>", apelido: "Ação",
+    });
+    mocks.listarHistorico.mockResolvedValue({ historico: [ITEM], total: 1, total_paginas: 1 });
+    const user = userEvent.setup();
+    renderComRota(<HistoricoPage />);
+
+    await user.click(await screen.findByText("Intimação", { exact: false }));
+    await within(await screen.findByRole("dialog")).findByText("um teor");
+    expect(mocks.detalhesProcesso).not.toHaveBeenCalled();
   });
 
   it("vazio de verdade diz outra coisa, sem botão", async () => {
