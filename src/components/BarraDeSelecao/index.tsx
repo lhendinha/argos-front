@@ -110,7 +110,24 @@ export default function BarraDeSelecao({
           </Text>
         )}
 
-        <Flex align="center" gap="8px" ml="auto">
+        {/* 🔴 `wrap` AQUI também, e não só no `Flex` de fora. O de fora já
+            quebrava; este grupo não, e por isso a barra inteira transbordava:
+            medido em 390px, as cinco ações somam 617px numa página de 390 e
+            a empurravam para 665.
+
+            🔴 `flex: 1 1 auto` no lugar de `ml: auto`: com `ml: auto` o
+            grupo descia com a largura do CONTEÚDO e quebrava desalinhado;
+            crescendo, ele toma a fileira inteira ao descer.
+
+            🔴 E alinhado à ESQUERDA, não à direita. Medido no cartão da Área
+            de trabalho: a fileira tem 594px úteis e as cinco ações pedem 618
+            -- faltam exatamente os 24px do recuo lateral da barra, ou seja,
+            elas NUNCA couberam (antes elas transbordavam o cartão em
+            silêncio). Já que a quebra é inevitável, ela tem de parecer
+            escolha: à esquerda as ações se alinham sob a contagem e formam
+            um bloco; à direita ficavam duas fileiras irregulares com a
+            destrutiva solta num canto. */}
+        <Flex align="center" gap="8px" rowGap="8px" wrap="wrap" justify="flex-start" minW="0" flex="1 1 auto">
           <Botao variante="ghost" onClick={onCancelar}>
             Cancelar
           </Botao>

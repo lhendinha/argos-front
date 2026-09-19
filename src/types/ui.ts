@@ -37,6 +37,16 @@ export interface MenuDaCasca {
   fechar: () => void;
 }
 
+/** O pedaço da tela que o teclado deixou à mostra, de `useAreaVisivel`.
+ *
+ * 🔴 `altura` é `null` quando NÃO se deve prender nada: sem teclado aberto,
+ * sem `visualViewport`, ou com menos que o piso de altura -- os três casos
+ * em que a folha deve seguir com a altura do layout. */
+export interface AreaVisivel {
+  altura: number | null;
+  deslocamento: number;
+}
+
 /** Uma opção de menu de escolha única -- o filtro de período e a
  * `PilulaDeMenu` usam a mesma forma.
  *

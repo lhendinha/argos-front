@@ -60,6 +60,7 @@ export default function AppShell({ onSair }: AppShellProps) {
           onAlternarMenu={menu.alternar}
           menuAberto={menu.aberto}
           rotuloDoBotao={menu.aberto ? "Recolher menu" : "Abrir menu"}
+          sobreposto={gavetaAberta}
         />
 
         <Flex flex="1" minH="0" {...(gavetaAberta ? { inert: "" } : {})}>

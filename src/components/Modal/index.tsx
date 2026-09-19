@@ -1,5 +1,9 @@
 import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
+
+import { TELA_APERTADA_PARA_DIALOGO } from "../../constants";
+import { useAreaVisivel } from "../../hooks/useAreaVisivel";
 
 import { BotaoNu } from "../BotaoNu";
 /* ⚠️ Direto, e NUNCA pelo barril `../index`: `ModalDeConfirmacao` importa
@@ -77,6 +81,9 @@ const PERGUNTA_DE_DESCARTE = {
 
 export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, rodape, acaoNoCabecalho, children }: ModalProps) {
   const [perguntando, setPerguntando] = useState(false);
+  /* O teclado só interessa enquanto ESTE diálogo está aberto e não há uma
+     pergunta de descarte por cima dele. */
+  const areaVisivel = useAreaVisivel(!perguntando);
 
   /** O que TODO gesto de fechar chama -- Escape, cortina e X.
    *
@@ -135,6 +142,27 @@ export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, ro
   useEffect(() => {
     const meuLugar = Symbol("modal");
     pilhaDeModais.push(meuLugar);
+    /* 🔴 A página de trás para de rolar enquanto há diálogo na tela. Sem
+       isso o dedo que chega ao fim do formulário segue rolando a LISTA
+       atrás dele -- o conteúdo se move debaixo do modal e, ao fechar, a
+       pessoa está num lugar que não escolheu. No desktop era a segunda
+       barra de rolagem à direita, ao lado da do corpo do modal.
+       ⚠️ Pela PILHA e não por modal: o diálogo de descarte monta por cima
+       deste, e restaurar ao desmontar o de cima destravaria a rolagem com o
+       de baixo ainda aberto. */
+    const rolagemDeAntes = document.body.style.overflow;
+    const recuoDeAntes = document.body.style.paddingRight;
+    if (pilhaDeModais.length === 1) {
+      /* 🔴 COMPENSA a barra de rolagem que some junto. Sem isso o conteúdo
+         de trás alarga uns 15px no instante em que o modal abre e volta ao
+         fechar -- medido no desktop: 3.907 pixels diferentes numa tela de
+         Processos que não deveria ter mudado nenhum. O salto acontece atrás
+         de uma cortina escura, o que o torna fácil de não notar e
+         desagradável quando se nota. */
+      const somem = window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = "hidden";
+      if (somem > 0) document.body.style.paddingRight = `${somem}px`;
+    }
 
     function aoTeclar(evento: KeyboardEvent) {
       if (evento.key !== "Escape") return;
@@ -146,6 +174,10 @@ export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, ro
       document.removeEventListener("keydown", aoTeclar);
       const onde = pilhaDeModais.indexOf(meuLugar);
       if (onde >= 0) pilhaDeModais.splice(onde, 1);
+      if (pilhaDeModais.length === 0) {
+        document.body.style.overflow = rolagemDeAntes;
+        document.body.style.paddingRight = recuoDeAntes;
+      }
     };
   }, []);
 
@@ -169,6 +201,12 @@ export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, ro
       p="5vh 20px"
       overflowY="auto"
       onClick={pedirParaFechar}
+      /* 🔴 Na tela apertada a cortina para de rolar e para de recuar: quem
+         rola passa a ser o CORPO da folha, entre um cabeçalho e um rodapé
+         que ficam parados. Enquanto a rolagem era daqui, o rodapé descia
+         junto com o conteúdo e saía da tela -- medido no iPhone SE, 106px
+         abaixo da dobra, e no mesmo aparelho deitado o rodapé inteiro. */
+      css={{ [`@media ${TELA_APERTADA_PARA_DIALOGO}`]: { padding: 0, overflowY: "hidden" } }}
       /* 🔴 `inert` enquanto o diálogo está por cima, e resolve DOIS problemas
          de uma vez: o Tab deixa de passear pelo formulário de trás (não há
          armadilha de foco em lugar nenhum), e o X daqui some da árvore de
@@ -187,6 +225,24 @@ export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, ro
         borderRadius="lg"
         boxShadow="md"
         onClick={(e) => e.stopPropagation()}
+        /* A altura vem do `visualViewport` por JS porque nem `100dvh` nem
+           `env()` a conhecem: com o teclado aberto, a viewport de LAYOUT não
+           encolhe em nenhum dos dois sistemas. A variável existe sempre e é
+           lida SÓ dentro da media query -- assim a janela centralizada do
+           desktop não muda de altura. */
+        style={{ "--altura-da-folha": areaVisivel.altura ? `${areaVisivel.altura}px` : "100dvh",
+                 "--desvio-da-folha": `${areaVisivel.deslocamento}px` } as CSSProperties}
+        css={{
+          [`@media ${TELA_APERTADA_PARA_DIALOGO}`]: {
+            maxWidth: "none",
+            margin: 0,
+            borderRadius: 0,
+            display: "flex",
+            flexDirection: "column",
+            height: "var(--altura-da-folha)",
+            transform: "translateY(var(--desvio-da-folha))",
+          },
+        }}
       >
         <Flex
           align="center"
@@ -194,6 +250,10 @@ export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, ro
           p="18px 22px"
           borderBottomWidth="1px"
           borderBottomColor="border.subtle"
+          flex="0 0 auto"
+          /* Encolhe com o teclado aberto: com 213px úteis, 18px em cima e
+             embaixo são 36 dos 213 gastos em respiro. */
+          css={{ [`@media ${TELA_APERTADA_PARA_DIALOGO}`]: { padding: "12px 16px" } }}
         >
           <Box>
             <Heading as="h2" fontSize="16.5px" fontWeight="800">
@@ -233,10 +293,45 @@ export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, ro
           </Flex>
 
         </Flex>
-        <Box p="20px 22px" maxH="70vh" overflowY="auto">
+        <Box
+          p="20px 22px"
+          maxH="70vh"
+          overflowY="auto"
+          /* 🔴 `maxH: 70vh` SAI na folha: ali quem manda é o espaço que
+             sobra entre cabeçalho e rodapé, e um teto em `vh` o cortaria
+             antes disso -- `vh` ignora o teclado. */
+          css={{
+            [`@media ${TELA_APERTADA_PARA_DIALOGO}`]: {
+              maxHeight: "none",
+              flex: "1 1 auto",
+              minHeight: 0,
+              padding: "16px",
+            },
+          }}
+        >
           {children}
         </Box>
-        {rodape}
+        {rodape && (
+          <Box
+            flex="0 0 auto"
+            /* ⚠️ `bg` pela prop, e não por `var(--chakra-colors-...)` num
+               `css`: o nome da variável gerada é detalhe do Chakra, e
+               escrevê-lo à mão é uma cópia que quebra calada. Aqui ele
+               repinta o mesmo fundo do diálogo -- no desktop não muda nada,
+               e na folha impede o conteúdo de aparecer por baixo do rodapé
+               ao rolar. */
+            bg="bg.surface"
+            /* O rodapé encosta na borda de baixo da folha: `env()` vale zero
+               onde não há recorte. */
+            css={{
+              [`@media ${TELA_APERTADA_PARA_DIALOGO}`]: {
+                paddingBottom: "env(safe-area-inset-bottom)",
+              },
+            }}
+          >
+            {rodape}
+          </Box>
+        )}
       </Box>
 
     </Flex>

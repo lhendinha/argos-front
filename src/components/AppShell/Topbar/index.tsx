@@ -23,11 +23,13 @@ import type { TopbarProps } from "./types";
  *
  * ⚠️ O ícone alterna entre `IconeMenu` e `IconeX` no mesmo botão, em vez de
  * um segundo botão dentro da gaveta: o controle não muda de posição, só de
- * desenho -- fechar é onde abrir estava.
+ * desenho -- fechar é onde abrir estava. Mas só com a GAVETA por cima: com o
+ * menu fixo aberto não há nada a fechar, e o `✕` ali lia como o fechar da
+ * página.
  *
  * `sticky top 3px` pra ficar logo abaixo da faixa da marca, que é fixa.
  */
-export default function Topbar({ onSair, onAlternarMenu, menuAberto, rotuloDoBotao }: TopbarProps) {
+export default function Topbar({ onSair, onAlternarMenu, menuAberto, rotuloDoBotao, sobreposto }: TopbarProps) {
   return (
     <Flex
       /* Some no papel, como o menu lateral. */
@@ -64,7 +66,7 @@ export default function Topbar({ onSair, onAlternarMenu, menuAberto, rotuloDoBot
         color="fg"
         css={{ "& svg": { width: "18px", height: "18px" } }}
       >
-        {menuAberto ? <IconeX /> : <IconeMenu />}
+        {sobreposto ? <IconeX /> : <IconeMenu />}
       </BotaoDeIcone>
 
       <MarcaArgos />

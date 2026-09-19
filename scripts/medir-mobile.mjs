@@ -68,6 +68,29 @@ const ROTAS = [
   "/login",
 ];
 
+/** Telas em ESTADO, e não recém-abertas.
+ *
+ * 🔴 Existe porque a régua mentia: ela dizia 56 de 56 com o modo de seleção
+ * e os modais transbordando, simplesmente porque nunca os abria. Quem achou
+ * foi o usuário, olhando a tela -- que é exatamente o que um guarda deveria
+ * tornar desnecessário. Medido então: a barra de seleção somava 617px numa
+ * página de 390, e o rodapé de três botões do honorário saía pela esquerda
+ * do próprio modal.
+ *
+ * ⚠️ `botoes` é uma sequência: o lançamento do Financeiro abre por um menu,
+ * e só o segundo clique põe o formulário na tela. */
+const ESTADOS = [
+  { nome: "seleção na área de trabalho", rota: "/", botoes: ["Selecionar"] },
+  { nome: "seleção no kanban", rota: "/kanban", botoes: ["Selecionar"] },
+  { nome: "novo processo", rota: "/processos", botoes: ["+ Novo processo"] },
+  { nome: "importar por OAB", rota: "/processos", botoes: ["Importar por OAB"] },
+  { nome: "novo cliente", rota: "/clientes", botoes: ["Novo cliente"] },
+  { nome: "novo documento", rota: "/documentos", botoes: ["Adicionar documento"] },
+  { nome: "novo atendimento", rota: "/atendimentos", botoes: ["Adicionar atendimento"] },
+  { nome: "nova tarefa", rota: "/kanban", botoes: ["Nova tarefa"] },
+  { nome: "novo honorário", rota: "/financeiro", botoes: ["+ Novo lançamento", "Honorário"] },
+];
+
 /** Texto do tamanho que o dado real tem.
  *
  * ⚠️ Estica a resposta do stub em vez de substituí-la: a FORMA continua
@@ -150,6 +173,9 @@ function medir() {
       },
     });
   }
+  /* ⚠️ A cortina do modal é filha do `body`, fora do `main`: medir só o
+     `main` aprovaria uma folha transbordando. O `scrollWidth` já é do
+     documento; o que muda aqui é só de onde sai o "renderizou". */
   const principal = document.querySelector("main");
   return {
     viewport: largura,
@@ -170,7 +196,9 @@ const navegador = await chromium.launch();
 const resultados = [];
 const naoRenderizaram = [];
 
-console.log(`\n  medindo ${rotas.length} rota(s) em ${FORMATOS.length} formatos, dado ${curto ? "curto" : "longo"}\n`);
+const estados = soEsta ? ESTADOS.filter((e) => e.rota === soEsta) : ESTADOS;
+
+console.log(`\n  medindo ${rotas.length} rota(s) e ${estados.length} estado(s) em ${FORMATOS.length} formatos, dado ${curto ? "curto" : "longo"}\n`);
 
 for (const formato of FORMATOS) {
   const contexto = await navegador.newContext({
@@ -213,6 +241,45 @@ for (const formato of FORMATOS) {
     resultados.push(coube);
     console.log(
       `    ${coube ? "ok " : "✗  "} ${rota.padEnd(42)} ${String(medida.pagina).padStart(5)}px de ${medida.viewport}`,
+    );
+    for (const culpado of coube ? [] : medida.culpados) {
+      console.log(
+        `          ${culpado.tag} de ${culpado.largura}px termina em ${culpado.direita} — ${JSON.stringify(culpado.texto)}`,
+      );
+    }
+  }
+
+  for (const estado of estados) {
+    await pagina.goto(`${BASE}${estado.rota}`, { waitUntil: "networkidle" });
+    await pagina.waitForTimeout(900);
+    let abriu = true;
+    for (const rotulo of estado.botoes) {
+      try {
+        /* ⚠️ `button` OU `menuitem`: o lançamento do Financeiro abre por um
+           menu, e o item dele não é `button`. E filtro por TEXTO CONTIDO,
+           porque o nome acessível do item carrega a descrição junto
+           ("HonorárioA receber de um cliente"). */
+        await pagina
+          .locator('button, [role="menuitem"]')
+          .filter({ hasText: rotulo })
+          .first()
+          .click({ timeout: 4000 });
+        await pagina.waitForTimeout(600);
+      } catch {
+        abriu = false;
+        break;
+      }
+    }
+    if (!abriu) {
+      naoRenderizaram.push(`${formato.nome} ${estado.nome}`);
+      console.log(`    ?   ${estado.nome.padEnd(42)} botão não encontrado`);
+      continue;
+    }
+    const medida = await pagina.evaluate(medir);
+    const coube = medida.pagina <= medida.viewport + 1;
+    resultados.push(coube);
+    console.log(
+      `    ${coube ? "ok " : "✗  "} ${estado.nome.padEnd(42)} ${String(medida.pagina).padStart(5)}px de ${medida.viewport}`,
     );
     for (const culpado of coube ? [] : medida.culpados) {
       console.log(

@@ -32,10 +32,12 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    `AlvoDaLeitura`, a união deles no corpo da rota. O passo 3.4 do
    `PLANO_LER_SO_O_NECESSARIO` trouxe `NaoCobrada`, a despesa marcada para
    "não cobrar" como a lista a recebe. A fase 1 do mobile trouxe
-   `MenuDaCasca`, o estado do menu da casca -- ele mora em `types/ui` e não
-   no `types.ts` da pasta porque quem o produz é um hook, e hook não declara
-   tipo. O número é o guarda: tipo novo sem pensar não passa. */
-const TIPOS_NO_PACOTE = 135;
+   `MenuDaCasca`, o estado do menu da casca, e a fase 3 trouxe `AreaVisivel`,
+   o pedaço de tela que o teclado deixou à mostra -- os dois moram em
+   `types/ui` e não no `types.ts` da pasta porque quem os produz é um hook, e
+   hook não declara tipo. O número é o guarda: tipo novo sem pensar não
+   passa. */
+const TIPOS_NO_PACOTE = 136;
 
 const dominios = readdirSync(PASTA)
   .filter((a) => a.endsWith(".ts") && !FORA_DO_INDICE.has(a))

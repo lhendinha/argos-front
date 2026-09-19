@@ -23,3 +23,4 @@ export * from "./busca";
 export * from "./documento";
 export * from "./financeiro";
 export * from "./processo";
+export * from "./dialogo";
