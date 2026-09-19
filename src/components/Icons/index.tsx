@@ -38,3 +38,6 @@ export { default as IconeOlho } from "./IconeOlho";
 export { default as IconeOlhoCortado } from "./IconeOlhoCortado";
 export { default as IconeSuporte } from "./IconeSuporte";
 export { default as IconeX } from "./IconeX";
+
+// O botão que abre a gaveta no celular e recolhe o menu no desktop.
+export { default as IconeMenu } from "./IconeMenu";

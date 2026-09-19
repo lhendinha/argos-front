@@ -118,9 +118,27 @@ function medir() {
     if (elemento.closest("svg")) continue;
     const caixa = elemento.getBoundingClientRect();
     if (!caixa.width && !caixa.height) continue;
+    /* ⚠️ O campo escondido por acessibilidade não conta: `CampoDeArquivo` e
+       os `input` de data usam 1x1 fora da tela (`left: -70px`) para ficarem
+       alcançáveis por leitor de tela sem aparecer. Eles casavam com "passa
+       da viewport" pela esquerda e empurravam o culpado de verdade para
+       fora dos três primeiros. Quem some assim não ocupa espaço. */
+    if (caixa.width <= 4 && caixa.height <= 4) continue;
     const estilo = getComputedStyle(elemento);
     if (estilo.display === "none" || estilo.visibility === "hidden") continue;
     if (caixa.right <= largura + 1 && caixa.left >= -1) continue;
+    /* 🔴 Quem está dentro de uma área que ROLA não é culpado: a tabela de
+       Processos mede 2374px e não empurra nada, porque a `Table.ScrollArea`
+       a recorta. Ela aparecia no topo da lista de culpados em toda tela com
+       tabela, escondendo o estouro de verdade -- que numa página de 455px
+       era uma linha de botões de 308. */
+    let acima = elemento.parentElement;
+    let recortado = false;
+    while (acima && acima !== document.body) {
+      if (getComputedStyle(acima).overflowX !== "visible") { recortado = true; break; }
+      acima = acima.parentElement;
+    }
+    if (recortado) continue;
     if (culpados.some(({ el }) => el.contains(elemento))) continue;
     culpados.push({
       el: elemento,

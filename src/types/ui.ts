@@ -24,6 +24,19 @@ export interface ItemNavegacao {
   pendente?: boolean;
 }
 
+/** O estado do menu da casca, de `useMenuDaCasca`.
+ *
+ * 🔴 `fixo` é pergunta de ESPAÇO, não de aparelho: há lugar para o menu MAIS
+ * uma coluna de leitura, e altura para os dez itens em pé. Medi o iPhone 17
+ * Pro Max deitado em 832x334 -- largura de sobra e altura nenhuma --, e uma
+ * régua só de largura entregaria o menu fixo justamente ali. */
+export interface MenuDaCasca {
+  fixo: boolean;
+  aberto: boolean;
+  alternar: () => void;
+  fechar: () => void;
+}
+
 /** Uma opção de menu de escolha única -- o filtro de período e a
  * `PilulaDeMenu` usam a mesma forma.
  *
