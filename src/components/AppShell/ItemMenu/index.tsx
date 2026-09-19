@@ -35,6 +35,10 @@ export default function ItemMenu({ item, contador }: ItemMenuProps) {
           position="relative"
           gap="11px"
           p="9px 10px"
+          /* 44px no apontador grosso -- ver `Botao`. São dez itens
+             empilhados na gaveta: 40px deixa 4px entre os alvos, e errar o
+             vizinho leva a pessoa para a tela errada. */
+          css={{ "@media (pointer: coarse)": { minHeight: "44px" } }}
           mb="2px"
           borderRadius="sm"
           color={isActive ? "brand.darker" : "fg.muted"}

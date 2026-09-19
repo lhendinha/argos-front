@@ -47,6 +47,9 @@ export const PilulaDeFiltro = forwardRef<HTMLButtonElement, PilulaDeFiltroProps>
         color={cor.texto}
         fontWeight={PILULA.peso}
         fontSize={PILULA.fonte}
+        /* 44px no apontador grosso -- ver `Botao`, mesma régua e mesmo
+           motivo. */
+        css={{ "@media (pointer: coarse)": { minHeight: "44px" } }}
         letterSpacing={PILULA.espacamento}
         textTransform="uppercase"
         whiteSpace="nowrap"

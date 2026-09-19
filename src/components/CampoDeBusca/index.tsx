@@ -38,6 +38,9 @@ export default function CampoDeBusca({
         aria-label={rotulo}
         w="100%"
         p="8px 12px 8px 34px"
+        /* 44px no apontador grosso -- ver `Botao`. Campo baixo é alvo
+           ruim, e a busca é das primeiras coisas que o dedo procura. */
+        css={{ "@media (pointer: coarse)": { minHeight: "44px" } }}
         fontSize="14px"
         bg="bg.surface"
         borderWidth="1px"

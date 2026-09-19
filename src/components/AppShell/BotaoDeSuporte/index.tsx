@@ -28,6 +28,8 @@ export default function BotaoDeSuporte() {
       alignItems="center"
       gap="11px"
       p="9px 10px"
+      /* 44px no apontador grosso -- ver `Botao`. Ele é o pé da gaveta. */
+      css={{ "@media (pointer: coarse)": { minHeight: "44px" } }}
       borderRadius="sm"
       color="fg.muted"
       fontWeight="600"

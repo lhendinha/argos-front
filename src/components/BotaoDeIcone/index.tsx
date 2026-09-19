@@ -13,7 +13,7 @@ import type { BotaoDeIconeProps } from "./types";
  * embaixo do botão -- foi exatamente o que aconteceu, e só apareceu
  * olhando a tela. Mesmo motivo do `PilulaDeFiltro`. */
 const BotaoDeIcone = forwardRef<HTMLButtonElement, BotaoDeIconeProps>(function BotaoDeIcone(
-  { rotulo, comAviso, onClick, children, ...resto },
+  { rotulo, comAviso, onClick, children, css: cssDoChamador, ...resto },
   ref,
 ) {
   return (
@@ -32,6 +32,7 @@ const BotaoDeIcone = forwardRef<HTMLButtonElement, BotaoDeIconeProps>(function B
       borderRadius="full"
       color="fg.muted"
       _hover={{ bg: "border.subtle", color: "fg" }}
+      css={{ "@media (pointer: coarse)": { width: "44px", height: "44px" }, ...cssDoChamador }}
       {...resto}
     >
       {children}

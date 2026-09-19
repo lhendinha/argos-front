@@ -65,6 +65,10 @@ export default function CabecalhoProcessos({
             <Button
               variant="outline"
               fontWeight="700"
+              /* 44px no apontador grosso -- ver `Botao`. Estes dois são
+                 `Button` do Chakra direto, e não o `Botao` do sistema, então
+                 a regra dele não os alcança. */
+              css={{ "@media (pointer: coarse)": { minHeight: "44px" } }}
               px="16px"
               onClick={onImportarPorOab}
             >
@@ -76,6 +80,8 @@ export default function CabecalhoProcessos({
             color="white"
             fontWeight="700"
             px="18px"
+            /* 44px no apontador grosso -- ver `Botao`, como o vizinho. */
+            css={{ "@media (pointer: coarse)": { minHeight: "44px" } }}
             _hover={{ bg: "brand.dark" }}
             onClick={onNovoProcesso}
           >

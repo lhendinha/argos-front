@@ -32,6 +32,19 @@ export default function BotaoDeAssumir({ rotulo, desabilitado, onAssumir }: Bota
       bg="transparent"
       color="fg.subtle"
       _hover={{ borderColor: "fg.brand", color: "fg.brand" }}
+      /* 🔴 A ÁREA DE TOQUE cresce, o desenho não. Medido no celular: este
+         círculo tem 19px, e o dedo cobre uns 44 -- errar a tarefa vizinha é
+         o resultado esperado. Esticar o círculo até 44 estragaria a lista
+         (o docstring acima explica por que ele é discreto), então quem
+         cresce é um retângulo invisível por cima. `inset` negativo de 12px
+         dá ~43px de alvo, e ele some onde o apontador é fino. */
+      position="relative"
+      _after={{
+        content: '""',
+        position: "absolute",
+        inset: "-12px",
+        "@media (pointer: fine)": { display: "none" },
+      }}
       css={{ "& svg": { width: "11px", height: "11px" } }}
     >
       <IconePlus />

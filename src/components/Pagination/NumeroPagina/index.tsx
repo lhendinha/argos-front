@@ -14,6 +14,8 @@ export default function NumeroPagina({ numero, atual, onClick }: NumeroPaginaPro
       justifyContent="center"
       minW="30px"
       h="30px"
+      /* 44px no apontador grosso -- ver `Botao`. */
+      css={{ "@media (pointer: coarse)": { minWidth: "44px", minHeight: "44px" } }}
       px="6px"
       borderRadius="sm"
       fontFamily="mono"

@@ -45,6 +45,9 @@ export default function MenuUsuario({ onSair }: MenuUsuarioProps) {
           cursor="pointer"
           _hover={{ bg: "border.subtle" }}
           _focusVisible={{ outline: "2px solid", outlineColor: "fg.brand", outlineOffset: "2px" }}
+          /* 44px no apontador grosso -- ver `Botao`. O chip tem 32px de
+             altura, e ele é a porta do "Sair". */
+          css={{ "@media (pointer: coarse)": { minHeight: "44px" } }}
         >
           <Avatar nome={nome} tamanho="pequeno" />
           <Text

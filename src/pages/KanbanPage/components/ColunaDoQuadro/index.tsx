@@ -112,7 +112,11 @@ export default function ColunaDoQuadro({
         fontWeight="700"
         opacity={0.75}
         _hover={{ opacity: 1, borderColor: "fg.brand", color: "brand.dark" }}
-        css={{ "& svg": { width: "15px", height: "15px", flex: "0 0 auto" } }}
+        /* 44px no apontador grosso -- ver `Botao`. */
+        css={{
+          "& svg": { width: "15px", height: "15px", flex: "0 0 auto" },
+          "@media (pointer: coarse)": { minHeight: "44px" },
+        }}
       >
         <IconePlus />
         Nova atividade

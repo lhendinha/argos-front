@@ -16,6 +16,8 @@ export default function SetaPagina({ direcao, desabilitado, onClick }: SetaPagin
       justifyContent="center"
       w="30px"
       h="30px"
+      /* 44px no apontador grosso -- ver `Botao`. */
+      css={{ "@media (pointer: coarse)": { minWidth: "44px", minHeight: "44px" } }}
       borderWidth="1px"
       borderStyle="solid"
       borderColor="border"

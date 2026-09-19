@@ -14,6 +14,8 @@ export default function BotaoDeTexto({ onClick, children, desabilitado }: BotaoD
       gap="7px"
       h="auto"
       p="9px 6px"
+      /* 44px no apontador grosso -- ver `Botao`, mesma régua. */
+      css={{ "@media (pointer: coarse)": { minHeight: "44px" } }}
       pl="0"
       bg="transparent"
       color="fg.brand"
