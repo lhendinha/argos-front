@@ -97,8 +97,21 @@ export default function LinhaDeTarefa({
           inteiro no `title`. */}
       <Flex align="center" gap="8px" flexShrink="0" minW="0" maxW="60%">
         {!semEtiqueta && <EtiquetasDeSubgrupo nomes={[subgrupoNome]} />}
-        <Box w="8px" h="8px" borderRadius="full" bg={cor} aria-hidden="true" />
-        <Text fontSize="11.5px" fontWeight="700" color="fg.muted" whiteSpace="nowrap">
+        {/* 🔴 `flexShrink="0"` nos DOIS, e o ponto é o que mais precisa. Ele
+            era o único item sem trava dentro da caixa com teto de 60%, então
+            era ele que cedia quando o nome do subgrupo era longo -- e um
+            quadrado de 8x8 espremido na horizontal vira uma BARRA VERTICAL,
+            não some. Visto na tela com "Direito Administrativo e Licitações".
+            Quem tem de ceder é a etiqueta, que corta com reticências e guarda
+            o nome inteiro no `title`. */}
+        <Box w="8px" h="8px" flexShrink="0" borderRadius="full" bg={cor} aria-hidden="true" />
+        <Text
+          fontSize="11.5px"
+          fontWeight="700"
+          color="fg.muted"
+          whiteSpace="nowrap"
+          flexShrink="0"
+        >
           {tarefa.prioridade}
         </Text>
       </Flex>

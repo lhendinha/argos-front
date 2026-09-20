@@ -17,12 +17,23 @@ export default function NovoRegistro({ enviando, onEnviar }: NovoRegistroProps) 
   const vazio = texto.trim() === "";
 
   return (
-    <Flex gap="12px" pt="14px" align="flex-start">
+    /* 🔴 **O botão desce quando a caixa fica estreita demais para escrever.**
+       Medido em 375px: avatar, campo e botão na mesma fileira deixavam o
+       campo com 174px -- cerca de 21 caracteres por linha, contra 132 no
+       desktop. Não dá para redigir um registro de atendimento em 21
+       caracteres.
+
+       ⚠️ Sem ponto de virada: o `wrap` com `minW` no campo é que decide. Onde
+       os três cabem, nada muda -- em 1440 a fileira segue igual. */
+    <Flex gap="12px" pt="14px" align="flex-start" wrap="wrap">
       {/* O avatar de quem está escrevendo, como no artifact -- alinha a
           coluna com a das entradas acima. */}
       <Avatar nome={getApelido() || getEmail() || ""} tamanho="pequeno" />
       <Textarea
-        flex="1"
+        /* O piso é o que empurra o botão para baixo: abaixo de 260px de
+           campo a fileira não fecha, e ele desce. */
+        flex="1 1 260px"
+        minW="260px"
         minH="64px"
         resize="vertical"
         /* O recipe do Chakra dá 9px 12px e raio `sm` ao campo; o artifact
@@ -42,6 +53,9 @@ export default function NovoRegistro({ enviando, onEnviar }: NovoRegistroProps) 
       <Botao
         type="button"
         alignSelf="flex-end"
+        /* Colado à direita quando desce sozinho para a segunda linha; na
+           fileira cheia não há folga, então isto não faz nada lá. */
+        ml="auto"
         aria-label="Adicionar registro"
         title="Adicionar registro"
         disabled={vazio || enviando}

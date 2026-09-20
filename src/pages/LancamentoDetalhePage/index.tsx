@@ -303,8 +303,14 @@ export default function LancamentoDetalhePage() {
           abaixo dele. Com o componente de página elas caíam numa faixa solta
           entre o cabeçalho e o cartão. É o mesmo molde de
           `FormularioProcesso`, que é a outra tela de detalhe com ações. */}
-      <Flex align="flex-start" justify="space-between" gap="16px" mb="18px">
-        <Box>
+      {/* 🔴 **Quebra antes de empurrar.** Medido em 375px: com o bloco de
+          ações `flexShrink: 0` ao lado do título, a página inteira ia a
+          517px e "Marcar como recebido" terminava 60px FORA da tela. O
+          `wrap` aqui resolve sem ponto de virada nenhum: o título pede 240px
+          e as ações descem para a linha de baixo quando o que sobra não dá.
+          Onde cabem os dois, nada muda. */}
+      <Flex align="flex-start" justify="space-between" gap="16px" mb="18px" wrap="wrap">
+        <Box flex="1 1 240px" minW="0">
           <Heading as="h1" fontSize="23px" fontWeight="800" lineHeight="30px"
                    letterSpacing="-0.23px">
             {lancamento.descricao}
@@ -335,7 +341,10 @@ export default function LancamentoDetalhePage() {
           </Flex>
         </Box>
 
-        <Flex gap="8px" flexShrink={0} wrap="wrap" justify="flex-end">
+        {/* ⚠️ `flex="0 1 auto"` e não `flexShrink={0}`: indivisível, ele
+            empurrava a página em vez de descer. Descendo, ocupa a linha e se
+            alinha à direita, como no desktop. */}
+        <Flex gap="8px" flex="0 1 auto" wrap="wrap" justify="flex-end">
           {podeExcluir && (
             <Botao
               variante="perigoContorno"
