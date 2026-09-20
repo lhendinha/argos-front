@@ -18,11 +18,12 @@
  * na tela em que a "visão de conjunto do mês" mais faz falta. Régua de
  * ALTURA para problema de altura.
  *
- * ⚠️ **Estas são de VIEWPORT. As de CONTAINER moram em `lista.ts`**
- * (`LARGURA_MINIMA_DA_TABELA`), e a diferença não é estilo: a mesma lista
- * tem larguras diferentes na mesma janela -- com o menu recolhido a área de
- * conteúdo ganha uns 236px sem a viewport mudar um pixel. Tabela pergunta ao
- * container; tela pergunta à tela.
+ * ⚠️ **Quase todas são de VIEWPORT; a última é de CONTAINER**, e a
+ * diferença não é estilo: a mesma caixa tem larguras diferentes na mesma
+ * janela -- com o menu recolhido a área de conteúdo ganha uns 236px sem a
+ * viewport mudar um pixel. As de lista moram em `lista.ts`
+ * (`LARGURA_MINIMA_DA_TABELA`), porque envelhecem com as colunas de cada
+ * uma; esta fica aqui porque é régua de uma tela só.
  *
  * ⚠️ **A régua da casca não está aqui**, e é a exceção anotada: ela é o
  * `md` do Chakra (768px), aplicado por prop responsiva e não por media query
@@ -95,3 +96,32 @@ export const TELA_ESTREITA_PARA_A_SEMANA = "(max-width: 840px)";
  * diferença entre elas é o papel.
  */
 export const TELA_DE_DUAS_COLUNAS = "(min-width: 480px)";
+
+/** Abaixo desta largura de CONTAINER, o documento da fatura deixa de ser
+ * três colunas e empilha.
+ *
+ * 🔴 **Três colunas não cabem num celular pequeno, e não há conserto
+ * estável.** Medido em 360px (318 de área útil), com descrição longa: a
+ * tabela pede 327px, e 342 quando o valor é R$ 123.456,78 -- o valor é o
+ * único dos três conteúdos que cresce sem limite conhecido. Tentei cada
+ * saída e medi as duas pontas: cabeçalho sem caixa-alta (318 / 327), valor
+ * fora da monoespaçada (318 / 331), recuo de 12px (318 / 330). Todas cabem
+ * com valor pequeno, todas estouram com valor grande, e cada uma custa uma
+ * convenção do sistema. O que cortava era o VALOR, numa fatura.
+ *
+ * 🔴 **Consulta de CONTAINER, e não media query nem JavaScript**, e isto é
+ * o ponto: a fatura se imprime. A prop responsiva do Chakra vira
+ * `@media SCREEN and ...` e não vale no papel; `useLarguraEstreita` troca a
+ * ÁRVORE por JS e o papel herda a árvore da tela -- medido, Clientes numa
+ * janela de 360px imprime zero tabelas. A consulta de container é CSS puro e
+ * o layout de impressão usa a largura do PAPEL: medido em PDF A4 gerado de
+ * uma janela de 360px, com e sem a pilha, **0pt de diferença**. No papel o
+ * container tem 784px e continua tabela.
+ *
+ * ⚠️ **420 é folga sobre o pior caso medido**, e não o limite exato: o
+ * mínimo da tabela vai de 327 a ~360 conforme o valor, então empilhar só aos
+ * 360 deixaria a tabela raspando a borda. E fica bem abaixo da área de
+ * conteúdo de qualquer desktop -- medido, no iPad mini em pé o container tem
+ * mais que isto e continua tabela.
+ */
+export const CONTAINER_PARA_EMPILHAR_O_DOCUMENTO = "(max-width: 420px)";
