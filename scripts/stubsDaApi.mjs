@@ -434,12 +434,19 @@ const RESPOSTAS = [
       processos: [{ ...PROCESSOS.processos[0], subgrupo_id: "sg-civel" }],
       // Sete de propósito: com cinco por página, a paginação aparece na
       // verificação visual.
+      /* ⚠️ `tem_envio` e `lido` na proporção do real: as duas primeiras
+         avisadas e não lidas, a terceira avisada e lida, e as quatro
+         restantes SEM os campos -- movimentação que nunca notificou
+         ninguém, que em produção é a maioria (9 de 73, medido em
+         26/08/2026). É essa mistura que exercita o destaque e, mais
+         importante, a regra de que ausência não é "não lida". */
       comunicacoes: Array.from({ length: 7 }, (_, i) => ({
         comunicacao_id: `c${i + 1}`,
         tipo_comunicacao: ["Intimação", "Despacho", "Sentença"][i % 3],
         data_disponibilizacao: `2026-08-${String(18 - i).padStart(2, "0")}`,
         nome_orgao: "TJMG · 2ª Vara Cível",
         texto: `<p>Movimentação ${i + 1}: fica a parte intimada a se manifestar no prazo legal.</p>`,
+        ...(i < 3 ? { tem_envio: true, lido: i === 2 } : {}),
       })),
     }),
   ],
