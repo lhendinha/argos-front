@@ -23,9 +23,17 @@
  *
  * ⚠️ Eles envelhecem com as colunas. Coluna nova pede medida nova, e a régua
  * do mobile acusa quem esquecer.
+ *
+ * ⚠️ **E envelhecem com a TIPOGRAFIA também.** `processos` e
+ * `previaDaImportacao` subiram quando o identificador de processo deixou os
+ * 12,5px e passou a escrever nos 13px da célula (ver `CelulaComSub`): medi
+ * 1068 → 1075 em Processos, com o mesmo banco local que deu o 1068, e +10 na
+ * prévia. Sete pixels não parecem nada, mas o limiar existe justamente para
+ * que a tabela NÃO role de lado -- e um limiar sete pixels curto devolve a
+ * faixa morta que ele veio matar.
  */
 export const LARGURA_MINIMA_DA_TABELA = {
-  processos: 1068,
+  processos: 1075,
   lancamentos: 1039,
   documentos: 999,
   aFaturar: 989,
@@ -37,7 +45,7 @@ export const LARGURA_MINIMA_DA_TABELA = {
   naoCobradas: 725,
   membros: 691,
   emissaoDeFatura: 642,
-  previaDaImportacao: 621,
+  previaDaImportacao: 631,
   inscricoes: 525,
   categorias: 421,
 } as const;

@@ -10,6 +10,15 @@ import type { CelulaComSubProps } from "./types";
  * Medidas do artifact: `.tbl td` 13px 14px com divisória em `line-soft`,
  * `.cell-sub` 12px em `slate-2` com 2px de respiro.
  *
+ * 🔴 **O identificador de processo escreve nos 13px da célula, e não nos
+ * 12,5px que o `.proc-num` do artifact pedia.** Era a única das sete tabelas
+ * com corpo próprio. Medi a altura do "x" nas três combinações: Manrope
+ * 13/700 dá 7,02px, IBM Plex Mono 13/700 dá 7,11px e a mesma mono em 12,5
+ * dá 6,84px. Ou seja, os 12,5px não compensavam a mono ser mais larga --
+ * eles deixavam o número 2,6% MENOR que o texto ao lado, e é ele que
+ * identifica a linha. Custa +7,5px por número, que é por que os limiares de
+ * `processos` e `previaDaImportacao` foram remedidos junto.
+ *
  * ⚠️ **A linha de apoio TRUNCA.** Ela recebe nome de cadastro (contraparte,
  * cliente), e nome de empresa é longo: medido, "Construtora Alfa
  * Empreendimentos Imobiliários e Participações Societárias do Brasil Ltda ME"
@@ -39,7 +48,6 @@ export default function CelulaComSub({
       <Box
         fontFamily={processo ? "mono" : undefined}
         fontWeight={forte ? "700" : undefined}
-        fontSize={processo ? "12.5px" : undefined}
         color="fg"
         truncate={Boolean(maxLargura)}
       >
