@@ -53,7 +53,19 @@ export default function RolagemHorizontal({ rotulo, dica, children }: RolagemHor
           60% para os números -- espaço para pelo menos um mês inteiro ao
           lado do rótulo em 390px, que era o que faltava. Dentro do rolador
           a mesma conta daria 40% de 1975px. */}
-      <Box position="relative" containerType="inline-size">
+      <Box
+        position="relative"
+        containerType="inline-size"
+        /* 🔴 **A declaração de "largo de propósito", para a régua do
+           mobile.** Ela cobra toda tabela que passe da própria área visível
+           -- foi o defeito que o usuário achou no Fluxo de caixa, com a
+           régua marcando 92 de 92 --, e só não cobra quem se declara. O
+           lugar certo da declaração é AQUI e não na tabela: este componente
+           é a declaração, porque é ele que desenha os três sinais que
+           tornam a rolagem utilizável. Tabela larga sem eles continua
+           sendo reprovada, que é exatamente a regra que se quer. */
+        data-larga=""
+      >
         <Box
           ref={medir}
           overflowX="auto"
@@ -71,10 +83,12 @@ export default function RolagemHorizontal({ rotulo, dica, children }: RolagemHor
           {children}
         </Box>
 
-        {/* 44px, a medida do quadro: largo o bastante para se ler como
-            "continua" e estreito o bastante para não apagar um número. */}
-        {bordas.antes && <Esmaecido lado="left" />}
-        {bordas.depois && <Esmaecido lado="right" />}
+        {/* 44px é a medida do quadro -- larga o bastante para se ler como
+            "continua" e estreita o bastante para não apagar um número. Mas
+            ela é o TETO, não a medida: o esmaecido nunca é mais largo do
+            que o que ele esconde. Ver `quantoPassa`. */}
+        {bordas.antes && <Esmaecido lado="left" largura={bordas.quantoPassa} />}
+        {bordas.depois && <Esmaecido lado="right" largura={bordas.quantoPassa} />}
       </Box>
     </>
   );
@@ -82,9 +96,14 @@ export default function RolagemHorizontal({ rotulo, dica, children }: RolagemHor
 
 /** A faixa que dissolve o conteúdo na borda do cartão.
  *
+ * 🔴 **Nunca mais larga do que o que esconde.** Visto na tela: o documento
+ * da fatura passa nove pixels em 360px, e uma faixa de 44px apagava a maior
+ * parte do VALOR -- o número que se está ali para ler -- só para anunciar
+ * nove pixels. A faixa agora diz quanto falta, e não só que falta.
+ *
  * ⚠️ O gradiente vai para `bg.surface`, o fundo do cartão -- num tema escuro
  * um branco fixo seria uma mancha clara. */
-function Esmaecido({ lado }: { lado: "left" | "right" }) {
+function Esmaecido({ lado, largura }: { lado: "left" | "right"; largura: number }) {
   return (
     <Box
       position="absolute"
@@ -92,7 +111,7 @@ function Esmaecido({ lado }: { lado: "left" | "right" }) {
       bottom="0"
       left={lado === "left" ? "0" : undefined}
       right={lado === "right" ? "0" : undefined}
-      w="44px"
+      w={`${Math.min(44, largura)}px`}
       pointerEvents="none"
       aria-hidden="true"
       css={{

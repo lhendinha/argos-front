@@ -228,6 +228,125 @@ const RESPOSTAS = [
       ],
     }),
   ],
+  /* 🔴 **As duas tabelas mais largas do app, e as duas últimas a ganhar
+     régua.** O Fluxo rola 1544px dentro da própria área e o documento da
+     fatura estourava 57px em 360 -- nenhum dos dois era medido, porque a
+     régua não visitava nem `/financeiro?aba=fluxo` nem
+     `/financeiro/faturas/:id`. Estes dois stubs são o que faltava para
+     visitar.
+
+     ⚠️ A FORMA foi capturada da API local rodando (`yarn offline`), como a
+     dos quatro acima -- e não deduzida dos tipos. O VOLUME é que foi
+     cortado: doze meses de verdade, porque a largura da tabela do fluxo vem
+     deles, e seis categorias em vez de doze, porque essas só acrescentam
+     linhas. */
+  [
+    /\/financeiro\/fluxo-de-caixa/,
+    () => {
+      const meses = Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, "0")}`);
+      /* Um valor por mês, variando: zero em todos faria as colunas terem a
+         largura do "R$ 0,00" e a tabela mediria menos do que mede. */
+      const porMes = (base) =>
+        Object.fromEntries(meses.map((m, i) => [m, base * (i + 1) * 137]));
+      const categoria = (id, nome, natureza, cor, base) => ({
+        categoria_id: id,
+        nome,
+        natureza,
+        cor,
+        por_mes: porMes(base),
+        total_centavos: Object.values(porMes(base)).reduce((a, b) => a + b, 0),
+      });
+      return {
+        meses,
+        saldo_disponivel: true,
+        linhas: [
+          categoria("cat-1", "Honorários contratuais", "entrada", "#1f9d55", 1900),
+          categoria("cat-3", "Adiantamento de despesas", "entrada", "#4d7c0f", 420),
+          categoria("cat-5", "Rendimentos financeiros", "entrada", "#0f766e", 90),
+          categoria("cat-2", "Custas processuais", "saida", "#d64550", 310),
+          categoria("cat-4", "Despesas administrativas", "saida", "#b45309", 760),
+          categoria("cat-6", "Impostos sobre honorários", "saida", "#9f1239", 540),
+        ],
+        entradas_por_mes: porMes(2410),
+        saidas_por_mes: porMes(1610),
+        entradas_realizadas_por_mes: porMes(1800),
+        saidas_realizadas_por_mes: porMes(1200),
+        entradas_previstas_por_mes: porMes(610),
+        saidas_previstas_por_mes: porMes(410),
+        transferencias_por_mes: porMes(0),
+        aberturas_de_conta_por_mes: porMes(0),
+        saldo_anterior_por_mes: porMes(3300),
+        saldo_do_periodo_por_mes: porMes(800),
+        saldo_final_por_mes: porMes(4100),
+      };
+    },
+  ],
+  /* ⚠️ ANTES de `/clientes/:id` e de qualquer padrão mais largo, e depois
+     de `a-faturar`/`nao-cobradas`, que também começam com `/faturas/`. */
+  [
+    /\/faturas\/(?!a-faturar|nao-cobradas)[^/]+$/,
+    () => ({
+      grupo_id: "grupo-demo",
+      fatura_id: "fat-1",
+      numero: "2026-0052",
+      cliente_id: "cli-2",
+      lancamento_ids: ["lan-1", "lan-2", "lan-3"],
+      despesa_ids: ["lan-3"],
+      reembolso_id: "lan-3",
+      valor_total_centavos: 289700,
+      data_vencimento: "2026-12-28",
+      situacao: "paga",
+      pago_em: "2026-09-05",
+      criado_por: "ana@argos.local",
+      criado_em: "2026-09-14T20:47:05.230356+00:00",
+      sequencia: 389,
+      ordem: "2026-12-28\u00002026-0052",
+      cliente_ordem: "cli-2#2026-12-28#fat-1",
+      lancamentos: [
+        {
+          grupo_id: "grupo-demo", lancamento_id: "lan-1", tipo: "honorario",
+          descricao: "Honorários contratuais da fase de conhecimento",
+          valor_centavos: 250000, data_vencimento: "2026-12-28",
+          criado_por: "ana@argos.local", criado_em: "2026-09-14T20:47:05+00:00",
+          sequencia: 388, data_efetivacao: "2026-09-05", conta_id: "ct-1",
+          conta_origem_id: "", conta_destino_id: "", categoria_id: "cat-1",
+          centro_id: "", cliente_id: "cli-2", contraparte: "", subgrupo_id: "",
+          numero_processo: "", atendimento_id: "", responsavel: "",
+          documento_numero: "", parcela: "", rateio: [],
+          fatura_id: "fat-1", vencimento_ordem: "2026-12-28#lan-1",
+          natureza: "entrada", situacao: "efetivado",
+        },
+        {
+          grupo_id: "grupo-demo", lancamento_id: "lan-2", tipo: "honorario",
+          descricao: "Honorários de êxito",
+          valor_centavos: 32000, data_vencimento: "2026-12-28",
+          criado_por: "ana@argos.local", criado_em: "2026-09-14T20:47:06+00:00",
+          sequencia: 389, data_efetivacao: "2026-09-05", conta_id: "ct-1",
+          conta_origem_id: "", conta_destino_id: "", categoria_id: "cat-1",
+          centro_id: "", cliente_id: "cli-2", contraparte: "", subgrupo_id: "",
+          numero_processo: "", atendimento_id: "", responsavel: "",
+          documento_numero: "", parcela: "", rateio: [],
+          fatura_id: "fat-1", vencimento_ordem: "2026-12-28#lan-2",
+          natureza: "entrada", situacao: "efetivado",
+        },
+        /* A linha de reembolso: `natureza: "saida"` é o que faz a tela
+           escrever "Reembolso de despesa" embaixo da descrição. */
+        {
+          grupo_id: "grupo-demo", lancamento_id: "lan-3", tipo: "saida",
+          descricao: "Reembolso de despesas",
+          valor_centavos: 7700, data_vencimento: "2026-12-28",
+          criado_por: "ana@argos.local", criado_em: "2026-09-14T20:47:07+00:00",
+          sequencia: 390, data_efetivacao: "2026-09-05", conta_id: "ct-1",
+          conta_origem_id: "", conta_destino_id: "", categoria_id: "cat-2",
+          centro_id: "", cliente_id: "cli-2", contraparte: "", subgrupo_id: "",
+          numero_processo: "", atendimento_id: "", responsavel: "",
+          documento_numero: "", parcela: "", rateio: [],
+          fatura_id: "fat-1", vencimento_ordem: "2026-12-28#lan-3",
+          natureza: "saida", situacao: "efetivado",
+        },
+      ],
+    }),
+  ],
   [
     /\/financeiro\/catalogo/,
     () => ({

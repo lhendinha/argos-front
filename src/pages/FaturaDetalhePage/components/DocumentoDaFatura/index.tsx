@@ -61,6 +61,16 @@ export default function DocumentoDaFatura({
       <CartaoDeTabela>
         <Tabela
           colunas={COLUNAS_DO_DOCUMENTO}
+          /* 🔴 **Rola de lado no Android pequeno, e avisa.** Medido em 360px
+             com descrição longa: 327px em 318 visíveis. Os nove pixels que
+             faltam não têm de onde sair -- 84 dos 327 são o recuo de 14px
+             que a guarda `celulaDeTabela.test.ts` cobra, o valor é monoespaçado
+             porque é dinheiro em coluna, e o cabeçalho "Lançamento" não
+             quebra. Em 390px ela cabe inteira, e aí nada disto aparece. */
+          rolagem={{
+            rotulo: "Lançamentos desta fatura",
+            dica: "Role a tabela para ver o valor",
+          }}
           vazio={
             fatura.lancamentos.length === 0 ? (
               <EstadoVazio mensagem="Os lançamentos desta fatura não foram encontrados." />
@@ -84,6 +94,23 @@ export default function DocumentoDaFatura({
               <Table.Cell
                 p="13px 14px"
                 whiteSpace="normal"
+                /* 🔴 **E hifeniza.** Quebrar por espaço não bastou: quem
+                   achou foi a régua do mobile, com o dado longo dela --
+                   "conhecimento" mede 93px e, mais os 28 de recuo, a coluna
+                   não desce de 119; com a data (105) e o valor (114) a
+                   tabela ia a 337px dentro de 318, e o VALOR é que ficava
+                   cortado. Medido com `lang="pt-BR"`, que o documento já
+                   declara: o mínimo da frase cai de 92px para 34.
+
+                   ⚠️ Recuo não era saída: a guarda `celulaDeTabela.test.ts` cobra
+                   `13px 14px` em toda célula, e por um bom motivo -- é o
+                   que faz o valor nascer embaixo do título da coluna.
+
+                   ⚠️ Só quebra quando falta espaço, e com hífen à vista --
+                   é tipografia de documento impresso, não corte no meio da
+                   palavra. Em 1440 a coluna tem 531px e nada hifeniza. Sem
+                   dicionário no navegador, volta ao que era: rola 19px. */
+                css={{ hyphens: "auto", WebkitHyphens: "auto" }}
                 borderBottomWidth="1px"
                 borderBottomColor="border.subtle"
               >

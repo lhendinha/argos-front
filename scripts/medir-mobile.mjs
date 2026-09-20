@@ -65,6 +65,12 @@ const ROTAS = [
   "/perfil",
   "/financeiro",
   "/clientes/cli-1",
+  /* 🔴 As duas tabelas mais largas do app, e as duas últimas a entrar aqui.
+     O Fluxo rola 1544px DENTRO da própria área -- a régua não pegava porque
+     não abria a aba dele --, e o documento da fatura estourava 57px em 360.
+     Os dois stubs que alimentam estas rotas estão em `stubsDaApi.mjs`. */
+  "/financeiro?aba=fluxo",
+  "/financeiro/faturas/fat-1",
   "/login",
 ];
 
@@ -180,8 +186,10 @@ function medir() {
      passava 1657px da área visível, dentro da própria `ScrollArea`, e a
      régua marcava 92 de 92. Quem viu foi o usuário, olhando a tela.
 
-     Uma tabela larga de propósito se declara com `larga` (ver `Tabela`), e
-     essas a régua não cobra. Toda outra que passar da própria área é
+     Uma tabela larga de propósito se declara envolvendo-se em
+     `RolagemHorizontal`, que marca `data-larga` -- e a declaração fica lá
+     porque é ele que desenha a frase, o esmaecido e a sombra que tornam a
+     rolagem achável. Tabela larga SEM esses sinais continua reprovada. Toda outra que passar da própria área é
      defeito: no celular, ela é uma coluna que ninguém vai achar. */
   const tabelasQueRolam = [];
   for (const tabela of document.querySelectorAll("table")) {

@@ -21,6 +21,11 @@
  * muda quanto cabe, e trocar o período troca o número de colunas sem que
  * nenhum dos dois aconteça -- por isso o observador olha o CONTEÚDO também.
  *
+ * ⚠️ Devolve também QUANTO o conteúdo passa da caixa, e não só que passa:
+ * o esmaecido da borda é proporcional a isso. Um documento de fatura que
+ * esconde nove pixels não merece a mesma faixa de 44px que um fluxo de caixa
+ * que esconde 1544 -- ali ela cobria justamente o valor que se quer ler.
+ *
  * ⚠️ Sem `ResizeObserver` (jsdom), os dois lados ficam apagados: é a tela
  * sem aviso nenhum, que é o que os testes existentes esperam ver.
  */
@@ -34,18 +39,28 @@ const FOLGA = 1;
 
 export function useBordasDaRolagem(): [(no: HTMLElement | null) => void, BordasDaRolagem] {
   const [no, setNo] = useState<HTMLElement | null>(null);
-  const [bordas, setBordas] = useState<BordasDaRolagem>({ antes: false, depois: false });
+  const [bordas, setBordas] = useState<BordasDaRolagem>({
+    antes: false,
+    depois: false,
+    quantoPassa: 0,
+  });
 
   useLayoutEffect(() => {
     if (!no || typeof ResizeObserver !== "function") return;
     const medir = () => {
-      const fim = no.scrollWidth - no.clientWidth - no.scrollLeft;
+      const quantoPassa = Math.max(Math.round(no.scrollWidth - no.clientWidth), 0);
+      const fim = quantoPassa - no.scrollLeft;
       setBordas((atuais) => {
         const antes = no.scrollLeft > FOLGA;
         const depois = fim > FOLGA;
         /* Só grava quando muda: o `scroll` dispara a cada quadro do arraste,
-           e um `setState` por quadro repintaria a tabela inteira. */
-        return atuais.antes === antes && atuais.depois === depois ? atuais : { antes, depois };
+           e um `setState` por quadro repintaria a tabela inteira. E
+           `quantoPassa` não muda ao rolar, então ele não estraga isso. */
+        return atuais.antes === antes &&
+          atuais.depois === depois &&
+          atuais.quantoPassa === quantoPassa
+          ? atuais
+          : { antes, depois, quantoPassa };
       });
     };
     medir();

@@ -1,5 +1,6 @@
 import { Table } from "@chakra-ui/react";
 import { colunaComRotulo } from "../../utils/tabela";
+import RolagemHorizontal from "../RolagemHorizontal";
 import type { TabelaProps } from "./types";
 
 /** A tabela do sistema (`.tbl` do artifact), com o cabeçalho e a área de
@@ -14,38 +15,42 @@ import type { TabelaProps } from "./types";
  * rola dentro do próprio container em vez de empurrar a página pro lado --
  * regra que vale pra todo conteúdo largo do sistema.
  */
-export default function Tabela({ colunas, vazio, children }: TabelaProps) {
+export default function Tabela({
+  colunas,
+  vazio,
+  rolagem,
+  children,
+}: TabelaProps) {
   if (vazio) return <>{vazio}</>;
 
-  return (
-    <Table.ScrollArea>
-      <Table.Root size="sm" width="100%">
-        <Table.Header>
-          <Table.Row>
-            {colunas.map(colunaComRotulo).map((coluna, i) => (
-              <Table.ColumnHeader
-                key={coluna.rotulo || `acoes-${i}`}
-                /* `.tbl th` do artifact: 11px/800 em caixa alta, com
+  const tabela = (
+    <Table.Root size="sm" width="100%">
+      <Table.Header>
+        <Table.Row>
+          {colunas.map(colunaComRotulo).map((coluna, i) => (
+            <Table.ColumnHeader
+              key={coluna.rotulo || `acoes-${i}`}
+              /* `.tbl th` do artifact: 11px/800 em caixa alta, com
                    divisória de 1px em `line` -- mais forte que a das linhas
                    de dados, que usam `line-soft`. */
-                fontSize="11px"
-                fontWeight="800"
-                textTransform="uppercase"
-                letterSpacing="0.04em"
-                color="fg.subtle"
-                textAlign={coluna.aDireita ? "right" : "left"}
-                whiteSpace="nowrap"
-                p="0 14px 10px"
-                borderBottomWidth="1px"
-                borderBottomStyle="solid"
-                borderBottomColor="border"
-              >
-                {coluna.rotulo}
-              </Table.ColumnHeader>
-            ))}
-          </Table.Row>
-        </Table.Header>
-        {/* 🔴 A ÚLTIMA linha não desenha a divisória de baixo -- é
+              fontSize="11px"
+              fontWeight="800"
+              textTransform="uppercase"
+              letterSpacing="0.04em"
+              color="fg.subtle"
+              textAlign={coluna.aDireita ? "right" : "left"}
+              whiteSpace="nowrap"
+              p="0 14px 10px"
+              borderBottomWidth="1px"
+              borderBottomStyle="solid"
+              borderBottomColor="border"
+            >
+              {coluna.rotulo}
+            </Table.ColumnHeader>
+          ))}
+        </Table.Row>
+      </Table.Header>
+      {/* 🔴 A ÚLTIMA linha não desenha a divisória de baixo -- é
             `tbody tr:last-child td{border-bottom-width:0}` no artefato. Cada
             célula declara a borda (o guarda de padding cobra isso), então
             sem esta regra a última risca o cartão e sobra um vão embaixo
@@ -54,10 +59,20 @@ export default function Tabela({ colunas, vazio, children }: TabelaProps) {
             ⚠️ Aqui e não em cada célula: `:last-child` é do CSS, e repetir a
             exceção linha a linha só funcionaria se quem escreve a linha
             soubesse que é a última -- ele não sabe. */}
-        <Table.Body css={{ "& tr:last-child td": { borderBottomWidth: 0 } }}>
-          {children}
-        </Table.Body>
-      </Table.Root>
-    </Table.ScrollArea>
+      <Table.Body css={{ "& tr:last-child td": { borderBottomWidth: 0 } }}>
+        {children}
+      </Table.Body>
+    </Table.Root>
+  );
+
+  /* ⚠️ Um OU outro, nunca os dois: dois roladores aninhados fariam o de
+     dentro rolar e o de fora nunca -- e os avisos, que leem o de fora,
+     ficariam apagados justamente quando há o que avisar. */
+  return rolagem ? (
+    <RolagemHorizontal rotulo={rolagem.rotulo} dica={rolagem.dica}>
+      {tabela}
+    </RolagemHorizontal>
+  ) : (
+    <Table.ScrollArea>{tabela}</Table.ScrollArea>
   );
 }

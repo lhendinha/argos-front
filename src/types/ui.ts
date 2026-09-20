@@ -183,4 +183,10 @@ export interface BordasDaRolagem {
   antes: boolean;
   /** Há conteúdo à direita: ainda falta rolar. */
   depois: boolean;
+  /** Quanto o conteúdo passa da área visível, ao todo.
+   *
+   * ⚠️ NÃO muda enquanto se rola -- é a diferença entre o conteúdo e a
+   * caixa, e rolar não mexe em nenhum dos dois. É o que deixa o esmaecido
+   * ser proporcional sem repintar a cada quadro do arraste. */
+  quantoPassa: number;
 }
