@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Botao, CartaoDeTabela, EstadoDeErro, EstadoVazio, Esqueleto, Etiqueta, ModalDeConfirmacao, Pagination, Tabela } from "../../../../components";
 import { useToast } from "../../../../contexts/ToastContext";
-import { LIMIAR_DA_LISTA_EM_ITENS, TAMANHO_PAGINA_PADRAO } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA, TAMANHO_PAGINA_PADRAO } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { useTodosOsSubgrupos } from "../../../../hooks/useTodosOsSubgrupos";
 import {
@@ -125,7 +125,7 @@ export default function InscricoesDoGrupo() {
 
   /* ⚠️ Antes dos returns antecipados: gancho depois de `return` quebra a
      ordem dos ganchos entre renderizações. */
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.inscricoes);
 
   if (query.isPending) return <Esqueleto linhas={3} />;
   if (query.isError) {

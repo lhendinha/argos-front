@@ -23,6 +23,15 @@ export const POSICAO_DO_MENU = { placement: "bottom-start", gutter: 6 } as const
 
 export const PAINEL_DE_MENU: SystemStyleObject = {
   minWidth: "216px",
+  /** 🔴 **Teto de largura, senão o conteúdo manda.** O menu "Todos os
+   * subgrupos" do Histórico lista nomes de subgrupo inteiros, e com nomes
+   * reais e longos o painel media 508px numa tela de 390 -- saía 126px pela
+   * direita. O posicionador vira o painel de lado quando falta espaço, mas
+   * não o ENCOLHE: painel mais largo que a tela não tem lado que sirva.
+   *
+   * ⚠️ 32px é a margem da página nos dois lados. Em tela larga o teto nunca
+   * entra em jogo -- ele só existe onde a tela é menor que o conteúdo. */
+  maxWidth: "calc(100vw - 32px)",
   padding: "6px",
   bg: "bg.surface",
   borderWidth: "1px",

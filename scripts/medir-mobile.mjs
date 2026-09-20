@@ -173,6 +173,37 @@ function medir() {
       },
     });
   }
+  /* 🔴 **A tabela que rola DENTRO de si.** O bloco acima descarta quem está
+     recortado por um ancestral que rola -- e tem de descartar, senão toda
+     tela com tabela acusaria a tabela em vez do estouro de verdade. Só que
+     esse descarte tinha um preço que ninguém tinha cobrado: o Fluxo de caixa
+     passava 1657px da área visível, dentro da própria `ScrollArea`, e a
+     régua marcava 92 de 92. Quem viu foi o usuário, olhando a tela.
+
+     Uma tabela larga de propósito se declara com `larga` (ver `Tabela`), e
+     essas a régua não cobra. Toda outra que passar da própria área é
+     defeito: no celular, ela é uma coluna que ninguém vai achar. */
+  const tabelasQueRolam = [];
+  for (const tabela of document.querySelectorAll("table")) {
+    if (tabela.closest("[data-larga]")) continue;
+    let rolador = tabela.parentElement;
+    while (rolador && getComputedStyle(rolador).overflowX === "visible") {
+      rolador = rolador.parentElement;
+    }
+    if (!rolador) continue;
+    const passa = Math.round(tabela.scrollWidth - rolador.clientWidth);
+    if (passa <= 1) continue;
+    tabelasQueRolam.push({
+      passa,
+      largura: Math.round(tabela.scrollWidth),
+      visivel: Math.round(rolador.clientWidth),
+      colunas: [...tabela.querySelectorAll("thead th")]
+        .map((c) => c.textContent.trim() || "·")
+        .join(" | ")
+        .slice(0, 70),
+    });
+  }
+
   /* ⚠️ A cortina do modal é filha do `body`, fora do `main`: medir só o
      `main` aprovaria uma folha transbordando. O `scrollWidth` já é do
      documento; o que muda aqui é só de onde sai o "renderizou". */
@@ -184,7 +215,53 @@ function medir() {
        renderizou", que dão o mesmo `scrollWidth`. */
     texto: principal ? (principal.textContent || "").length : 0,
     culpados: culpados.map(({ info }) => info).slice(0, 3),
+    tabelasQueRolam,
   };
+}
+
+/** Abre cada menu da tela e mede o painel.
+ *
+ * 🔴 **Existe porque a régua não abria menu nenhum.** Ela mede telas
+ * recém-abertas e nove estados, e o painel de "+ Novo lançamento" nascia em
+ * -29px numa tela de 390 -- 29 pixels fora dela, com os pontinhos coloridos
+ * de cada opção amputados. Marcava 92 de 92. Quem viu foi o usuário.
+ *
+ * ⚠️ Um por vez, fechando com Escape: dois painéis abertos ao mesmo tempo
+ * mediriam a posição de um com o outro por cima.
+ */
+async function medirMenus(pagina) {
+  const gatilhos = pagina.locator('[aria-haspopup="menu"], [data-scope="menu"][data-part="trigger"]');
+  const quantos = await gatilhos.count();
+  const fora = [];
+  for (let i = 0; i < quantos; i++) {
+    const gatilho = gatilhos.nth(i);
+    let rotulo = "?";
+    try {
+      rotulo = ((await gatilho.textContent()) || "").trim().slice(0, 28) || "(sem texto)";
+      await gatilho.click({ timeout: 3000 });
+      await pagina.waitForTimeout(400);
+    } catch {
+      continue;
+    }
+    const medida = await pagina.evaluate(() => {
+      const painel = document.querySelector('[role="menu"]:not([hidden]), [data-scope="menu"][data-part="content"]');
+      if (!painel) return null;
+      const c = painel.getBoundingClientRect();
+      if (!c.width) return null;
+      return {
+        esquerda: Math.round(c.left),
+        direita: Math.round(c.right),
+        largura: Math.round(c.width),
+        viewport: document.documentElement.clientWidth,
+      };
+    });
+    await pagina.keyboard.press("Escape").catch(() => {});
+    await pagina.waitForTimeout(250);
+    if (!medida) continue;
+    if (medida.esquerda < -1) fora.push({ rotulo, ...medida, lado: "pela esquerda" });
+    else if (medida.direita > medida.viewport + 1) fora.push({ rotulo, ...medida, lado: "pela direita" });
+  }
+  return fora;
 }
 
 const argumentos = process.argv.slice(2);
@@ -237,14 +314,28 @@ for (const formato of FORMATOS) {
       continue;
     }
 
-    const coube = medida.pagina <= medida.viewport + 1;
+    const menusFora = await medirMenus(pagina);
+    const coube =
+      medida.pagina <= medida.viewport + 1 &&
+      medida.tabelasQueRolam.length === 0 &&
+      menusFora.length === 0;
     resultados.push(coube);
     console.log(
       `    ${coube ? "ok " : "✗  "} ${rota.padEnd(42)} ${String(medida.pagina).padStart(5)}px de ${medida.viewport}`,
     );
-    for (const culpado of coube ? [] : medida.culpados) {
+    for (const culpado of medida.pagina <= medida.viewport + 1 ? [] : medida.culpados) {
       console.log(
         `          ${culpado.tag} de ${culpado.largura}px termina em ${culpado.direita} — ${JSON.stringify(culpado.texto)}`,
+      );
+    }
+    for (const t of medida.tabelasQueRolam) {
+      console.log(
+        `          tabela rola ${t.passa}px dentro de si (${t.largura} em ${t.visivel}) — ${t.colunas}`,
+      );
+    }
+    for (const m of menusFora) {
+      console.log(
+        `          menu "${m.rotulo}" sai ${m.lado}: ${m.largura}px de ${m.esquerda} a ${m.direita}`,
       );
     }
   }
@@ -276,14 +367,19 @@ for (const formato of FORMATOS) {
       continue;
     }
     const medida = await pagina.evaluate(medir);
-    const coube = medida.pagina <= medida.viewport + 1;
+    const coube = medida.pagina <= medida.viewport + 1 && medida.tabelasQueRolam.length === 0;
     resultados.push(coube);
     console.log(
       `    ${coube ? "ok " : "✗  "} ${estado.nome.padEnd(42)} ${String(medida.pagina).padStart(5)}px de ${medida.viewport}`,
     );
-    for (const culpado of coube ? [] : medida.culpados) {
+    for (const culpado of medida.pagina <= medida.viewport + 1 ? [] : medida.culpados) {
       console.log(
         `          ${culpado.tag} de ${culpado.largura}px termina em ${culpado.direita} — ${JSON.stringify(culpado.texto)}`,
+      );
+    }
+    for (const t of medida.tabelasQueRolam) {
+      console.log(
+        `          tabela rola ${t.passa}px dentro de si (${t.largura} em ${t.visivel}) — ${t.colunas}`,
       );
     }
   }

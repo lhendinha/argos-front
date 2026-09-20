@@ -17,7 +17,7 @@ import {
   rotuloDeResponsavel,
   selecionaveis,
 } from "../../../../utils/importacao";
-import { LIMIAR_DA_LISTA_EM_ITENS, TAMANHO_PAGINA_PADRAO } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA, TAMANHO_PAGINA_PADRAO } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { COLUNAS_DA_PREVIA, ESTILO_DE_LINK } from "../../constants";
 import AvisoDaImportacao from "../AvisoDaImportacao";
@@ -41,7 +41,7 @@ export default function PreviaDaImportacao({
   onImportar,
   onVoltar,
 }: PreviaDaImportacaoProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.previaDaImportacao);
   const disponiveis = useMemo(() => selecionaveis(previa.processos), [previa.processos]);
   /* 🔴 Abre marcando tudo que dá para importar, MENOS o que este subgrupo já
      apagou de propósito. Quem apagou tomou uma decisão, e o padrão da tela

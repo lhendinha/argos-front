@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 
 import { EstadoVazio, Tabela } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { COLUNAS_MEMBROS, COLUNA_DE_ACOES } from "../../constants";
 import ItemDeMembro from "../ItemDeMembro";
@@ -16,7 +16,7 @@ import type { TabelaDeMembrosProps } from "./types";
  * com o grupo, e medir com dado ralo subestima.
  */
 export default function TabelaDeMembros({ membros, podeEditar, onEditar }: TabelaDeMembrosProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.membros);
 
   const vazio = membros.length === 0 && (
     <EstadoVazio mensagem="Nenhuma pessoa neste grupo ainda." />

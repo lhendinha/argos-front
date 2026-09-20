@@ -8,7 +8,7 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { contar, formatarCentavos, formatarData } from "../../../../utils";
 import { COLUNAS_DE_CONTAS } from "../../constants";
@@ -44,7 +44,7 @@ export default function ListaDeContas({
   onEditar,
   onAlternarAtivo,
 }: ListaDeContasProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.contas);
   return (
     <>
       <SubcabecalhoDaLista

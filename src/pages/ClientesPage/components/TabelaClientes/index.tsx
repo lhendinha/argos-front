@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 
 import { Botao, EstadoVazio, Tabela } from "../../../../components";
-import { ESTADO_DE_CLIENTE_ARQUIVADOS, LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { ESTADO_DE_CLIENTE_ARQUIVADOS, LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { colunasDeClientes } from "../../constants";
 import ItemDeCliente from "../ItemDeCliente";
@@ -21,7 +21,7 @@ export default function TabelaClientes({
   reativandoId,
   onLimparBusca,
 }: TabelaClientesProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.clientes);
 
   const vazio = clientes.length === 0 && (
     <EstadoVazio

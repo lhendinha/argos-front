@@ -10,7 +10,7 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { formatarCentavos, formatarData } from "../../../../utils";
 import { COLUNAS_NAO_COBRADAS } from "../../constants";
@@ -32,7 +32,7 @@ import type { SecaoNaoCobradasProps } from "./types";
 export default function SecaoNaoCobradas({
   itens, carregando, erro, onTentarDeNovo, paginacao, onAbrir, onVoltarACobrar, voltando,
 }: SecaoNaoCobradasProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.naoCobradas);
   const vazio =
     itens.length === 0 ? (
       <EstadoVazio mensagem="Nenhuma despesa marcada como não cobrar." />

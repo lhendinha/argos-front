@@ -8,7 +8,7 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { contar } from "../../../../utils";
 import { COLUNAS_DE_FATURAS } from "../../constants";
@@ -36,7 +36,7 @@ import type { SecaoEmitidasProps } from "./types";
 export default function SecaoEmitidas({
   faturas, carregando, erro, onTentarDeNovo, paginacao, nomeDoCliente, onAbrir,
 }: SecaoEmitidasProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.faturas);
   const vazio =
     faturas.length === 0 ? (
       <EstadoVazio mensagem="Nenhuma fatura emitida neste período." />

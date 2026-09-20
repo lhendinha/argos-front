@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 
 import { Tabela } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { COLUNAS_DO_HISTORICO } from "../../constants";
 import ItemDeHistorico from "../ItemDeHistorico";
@@ -25,7 +25,7 @@ export default function ListaDeHistorico({
   subgruposVisiveis,
   onAbrir,
 }: ListaDeHistoricoProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.historico);
   const comuns = { subgruposVisiveis, onAbrir };
   const chave = (h: (typeof historico)[number], i: number) =>
     `${h.numero_processo}-${h.enviado_em}-${i}`;

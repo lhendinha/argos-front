@@ -15,7 +15,7 @@ import {
   SeletorData,
   Tabela,
 } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS, NATUREZA_SAIDA } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA, NATUREZA_SAIDA } from "../../../../constants";
 import { useToast } from "../../../../contexts/ToastContext";
 import { useGuardaDeDescarte } from "../../../../hooks/useGuardaDeDescarte";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
@@ -79,7 +79,7 @@ import type { ModalDeEmissaoProps } from "./types";
  * ➡️ `index.test.tsx`.
  */
 export default function ModalDeEmissao({ cliente, onFechar, onEmitida }: ModalDeEmissaoProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.emissaoDeFatura);
   const queryClient = useQueryClient();
   const toast = useToast();
   const doCliente = useQuery<RespostaAFaturarDoCliente>({

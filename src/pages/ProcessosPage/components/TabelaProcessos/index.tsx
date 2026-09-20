@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 
 import { Botao, EstadoVazio, Tabela } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { COLUNAS_PROCESSOS } from "../../constants";
 import ItemDeProcesso from "../ItemDeProcesso";
@@ -30,7 +30,7 @@ export default function TabelaProcessos({
   situacaoRotulo,
   onAbrir,
 }: TabelaProcessosProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.processos);
 
   const vazio = processos.length === 0 && (
     <EstadoVazio

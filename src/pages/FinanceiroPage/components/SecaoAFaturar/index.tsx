@@ -9,7 +9,7 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { contar, formatarCentavos, formatarData } from "../../../../utils";
 import { COLUNAS_A_FATURAR } from "../../constants";
@@ -44,7 +44,7 @@ import type { SecaoAFaturarProps } from "./types";
 export default function SecaoAFaturar({
   clientes, carregando, erro, onTentarDeNovo, paginacao, onEmitir,
 }: SecaoAFaturarProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.aFaturar);
   const vazio =
     clientes.length === 0 ? (
       <EstadoVazio mensagem="Nada a faturar: todo honorário e toda despesa de cliente já foram cobrados." />

@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 
 import { Tabela } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { COLUNAS_DE_ATENDIMENTOS } from "../../constants";
 import ItemDeAtendimento from "../ItemDeAtendimento";
@@ -27,7 +27,7 @@ export default function ListaDeAtendimentos({
   subgrupoNome,
   onAbrir,
 }: ListaDeAtendimentosProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.atendimentos);
   const comuns = { subgrupoNome, onAbrir };
   const chave = (a: (typeof atendimentos)[number]) => `${a.subgrupo_id}:${a.atendimento_id}`;
 

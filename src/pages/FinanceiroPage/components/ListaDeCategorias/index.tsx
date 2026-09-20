@@ -6,7 +6,7 @@ import {
   Etiqueta,
   Tabela,
 } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS, NATUREZA_ENTRADA, NATUREZA_SAIDA } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA, NATUREZA_ENTRADA, NATUREZA_SAIDA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { contar } from "../../../../utils";
 import { COLUNAS_DE_CATEGORIAS } from "../../constants";
@@ -39,7 +39,7 @@ export default function ListaDeCategorias({
   onEditar,
   onAlternarAtivo,
 }: ListaDeCategoriasProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.categorias);
   /** ⚠️ Quantas filhas cada agrupadora tem -- o artefato escreve o número
    * ("agrupador de 3 categorias"), e ele sai do próprio catálogo, sem
    * leitura extra. */

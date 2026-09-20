@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 
 import { Tabela } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { COLUNAS_DE_DOCUMENTOS } from "../../constants";
 import ItemDeDocumento from "../ItemDeDocumento";
@@ -23,7 +23,7 @@ export default function ListaDeDocumentos({
   onAbrir,
   vazio,
 }: ListaDeDocumentosProps) {
-  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.documentos);
   const chave = (d: Documento) => `${d.subgrupo_id}:${d.documento_id}`;
 
   return (

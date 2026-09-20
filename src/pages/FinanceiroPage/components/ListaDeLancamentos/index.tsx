@@ -10,7 +10,7 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
-import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { usePaginacaoDaLista } from "../../../../hooks/usePaginacaoDaLista";
 import { useValorComEspera } from "../../../../hooks/useValorComEspera";
@@ -45,7 +45,7 @@ export default function ListaDeLancamentos() {
   const navegar = useNavigate();
   /* Tabela onde as seis colunas cabem, itens de várias linhas onde não
      cabem -- ver `TabelaProcessos`, que estabeleceu o padrão. */
-  const [medirLista, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const [medirLista, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.lancamentos);
   const { filtros, intervalo, mudar } = useFiltrosDeLancamentos();
   const { pagina, setPagina, tamanhoPagina, setTamanhoPagina } = usePaginacaoDaLista();
   const departamentos = useSubgruposBuscaveis(true);
