@@ -236,6 +236,17 @@ export interface Comunicacao {
    * ⚠️ Pode vir ausente em resposta antiga; quem lê trata `undefined` como
    * "não sei, não oferece". */
   tem_envio?: boolean;
+  /** A pessoa já leu o aviso desta movimentação -- por PESSOA, resolvido no
+   * servidor (`processos_service.detalhes`).
+   *
+   * 🔴 **ESPARSO, e a ausência NÃO quer dizer "não lida".** O campo só vem
+   * quando houve aviso, que é a minoria -- os mesmos 9 de 73 do `tem_envio`.
+   * Quem lê tem de comparar com `false` explicitamente: `!lido` acenderia
+   * toda movimentação que nunca notificou ninguém, ou seja, a lista inteira.
+   *
+   * ⚠️ Ausente também em resposta antiga, e aí vale a mesma regra: sem
+   * destaque. É o que deixa o front subir antes da API. */
+  lido?: boolean;
 }
 
 export interface HistoricoItem {

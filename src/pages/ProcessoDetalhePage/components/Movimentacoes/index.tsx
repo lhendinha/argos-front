@@ -126,6 +126,12 @@ export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
               key={`${c.comunicacao_id}-${inicio + i}`}
               titulo={c.tipo_comunicacao || "Comunicação"}
               meta={`${formatarData(c.data_disponibilizacao)} · ${c.nome_orgao}`}
+              /* 🔴 `=== false`, e nunca `!c.lido`: o campo só existe quando
+                 houve aviso -- 9 de 73 em produção --, e a ausência quer
+                 dizer "não há o que ler", não "não lida". Com a negação
+                 simples, toda movimentação que nunca notificou ninguém
+                 acenderia, ou seja, a lista inteira. */
+              naoLido={c.lido === false}
               onAbrir={() => trocarAberta(String(c.comunicacao_id))}
             />
           ))}

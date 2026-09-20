@@ -404,6 +404,41 @@ describe("as três abas", () => {
   });
 });
 
+describe("o não lido da movimentação", () => {
+  it("🔴 destaca a avisada e NÃO lida, e deixa quieta a que nunca avisou", async () => {
+    /* A armadilha que este teste existe para prender: `lido` é ESPARSO --
+       só vem quando houve aviso, e em produção isso são 9 de 73. Quem
+       escrever `!c.lido` acende a lista inteira, porque `undefined` é
+       falsy. O par é deliberado: uma com `lido: false` e outra sem o campo,
+       na mesma resposta. */
+    mocks.detalhesProcesso.mockResolvedValue({
+      numero_processo: NUMERO,
+      processos: [PROCESSO],
+      comunicacoes: [
+        { ...COMUNICACAO, comunicacao_id: 1, tipo_comunicacao: "Avisada", tem_envio: true, lido: false },
+        { ...COMUNICACAO, comunicacao_id: 2, tipo_comunicacao: "Nunca avisou", tem_envio: false },
+      ],
+    });
+    montar(`/processos/sg1/${NUMERO}?aba=movimentacoes`);
+
+    expect(await screen.findByRole("button", { name: /Avisada, não lida/ })).toBeVisible();
+    const quieta = await screen.findByRole("button", { name: /Nunca avisou/ });
+    expect(quieta.getAttribute("aria-label")).not.toMatch(/não lida/);
+  });
+
+  it("a já lida também fica quieta", async () => {
+    mocks.detalhesProcesso.mockResolvedValue({
+      numero_processo: NUMERO,
+      processos: [PROCESSO],
+      comunicacoes: [{ ...COMUNICACAO, tem_envio: true, lido: true }],
+    });
+    montar(`/processos/sg1/${NUMERO}?aba=movimentacoes`);
+
+    const linha = await screen.findByRole("button", { name: /Intimação/ });
+    expect(linha.getAttribute("aria-label")).not.toMatch(/não lida/);
+  });
+});
+
 describe("o teor da movimentação", () => {
   it("clicar na linha abre o teor e põe a movimentação na URL", async () => {
     comMovimentacao();
