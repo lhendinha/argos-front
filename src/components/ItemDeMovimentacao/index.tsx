@@ -1,69 +1,33 @@
-import { Box, Flex, Text } from "@chakra-ui/react";
-
-import { BotaoNu } from "../BotaoNu";
-import IconeSeta from "../Icons/IconeSeta";
-import Ponto from "../Ponto";
+import ItemDeLista from "../ItemDeLista";
 import type { ItemDeMovimentacaoProps } from "./types";
 
-/** Uma movimentação numa lista (`.hist-item` do artifact): bolinha da
- * marca, título e meta.
+/** Uma movimentação numa lista.
  *
- * 🔴 **O texto do tribunal NÃO vem mais aqui.** Cada item despejava a
- * publicação inteira num bloco rolável de 200px, e uma página de cinco
- * itens virava cinco áreas de rolagem empilhadas dentro da rolagem da
- * página -- ninguém consegue percorrer a lista assim, e o texto que
- * importa é sempre o de UM item. Hoje o teor vive no modal, que é onde há
- * espaço pra ele. Ver `ModalDeMovimentacao`.
+ * 🔴 **Passou a ser `ItemDeLista` como as outras listas do sistema.** Ela
+ * tinha ficado para trás quando as quinze listas viraram o contrato: seguia
+ * desenhando bolinha, título em 13.5/700 e uma SETA à direita -- a mesma
+ * seta que o Histórico perdeu, e pela mesma razão. No toque não há hover
+ * nem cursor para explicar o que a seta promete, e a linha inteira já é o
+ * alvo. Ver o quadro "Histórico -- ganha etiquetas, perde a seta".
  *
- * Substitui o `ComunicacaoCard`, que vinha do design antigo e desenhava um
- * cartão dentro do cartão -- moldura demais, e destoava do resto da tela.
+ * 🔴 **O texto do tribunal NÃO vem aqui.** Cada item despejava a publicação
+ * inteira num bloco rolável de 200px, e uma página de cinco itens virava
+ * cinco áreas de rolagem empilhadas dentro da rolagem da página -- ninguém
+ * percorre a lista assim, e o texto que importa é sempre o de UM item. O
+ * teor vive no modal, que é onde há espaço. Ver `ModalDeMovimentacao`.
+ *
+ * ⚠️ **A divisória e o último item são do contrato**, e por isso `ultimo`
+ * deixou de existir: o `ItemDeLista` já não desenha risca no último filho do
+ * container. Quem lista precisa é envolver os itens numa caixa própria, para
+ * que a barra de paginação não conte como "o último".
  */
-export default function ItemDeMovimentacao({
-  titulo,
-  meta,
-  onAbrir,
-  ultimo,
-}: ItemDeMovimentacaoProps) {
-  const conteudo = (
-    <>
-      <Ponto noTopo />
-      <Box minW="0" flex="1" textAlign="left">
-        <Text fontSize="13.5px" fontWeight="700">
-          {titulo}
-        </Text>
-        <Text fontSize="12px" color="fg.subtle" mt="3px">
-          {meta}
-        </Text>
-      </Box>
-      {onAbrir && (
-        /* Seta pra direita = `IconeSeta` espelhado, como o próprio ícone
-           documenta (é um desenho só, não dois). Marca a linha como caminho
-           pra algum lugar -- é o que a diferencia de um parágrafo. */
-        <Flex color="fg.subtle" flexShrink={0} transform="scaleX(-1)">
-          <IconeSeta />
-        </Flex>
-      )}
-    </>
-  );
-
-  const estilo = {
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-    p: "15px 14px",
-    w: "100%",
-    borderBottomWidth: ultimo ? "0" : "1px",
-    borderBottomColor: "border.subtle",
-    transition: "background .1s",
-  } as const;
-
-  if (!onAbrir) {
-    return <Box {...estilo}>{conteudo}</Box>;
-  }
-
+export default function ItemDeMovimentacao({ titulo, meta, onAbrir }: ItemDeMovimentacaoProps) {
   return (
-    <BotaoNu type="button" onClick={onAbrir} {...estilo} _hover={{ bg: "bg.canvas" }}>
-      {conteudo}
-    </BotaoNu>
+    <ItemDeLista
+      onAbrir={onAbrir}
+      rotulo={`${titulo}. ${meta}`}
+      identificador={titulo}
+      rodape={{ texto: meta }}
+    />
   );
 }

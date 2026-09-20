@@ -609,7 +609,13 @@ describe("o teor da movimentação", () => {
     expect(await screen.findByText("teor da 4242")).toBeVisible();
 
     await userEvent.click(screen.getByRole("button", { name: /fechar/i }));
-    await userEvent.click(await screen.findByText("19/08/2026", { exact: false }));
+    /* ⚠️ Pelo NOME acessível da linha, e não pelo texto da data: desde que
+       a movimentação virou `ItemDeLista`, quem abre é o botão do
+       identificador com uma camada esticada por cima da linha. No navegador
+       o clique em qualquer ponto cai nessa camada; no jsdom não há teste de
+       acerto, então clicar no rodapé não chegava ao `onClick`. O nome
+       acessível carrega título E meta, e é o que distingue as duas. */
+    await userEvent.click(await screen.findByRole("button", { name: /19\/08\/2026/ }));
     expect(await screen.findByText("teor da 777")).toBeVisible();
   });
 

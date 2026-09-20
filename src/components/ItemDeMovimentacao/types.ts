@@ -1,9 +1,11 @@
 export interface ItemDeMovimentacaoProps {
   titulo: string;
+  /** A data e o órgão, na linha de baixo. */
   meta: string;
-  /** Abre o detalhe. Sem isto a linha é só leitura -- e sem afordância
-   * nenhuma de clique, que é o que se espera de um bloco de texto. */
-  onAbrir?: () => void;
-  /** Última linha da lista não desenha divisória. */
-  ultimo?: boolean;
+  /** Abre o detalhe -- a linha inteira é o alvo.
+   *
+   * ⚠️ Obrigatório desde que o item virou `ItemDeLista`: o contrato é de
+   * lista NAVEGÁVEL, e o único chamador sempre abriu o detalhe. Uma linha de
+   * leitura pura é outro componente, não esta com a prop apagada. */
+  onAbrir: () => void;
 }

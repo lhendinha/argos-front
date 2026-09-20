@@ -1,13 +1,13 @@
-import { Flex, Text } from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import {
-  BotaoNu,
+  EstadoDeErro,
+  EstadoVazio,
   EtiquetaDeMetadado,
   Esqueleto,
+  ItemDeLista,
   ModalDeTarefa,
-  Ponto,
 } from "../../../../components";
 import { useCatalogosDeProcesso } from "../../../../hooks/useCatalogosDeProcesso";
 import { useToastOnQueryError } from "../../../../services/queryClient";
@@ -50,64 +50,55 @@ export default function TarefasVinculadas({ numeroProcesso }: TarefasVinculadasP
   // coisas diferentes sobre o mesmo dado.
   if (query.isError) {
     return (
-      <Text fontSize="13px" color="status.bad.text">
-        Não foi possível carregar as tarefas deste processo.
-      </Text>
+      <EstadoDeErro
+        mensagem="Não foi possível carregar as tarefas deste processo."
+        onTentarDeNovo={() => query.refetch()}
+        tentando={query.isFetching}
+      />
     );
   }
 
   const tarefas = query.data?.tarefas || [];
   if (tarefas.length === 0) {
-    return (
-      <Text fontSize="13px" color="fg.subtle">
-        Nenhuma tarefa vinculada a este processo.
-      </Text>
-    );
+    return <EstadoVazio mensagem="Nenhuma tarefa vinculada a este processo." />;
   }
 
   return (
     <>
       {tarefas.map((t) => (
-        <BotaoNu
+        /* 🔴 **Era uma fileira só, e no celular ela espremia o título.**
+           Medido em 375px: o título ficava com ~60px porque as três
+           etiquetas não encolhem (`flexShrink: 0`) e ele sim -- lia-se
+           "COMPROV" e "GRATUIDAD" em duas linhas, com as pílulas ao lado.
+           O contrato resolve pela estrutura: o título é o identificador e
+           tem a linha inteira; as etiquetas descem para a fileira delas.
+
+           ⚠️ **A bolinha não vem.** O compartimento da frente custa 44px em
+           toda linha e é para o que se toca ou se varre -- o `Ponto` aqui
+           era decoração, e o contrato já recusou decoração ali no catálogo
+           do Financeiro.
+
+           ⚠️ **Concluída desbota em vez de riscar.** O identificador é
+           `string` por contrato, então não há como riscá-lo -- e não faz
+           falta: `coluna_nome` já diz em que pé a tarefa está, e o
+           `esmaecido` é o mesmo sinal que o catálogo usa para arquivado. */
+        <ItemDeLista
           key={t.tarefa_id}
-          type="button"
-          onClick={() => setAberta(t)}
-          display="flex"
-          alignItems="center"
-          gap="10px"
-          w="100%"
-          py="7px"
-          px="4px"
-          borderRadius="sm"
-          flexWrap="wrap"
-          _hover={{ bg: "bg.canvas" }}
-        >
-          {/* A bolinha antes de cada tarefa é do artifact (lá é um "•"
-              literal). Mesmo componente das outras listas -- as duas listas
-              desta página têm que ler igual. */}
-          <Ponto />
-          <Text
-            fontSize="13px"
-            flex="1"
-            minW="0"
-            /* Tachado quando a coluna do quadro conclui. `esta_concluida`
-               vem resolvido do servidor -- a tela não conhece as colunas
-               deste subgrupo, e antes disso uma tarefa já feita ficava
-               indistinguível de uma pendente aqui dentro. */
-            textDecoration={t.esta_concluida ? "line-through" : undefined}
-            color={t.esta_concluida ? "fg.subtle" : undefined}
-          >
-            {t.titulo}
-          </Text>
-          <Flex gap="6px" flexShrink={0}>
-            {/* Em que pé a tarefa está. Também derivado no servidor
-                (`coluna_nome`): omitido quando o quadro não conhece a
-                coluna, em vez de mostrar um id cru. */}
-            {t.coluna_nome && <EtiquetaDeMetadado>{t.coluna_nome}</EtiquetaDeMetadado>}
-            <EtiquetaDeMetadado>{formatarData(t.data)}</EtiquetaDeMetadado>
-            <EtiquetaDeMetadado>{t.prioridade}</EtiquetaDeMetadado>
-          </Flex>
-        </BotaoNu>
+          onAbrir={() => setAberta(t)}
+          rotulo={`${t.titulo}${t.esta_concluida ? ", concluída" : ""}`}
+          identificador={t.titulo}
+          esmaecido={t.esta_concluida}
+          etiquetas={
+            <>
+              {/* Em que pé a tarefa está. Derivado no servidor
+                  (`coluna_nome`): omitido quando o quadro não conhece a
+                  coluna, em vez de mostrar um id cru. */}
+              {t.coluna_nome && <EtiquetaDeMetadado>{t.coluna_nome}</EtiquetaDeMetadado>}
+              <EtiquetaDeMetadado>{t.prioridade}</EtiquetaDeMetadado>
+            </>
+          }
+          rodape={{ texto: formatarData(t.data) }}
+        />
       ))}
 
       {aberta && (

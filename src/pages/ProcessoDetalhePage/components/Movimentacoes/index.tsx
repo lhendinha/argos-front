@@ -117,15 +117,19 @@ export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
           bordas e as divisórias atravessam a largura toda, como no artifact
           -- lista dentro de cartão não é uma pilha de cartõezinhos. */}
       <Box m="-16px -18px">
-        {visiveis.map((c, i) => (
-          <ItemDeMovimentacao
-            key={`${c.comunicacao_id}-${inicio + i}`}
-            titulo={c.tipo_comunicacao || "Comunicação"}
-            meta={`${formatarData(c.data_disponibilizacao)} · ${c.nome_orgao}`}
-            onAbrir={() => trocarAberta(String(c.comunicacao_id))}
-            ultimo={i === visiveis.length - 1}
-          />
-        ))}
+        {/* ⚠️ Os itens numa caixa PRÓPRIA: a regra que apaga a divisória do
+            último item olha o último filho do container, e com a barra de
+            paginação como irmã dela o último item continuaria riscado. */}
+        <Box>
+          {visiveis.map((c, i) => (
+            <ItemDeMovimentacao
+              key={`${c.comunicacao_id}-${inicio + i}`}
+              titulo={c.tipo_comunicacao || "Comunicação"}
+              meta={`${formatarData(c.data_disponibilizacao)} · ${c.nome_orgao}`}
+              onAbrir={() => trocarAberta(String(c.comunicacao_id))}
+            />
+          ))}
+        </Box>
         {/* A barra decide sozinha se aparece; aqui só a divisória depende
             disso, pra não sobrar uma linha solta no fim do cartão. */}
         {comunicacoes.length > Math.min(...TAMANHOS_MOVIMENTACOES) && (

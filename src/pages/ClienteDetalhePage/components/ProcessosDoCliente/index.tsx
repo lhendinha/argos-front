@@ -1,8 +1,14 @@
-import { Stack, Text } from "@chakra-ui/react";
+import { Stack } from "@chakra-ui/react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { BotaoNu, Esqueleto, EtiquetasDeSubgrupo, Ponto } from "../../../../components";
+import {
+  EstadoDeErro,
+  EstadoVazio,
+  Esqueleto,
+  EtiquetasDeSubgrupo,
+  ItemDeLista,
+} from "../../../../components";
 import { useCatalogosDeProcesso } from "../../../../hooks/useCatalogosDeProcesso";
 import { useToastOnQueryError } from "../../../../services/queryClient";
 import { mascararNumeroProcesso } from "../../../../utils";
@@ -41,66 +47,61 @@ export default function ProcessosDoCliente({ clienteId }: ProcessosDoClienteProp
   // ao lado.
   if (query.isError) {
     return (
-      <Text fontSize="13px" color="status.bad.text">
-        Não foi possível carregar os processos deste cliente.
-      </Text>
+      <EstadoDeErro
+        mensagem="Não foi possível carregar os processos deste cliente."
+        onTentarDeNovo={() => query.refetch()}
+        tentando={query.isFetching}
+      />
     );
   }
 
   const processos = query.data || [];
   if (processos.length === 0) {
-    return (
-      <Text fontSize="13px" color="fg.subtle">
-        Nenhum processo vinculado a este cliente.
-      </Text>
-    );
+    return <EstadoVazio mensagem="Nenhum processo vinculado a este cliente." />;
   }
 
   return (
     <Stack gap="0">
       {processos.map((p) => (
-        <BotaoNu
+        /* 🔴 **Era uma fileira só, e ela espremia o que identifica.**
+           Medido em 375px: número, apelido, etiqueta de subgrupo e a linha
+           de situação disputavam a MESMA linha -- lia-se
+           "1000003-65.2026.8.26.0150 V..." com o apelido cortado em duas
+           letras. O contrato dá uma linha ao identificador e manda o resto
+           para baixo.
+
+           ⚠️ **Sem o nome do cliente**, ao contrário do `ItemDeProcesso` da
+           listagem: aqui a tela INTEIRA é de um cliente só, e repetir o nome
+           em cada linha é dizer o que o cabeçalho já disse.
+
+           ⚠️ A bolinha não vem, pela mesma razão das tarefas: o
+           compartimento da frente é para o que se toca, e ali ela era
+           decoração. */
+        <ItemDeLista
           key={`${p.subgrupo_id}-${p.numero_processo}`}
-          type="button"
-          onClick={() => setAberto(p)}
-          display="flex"
-          alignItems="center"
-          gap="10px"
-          w="100%"
-          py="7px"
-          px="4px"
-          borderRadius="sm"
-          flexWrap="wrap"
-          _hover={{ bg: "bg.canvas" }}
-        >
-          {/* Mesma bolinha das outras listas do sistema. */}
-          <Ponto />
-          <Text fontFamily="mono" fontSize="12.5px" fontWeight="700">
-            {mascararNumeroProcesso(p.numero_processo)}
-          </Text>
-          {/* O apelido é o nome que alguém deu pra reconhecer o processo;
-              vinte dígitos não dizem qual é qual. Sai quando não há. */}
-          {p.apelido && (
-            <Text fontSize="13px" flex="1" minW="0" truncate>
-              {p.apelido}
-            </Text>
-          )}
+          onAbrir={() => setAberto(p)}
+          rotulo={p.apelido || mascararNumeroProcesso(p.numero_processo)}
+          identificador={p.apelido || mascararNumeroProcesso(p.numero_processo)}
+          identificadorMono={!p.apelido}
+          /* O apelido é o nome que alguém deu pra reconhecer o processo;
+             vinte dígitos não dizem qual é qual. Quando ele existe, o número
+             desce para o apoio -- quando não, ele JÁ é o identificador. */
+          apoio={p.apelido ? mascararNumeroProcesso(p.numero_processo) : undefined}
+          apoioMono
+          /* 🔴 Um cliente pode ter processos em subgrupos diferentes, e é
+             aqui que a lista os põe lado a lado.
 
-          {/* 🔴 Logo depois do apelido -- junto do que identifica o processo.
-              Um cliente pode ter processos em subgrupos diferentes, e é aqui
-              que a lista os põe lado a lado.
-
-              ⚠️ `apoio.subgrupoNome`, e não `useNomeDeSubgrupo()`: este
-              componente já chama `useCatalogosDeProcesso`, que expõe a mesma
-              tradução sobre o mesmo catálogo. Um hook a mais aqui seria uma
-              segunda assinatura para o mesmo dado. */}
-          <EtiquetasDeSubgrupo nomes={[apoio.subgrupoNome(p.subgrupo_id)]} />
-          <Text fontSize="13px" color="fg.subtle">
-            {[apoio.situacaoRotulo(p.situacao_id), apoio.faseRotulo(p.fase_id)]
-              .filter(Boolean)
-              .join(" · ")}
-          </Text>
-        </BotaoNu>
+             ⚠️ `apoio.subgrupoNome`, e não `useNomeDeSubgrupo()`: este
+             componente já chama `useCatalogosDeProcesso`, que expõe a mesma
+             tradução sobre o mesmo catálogo. */
+          etiquetas={<EtiquetasDeSubgrupo nomes={[apoio.subgrupoNome(p.subgrupo_id)]} />}
+          rodape={{
+            texto:
+              [apoio.situacaoRotulo(p.situacao_id), apoio.faseRotulo(p.fase_id)]
+                .filter(Boolean)
+                .join(" · ") || undefined,
+          }}
+        />
       ))}
 
       {aberto && (
