@@ -6,16 +6,21 @@ import type { EtiquetaProps } from "./types";
  *
  * Cor E texto, sempre: quem não distingue duas pílulas claras continua
  * lendo "Admin" e "Gerente", "Enviado" e "Falha".
+ *
+ * ⚠️ Duas formas, uma pílula -- ver `variante` no `types`. O recuo, o raio e
+ * o teto de largura são os mesmos nas duas; muda o que o texto É.
  */
-export default function Etiqueta({ cores, children }: EtiquetaProps) {
+export default function Etiqueta({ cores, variante = "estado", children }: EtiquetaProps) {
+  const deNome = variante === "nome";
+
   return (
     <Box
       as="span"
       display="inline-block"
-      fontSize="11px"
-      fontWeight="800"
-      textTransform="uppercase"
-      letterSpacing="0.02em"
+      fontSize={deNome ? "12px" : "11px"}
+      fontWeight={deNome ? "700" : "800"}
+      textTransform={deNome ? undefined : "uppercase"}
+      letterSpacing={deNome ? undefined : "0.02em"}
       p="3px 9px"
       borderRadius="full"
       whiteSpace="nowrap"

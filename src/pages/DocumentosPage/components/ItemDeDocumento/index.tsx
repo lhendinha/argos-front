@@ -1,20 +1,16 @@
-import { Flex, Text } from "@chakra-ui/react";
-
-import { EtiquetasDeSubgrupo, ItemDeLista } from "../../../../components";
+import { Etiqueta, EtiquetasDeSubgrupo, ItemDeLista } from "../../../../components";
 import { rotuloDoTipo } from "../../../../constants";
 import { formatarDataDeInstante, vinculoDoDocumento } from "../../../../utils";
+import { CORES_DA_ETIQUETA_DE_NOME } from "../../../../theme/lista";
 import type { ItemDeDocumentoProps } from "./types";
 
-/** Um documento como ITEM de várias linhas, onde não há largura para as seis
- * colunas.
+/** A linha de Documentos onde não cabem colunas.
  *
- * 🔴 **Tipo e subgrupo viram etiquetas na mesma fileira.** Na tabela são
- * duas colunas afastadas por uma terceira; aqui, lado a lado, eles se leem
- * como o que são -- as duas classificações do mesmo documento.
- *
- * ⚠️ **Responsável e data ficam no rodapé, juntos**: as duas respondem
- * "quem e quando", e separá-las gastaria duas linhas para meia informação
- * cada.
+ * 🔴 **O apoio é o VÍNCULO, não a descrição.** Foram desenhadas as duas e
+ * medido o rodapé: ele tem 322px, e o número do processo mais um nome
+ * completo pedem 354 -- com a descrição em cima, o vínculo desce e corta
+ * (`5000434-96.2024.8.13.0…`). E a pergunta de quem varre a lista é de que
+ * processo o documento é; a descrição é texto livre, e aparece ao abrir.
  */
 export default function ItemDeDocumento({ documento, subgrupoNome, onAbrir }: ItemDeDocumentoProps) {
   const vinculo = vinculoDoDocumento(documento);
@@ -22,41 +18,23 @@ export default function ItemDeDocumento({ documento, subgrupoNome, onAbrir }: It
   const responsavel = documento.responsavel_nome || documento.responsavel_id;
 
   return (
-    <ItemDeLista onAbrir={() => onAbrir(documento)} rotulo={documento.titulo}>
-      <Text fontSize="14px" fontWeight="700" lineHeight="1.35">
-        {documento.titulo}
-      </Text>
-      {documento.descricao && (
-        <Text fontSize="12.5px" color="fg.muted" mt="3px" truncate>
-          {documento.descricao}
-        </Text>
-      )}
-
-      <Flex wrap="wrap" gap="6px" mt="9px" minW="0">
-        <Text
-          as="span"
-          px="9px"
-          py="3px"
-          borderRadius="full"
-          bg="border.subtle"
-          color="fg.muted"
-          fontSize="12px"
-          fontWeight="700"
-        >
-          {rotuloDoTipo(documento.tipo)}
-        </Text>
-        <EtiquetasDeSubgrupo nomes={[subgrupoNome(documento.subgrupo_id)]} />
-      </Flex>
-
-      {frase && (
-        <Text fontSize="12.5px" color="fg.muted" mt="8px" fontFamily={documento.processo_numero ? "mono" : undefined} truncate>
-          {frase}
-        </Text>
-      )}
-
-      <Text fontSize="12px" color="fg.subtle" mt="8px" truncate>
-        {[responsavel || "Sem responsável", formatarDataDeInstante(documento.criado_em)].join(" · ")}
-      </Text>
-    </ItemDeLista>
+    <ItemDeLista
+      onAbrir={() => onAbrir(documento)}
+      rotulo={documento.titulo}
+      identificador={documento.titulo}
+      apoio={frase || undefined}
+      apoioMono={Boolean(documento.processo_numero)}
+      etiquetas={
+        <>
+          <Etiqueta cores={CORES_DA_ETIQUETA_DE_NOME} variante="nome">
+            {rotuloDoTipo(documento.tipo)}
+          </Etiqueta>
+          <EtiquetasDeSubgrupo nomes={[subgrupoNome(documento.subgrupo_id)]} />
+        </>
+      }
+      rodape={{
+        texto: [responsavel || "Sem responsável", formatarDataDeInstante(documento.criado_em)].join(" · "),
+      }}
+    />
   );
 }
