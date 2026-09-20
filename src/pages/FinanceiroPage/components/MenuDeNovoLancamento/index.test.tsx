@@ -65,7 +65,17 @@ describe("o menu", () => {
     montar();
     await userEvent.click(botao());
     await screen.findByRole("menu");
-    await userEvent.click(document.body);
-    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    /* ⚠️ **Clica fora até fechar, e não uma vez só.**
+       `findByRole` resolve assim que o painel existe no documento -- e o
+       ouvinte de clique-fora do Chakra é armado DEPOIS, num efeito com
+       quadro de animação. Um clique caindo nesse intervalo não conta, e o
+       menu fica aberto: foi o que deixou este teste instável quando o menu
+       à mão virou `Menu` do Chakra, e falhava em 1 de cada 3 execuções.
+       Repetir dentro do `waitFor` tira a corrida sem afrouxar o que se
+       afirma -- clicar fora continua tendo de fechar. */
+    await waitFor(async () => {
+      await userEvent.click(document.body);
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
   });
 });

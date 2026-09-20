@@ -85,6 +85,31 @@ export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, ro
      pergunta de descarte por cima dele. */
   const areaVisivel = useAreaVisivel(!perguntando);
 
+  /** 🔴 **O campo focado sobe quando o teclado entra.**
+   *
+   * A folha já encolhe para a área que o teclado deixou -- é o que
+   * `useAreaVisivel` resolve. Só que encolher a folha não move o que está
+   * DENTRO dela: um campo no fim de um formulário longo continua abaixo do
+   * corte, e quem está digitando não vê o que digita.
+   *
+   * ⚠️ `block: "nearest"` e não `"center"`: move o mínimo para o campo
+   * aparecer. Centralizar daria um salto a cada toque em campo, mesmo nos
+   * que já estavam à vista.
+   *
+   * ⚠️ Só quando há altura de teclado (`altura` não nula) e só para o campo
+   * DENTRO deste diálogo: com dois modais abertos, o de baixo não move o
+   * foco do de cima.
+   *
+   * ⚠️ O navegador já leva o campo à vista sozinho em página comum -- aqui
+   * não basta, porque a folha é `position: fixed` e tem rolagem própria. */
+  useEffect(() => {
+    if (!areaVisivel.altura) return;
+    const focado = document.activeElement;
+    if (!(focado instanceof HTMLElement)) return;
+    if (!focado.closest('[role="dialog"]')) return;
+    focado.scrollIntoView?.({ block: "nearest" });
+  }, [areaVisivel.altura]);
+
   /** O que TODO gesto de fechar chama -- Escape, cortina e X.
    *
    * ⚠️ Não é o `onFechar`: este pergunta antes, quando há o que perder. Quem
