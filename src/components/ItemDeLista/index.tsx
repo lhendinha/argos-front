@@ -31,6 +31,18 @@ import type { ItemDeListaProps } from "./types";
  * no celular deixaria a lista inteira fora do alcance de quem navega por
  * teclado -- que existe no celular, em teclado acoplado e em leitor de tela.
  *
+ * 🔴 **O item NÃO é um botão que envolve tudo -- é uma linha com uma camada
+ * que abre.** O botão de abrir cobre a linha por um `::after` esticado, e
+ * quem precisa ser tocável por conta própria sobe acima dela com
+ * `position: relative`. Foi a etiqueta de subgrupo que exigiu isto: ela
+ * passou a ABRIR a lista quando resume, e `<button>` dentro de `<button>` é
+ * inválido -- o navegador fecha o de fora sozinho, e o toque na pílula
+ * abriria o registro. É a mesma parede que criou `acoes` e `selecao`, agora
+ * resolvida por dentro em vez de por exceção.
+ *
+ * ⚠️ O anel de foco é desenhado NO `::after`, não no texto: ele marca a linha
+ * inteira, que é o que o botão de fato aciona.
+ *
  * ⚠️ `selecao` e `acoes` ficam FORA do botão -- ver os dois no `types`.
  *
  * ⚠️ Difere de `LinhaDeLista`: aquele é uma fileira horizontal de UMA linha,
@@ -52,9 +64,11 @@ export default function ItemDeLista({
 }: ItemDeListaProps) {
   return (
     <Flex
+      position="relative"
       align={selecao ? "flex-start" : "center"}
       gap="10px"
       bg={destacado ? "brand.faint" : undefined}
+      _hover={{ bg: destacado ? "bg.brand.subtle" : "bg.canvas" }}
       borderBottomWidth="1px"
       borderBottomStyle="solid"
       borderBottomColor="border.subtle"
@@ -65,6 +79,8 @@ export default function ItemDeLista({
            desenhado continua com 20px, e é a área em volta que cresce. Mesmo
            recurso dos botões de concluir e de assumir. */
         <Flex
+          position="relative"
+          zIndex="1"
           flex="0 0 auto"
           minW="44px"
           minH="44px"
@@ -76,32 +92,32 @@ export default function ItemDeLista({
         </Flex>
       )}
 
-      <BotaoNu
-        type="button"
-        onClick={onAbrir}
-        aria-label={rotulo}
-        display="block"
-        w="100%"
-        textAlign="left"
-        flex="1 1 auto"
-        minW="0"
-        p={selecao ? "14px 14px 14px 0" : "14px"}
-        _hover={{ bg: destacado ? "bg.brand.subtle" : "bg.canvas" }}
-        _focusVisible={{ outline: "2px solid", outlineColor: "fg.brand", outlineOffset: "-2px" }}
-      >
+      <Box flex="1 1 auto" minW="0" p={selecao ? "14px 14px 14px 0" : "14px"}>
         <Flex align="flex-start" justify="space-between" gap="12px" minW="0">
-          <Text
-            as="span"
+          <BotaoNu
+            type="button"
+            onClick={onAbrir}
+            aria-label={rotulo}
             display="block"
+            textAlign="left"
             fontSize="14px"
             fontWeight="700"
             lineHeight="1.35"
             color="fg"
             fontFamily={identificadorMono ? "mono" : undefined}
             minW="0"
+            _after={{ content: '""', position: "absolute", inset: 0 }}
+            _focusVisible={{
+              outline: "none",
+              "&::after": {
+                outline: "2px solid",
+                outlineColor: "fg.brand",
+                outlineOffset: "-2px",
+              },
+            }}
           >
             {identificador}
-          </Text>
+          </BotaoNu>
           {valor && (
             <Flex direction="column" align="flex-end" gap="1px" flex="0 0 auto">
               <Text
@@ -164,10 +180,10 @@ export default function ItemDeLista({
             )}
           </Flex>
         )}
-      </BotaoNu>
+      </Box>
 
       {acoes && (
-        <Box flex="0 0 auto" pr="10px">
+        <Box position="relative" zIndex="1" flex="0 0 auto" pr="10px">
           {acoes}
         </Box>
       )}

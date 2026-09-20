@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { emDias } from "../../utils";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 
 import { renderComProviders } from "../../test/queryTestUtils";
 
@@ -73,6 +73,24 @@ function comTarefas(...lista: Record<string, unknown>[]) {
     total_paginas: 1,
   });
 }
+
+/** 🔴 Devolve os timers REAIS ao fim de cada teste, como `ToastContext` já
+ * fazia.
+ *
+ * `shouldAdvanceTime: true` liga um intervalo de verdade que fica cutucando o
+ * relógio falso. Sem restaurar, ele sobrevive ao arquivo e continua
+ * disparando DEPOIS que o ambiente do jsdom foi desfeito: qualquer callback
+ * ainda na fila -- um `requestAnimationFrame` do zag, por exemplo -- cai num
+ * `globalThis` sem `window`, e sobe como erro NÃO TRATADO. Erro não tratado
+ * faz o `vitest` sair com código 1 mesmo com tudo verde, que é o pior sinal
+ * possível para um pipeline -- a mesma razão do substituto de `PointerEvent`
+ * em `test/setup.ts`.
+ *
+ * ⚠️ O defeito é anterior a esta suíte ter overlay nas linhas: ele só ficou
+ * VISÍVEL quando a etiqueta de subgrupo passou a montar um balão. */
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

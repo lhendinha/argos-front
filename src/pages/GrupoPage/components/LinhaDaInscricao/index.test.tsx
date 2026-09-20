@@ -144,7 +144,7 @@ describe("a coluna de destinos", () => {
        tela divergem no primeiro ajuste. */
     montar({ ...LIGADA, subgrupos_destino: ["s-civel", "s-trab", "s-terceiro"] });
 
-    expect(screen.getByText("3 subgrupos")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver os 3 subgrupos" })).toBeInTheDocument();
     expect(screen.queryByText("Cível")).not.toBeInTheDocument();
   });
 
@@ -159,7 +159,8 @@ describe("a coluna de destinos", () => {
   it("e o title carrega a lista INTEIRA -- nada se perde no resumo", async () => {
     montar({ ...LIGADA, subgrupos_destino: ["s-civel", "s-trab", "s-terceiro"] });
 
-    expect(screen.getByText("3 subgrupos").parentElement).toHaveAttribute(
+    /* O `title` mora no próprio gatilho desde que o resumo virou botão. */
+    expect(screen.getByRole("button", { name: "Ver os 3 subgrupos" })).toHaveAttribute(
       "title",
       "Cível, Trabalhista, s-terceiro",
     );
