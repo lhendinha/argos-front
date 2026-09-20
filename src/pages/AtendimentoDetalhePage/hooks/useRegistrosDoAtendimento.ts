@@ -27,7 +27,13 @@ export function useRegistrosDoAtendimento(subgrupoId: string, atendimentoId: str
   });
 
   const registros = useMemo(
-    () => [...(consulta.data?.pages ?? [])].reverse().flatMap((pagina) => pagina.registros),
+    /* ⚠️ `?? []` na página: sem ele, uma resposta sem `registros` vira
+       `[undefined]` no `flatMap`, e a linha do tempo derruba a PÁGINA
+       inteira -- "Cannot read properties of undefined (reading
+       'registro_id')", tela branca, sem barreira de erro no caminho. Foi a
+       régua do mobile que achou, ao abrir esta rota pela primeira vez. Uma
+       lista vazia é a resposta honesta para "não veio registro nenhum". */
+    () => [...(consulta.data?.pages ?? [])].reverse().flatMap((pagina) => pagina.registros ?? []),
     [consulta.data],
   );
 

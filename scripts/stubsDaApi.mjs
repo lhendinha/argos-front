@@ -160,6 +160,21 @@ const ATENDIMENTOS = {
 const AGORA = new Date();
 const hMenos = (h) => new Date(AGORA.getTime() - h * 3600_000).toISOString();
 
+/** O lançamento que a lista mostra primeiro e que o detalhe devolve.
+ *
+ * ⚠️ Um objeto só para os dois: a rota de detalhe devolve exatamente os
+ * campos do item da lista -- conferido contra a API local --, e duas cópias
+ * divergiriam no primeiro campo novo. */
+const PRIMEIRO_LANCAMENTO = {
+  lancamento_id: "lan-1", tipo: "honorario", descricao: "Honorários de êxito",
+  valor_centavos: 250000, data_vencimento: "2026-09-25", natureza: "entrada",
+  situacao: "aberto", conta_id: "ct-1", categoria_id: "cat-1", centro_id: "",
+  cliente_id: "cli-2", cliente_nome: "Construtora Alfa", contraparte: "",
+  subgrupo_id: "", numero_processo: "", atendimento_id: "", responsavel: "",
+  documento_numero: "", parcela: "", rateio: [],
+  criado_por: "ana@argos.local", criado_em: "2026-09-01T10:00:00+00:00",
+};
+
 const RESPOSTAS = [
   [
     /\/notificacoes/,
@@ -364,17 +379,22 @@ const RESPOSTAS = [
       cores_disponiveis: ["#1f9d55", "#4d7c0f", "#d64550"],
     }),
   ],
+  /* ⚠️ ANTES da listagem, pelo mesmo motivo do detalhe de cliente logo
+     abaixo: `/\/lancamentos/` casa com o detalhe também, e devolver o
+     envelope da lista no lugar do item deixa a tela de detalhe sem
+     `descricao`.
+
+     🔴 O detalhe devolve os MESMOS campos do item da lista -- conferido
+     contra a API local: a diferença entre as duas respostas é vazia. Por
+     isso ele reaproveita o primeiro da lista em vez de inventar um segundo
+     objeto que divergiria no primeiro ajuste. */
+  [/\/lancamentos\/[^/]+\/serie$/, () => ({ abertos_a_frente: 0 })],
+  [/\/lancamentos\/[^/]+$/, () => PRIMEIRO_LANCAMENTO],
   [
     /\/lancamentos/,
     () => {
       const lancamentos = [
-        { lancamento_id: "lan-1", tipo: "honorario", descricao: "Honorários de êxito",
-          valor_centavos: 250000, data_vencimento: "2026-09-25", natureza: "entrada",
-          situacao: "aberto", conta_id: "ct-1", categoria_id: "cat-1", centro_id: "",
-          cliente_id: "cli-2", cliente_nome: "Construtora Alfa", contraparte: "",
-          subgrupo_id: "", numero_processo: "", atendimento_id: "", responsavel: "",
-          documento_numero: "", parcela: "", rateio: [],
-          criado_por: "ana@argos.local", criado_em: "2026-09-01T10:00:00+00:00" },
+        PRIMEIRO_LANCAMENTO,
         { lancamento_id: "lan-2", tipo: "saida", descricao: "Custas processuais",
           valor_centavos: 32000, data_vencimento: "2026-09-10", natureza: "saida",
           situacao: "atrasado", conta_id: "ct-1", categoria_id: "cat-2", centro_id: "",
@@ -453,6 +473,29 @@ const RESPOSTAS = [
   [/\/processos/, () => PROCESSOS],
   // Antes de /atendimentos: o caminho do detalhe contém os dois, e o padrão
   // da listagem casaria com ele devolvendo um envelope no lugar do item.
+  /* 🔴 **A linha do tempo do atendimento.** Faltava, e a régua do mobile
+     achou: sem ela o catch-all devolvia `{}`, o `flatMap` da consulta
+     infinita virava `[undefined]` e o componente derrubava a PÁGINA inteira
+     com "Cannot read properties of undefined (reading 'registro_id')".
+     Nenhuma das três abas do atendimento renderizava.
+
+     ⚠️ ANTES do detalhe logo abaixo -- aquele padrão termina em `$`, mas a
+     ordem deixa a intenção legível. */
+  [
+    /\/atendimentos\/[^/]+\/registros/,
+    () => ({
+      registros: [
+        { registro_id: "reg-1", autor_id: "ana@argos.local", autor_nome: "Ana Paula",
+          registrado_em: "2026-09-10T14:30:00+00:00",
+          texto: "Cliente retornou pedindo revisão da cláusula de reajuste." },
+        { registro_id: "reg-2", autor_id: "chefe@argos.local", autor_nome: "Carlos",
+          registrado_em: "2026-09-11T09:05:00+00:00",
+          texto: "Minuta revisada enviada por e-mail. Aguardando retorno." },
+      ],
+      quantidade: 2,
+      anteriores: null,
+    }),
+  ],
   [
     /\/subgrupos\/[^/]+\/atendimentos\/[^/]+$/,
     () => ATENDIMENTOS.atendimentos[0],

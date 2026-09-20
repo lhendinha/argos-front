@@ -8,6 +8,7 @@ import {
   IconeLapis,
 } from "../../../../components";
 import type { LinhaDeMembroProps } from "./types";
+import { LARGURA_MAXIMA_DO_NOME } from "../../constants";
 
 /** Uma linha da tabela de membros, nas 4 colunas do artifact mais a de ação.
  *
@@ -33,8 +34,12 @@ export default function LinhaDeMembro({ membro, subgruposNomes, podeEditar, onEd
     >
       {/* Sem apelido, o e-mail ocupa a coluna: uma célula em branco na
           primeira coluna faz a linha parecer defeito. */}
-      <CelulaComSub variante="destaque" principal={membro.apelido || membro.email} />
-      <CelulaComSub principal={membro.email} />
+      <CelulaComSub
+        variante="destaque"
+        principal={membro.apelido || membro.email}
+        maxLargura={LARGURA_MAXIMA_DO_NOME}
+      />
+      <CelulaComSub principal={membro.email} maxLargura={LARGURA_MAXIMA_DO_NOME} />
       <CelulaComSub principal={<EtiquetaDePapel papel={membro.papel} />} />
       <CelulaComSub principal={<EtiquetasDeSubgrupo nomes={subgruposNomes} />} />
       {podeEditar && (

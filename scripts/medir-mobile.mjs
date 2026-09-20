@@ -71,6 +71,34 @@ const ROTAS = [
      Os dois stubs que alimentam estas rotas estão em `stubsDaApi.mjs`. */
   "/financeiro?aba=fluxo",
   "/financeiro/faturas/fat-1",
+  /* 🔴 **As ABAS de dentro das telas de detalhe, que a régua nunca tinha
+     aberto.** Ela visitava `/processos/:n` e parava na primeira aba; as
+     outras onze telas -- tarefas, movimentações, documentos, os dois do
+     cliente, os do atendimento, o perfil e as seções do Financeiro -- não
+     tinham medida nenhuma. Foi onde estavam as três listas que nunca haviam
+     sido migradas, e nenhuma delas estourava a página: o que se mede aqui é
+     o estouro, e os defeitos de lá eram de layout. Mesmo assim entram, para
+     que o estouro nunca volte por ali.
+
+     ⚠️ As abas do `/grupo` NÃO estão aqui: elas são estado local, não vão
+     para a URL. Ficam em `ESTADOS`, clicadas uma a uma. */
+  "/processos/sg-civel/08012345620258050001?aba=tarefas",
+  "/processos/sg-civel/08012345620258050001?aba=movimentacoes",
+  "/processos/sg-civel/08012345620258050001?aba=documentos",
+  "/clientes/cli-1?aba=processos",
+  "/clientes/cli-1?aba=documentos",
+  "/atendimentos/sg-civel/at-1",
+  "/atendimentos/sg-civel/at-1?aba=detalhes",
+  "/atendimentos/sg-civel/at-1?aba=documentos",
+  "/perfil?aba=inscricao",
+  "/financeiro?aba=faturas",
+  "/financeiro?aba=configuracoes",
+  "/financeiro?aba=configuracoes&secao=contas",
+  "/financeiro?aba=configuracoes&secao=centros",
+  /* 🔴 Onde a régua acharia sozinha o maior estouro que sobrou: medido em
+     375px, o cabeçalho deste detalhe punha a página em 517px numa janela de
+     375, com um botão terminando 60px fora da tela. */
+  "/financeiro/lancamentos/lan-1",
   "/login",
 ];
 
@@ -95,6 +123,14 @@ const ESTADOS = [
   { nome: "novo atendimento", rota: "/atendimentos", botoes: ["Adicionar atendimento"] },
   { nome: "nova tarefa", rota: "/kanban", botoes: ["Nova tarefa"] },
   { nome: "novo honorário", rota: "/financeiro", botoes: ["+ Novo lançamento", "Honorário"] },
+  /* 🔴 As abas do Grupo entram por AQUI, e não por `ROTAS`: elas são
+     `useState` na página, não vão para a URL, e não há endereço para
+     visitar. O clique é o único jeito de chegar nelas -- e a aba é um
+     `<button>`, que é o que o seletor abaixo já alcança. */
+  { nome: "grupo · membros", rota: "/grupo", botoes: ["Membros"] },
+  { nome: "grupo · fases", rota: "/grupo", botoes: ["Fases"] },
+  { nome: "grupo · situações", rota: "/grupo", botoes: ["Situações"] },
+  { nome: "grupo · inscrições na OAB", rota: "/grupo", botoes: ["Inscrições na OAB"] },
 ];
 
 /** Texto do tamanho que o dado real tem.
