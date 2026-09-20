@@ -25,3 +25,4 @@ export * from "./financeiro";
 export * from "./processo";
 export * from "./dialogo";
 export * from "./arraste";
+export * from "./lista";

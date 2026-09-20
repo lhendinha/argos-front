@@ -100,3 +100,14 @@ export interface ClientesIniciaisDoDocumento {
   ids: string[];
   nomes: Map<string, string>;
 }
+
+/** A que um documento pertence, como `vinculoDoDocumento` o resolve: o
+ * vínculo e, quando há, quem está por trás dele.
+ *
+ * ⚠️ `principal` vazio significa "sem vínculo" -- quem desenha decide se
+ * isso vira um traço (a tabela) ou se a linha simplesmente não aparece (o
+ * item). */
+export interface VinculoDoDocumento {
+  principal: string;
+  sub?: string;
+}

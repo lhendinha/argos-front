@@ -1,12 +1,17 @@
+import { Box } from "@chakra-ui/react";
+
 import { Botao, EstadoVazio, Tabela } from "../../../../components";
-import { ESTADO_DE_CLIENTE_ARQUIVADOS } from "../../../../constants";
+import { ESTADO_DE_CLIENTE_ARQUIVADOS, LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { colunasDeClientes } from "../../constants";
+import ItemDeCliente from "../ItemDeCliente";
 import LinhaCliente from "../LinhaCliente";
 import type { TabelaClientesProps } from "./types";
 
-/** A tabela de clientes, nas colunas do artefato -- que mudam com o chip:
- * "Arquivados" troca a coluna Processos pela de ação, e "Todos" tem as duas.
- */
+/** Os clientes como TABELA onde cabem as colunas -- que mudam com o chip:
+ * "Arquivados" troca a coluna Processos pela de ação, e "Todos" tem as duas
+ * -- e como ITENS de várias linhas onde não cabem. Ver `TabelaProcessos`,
+ * que estabeleceu o padrão. */
 export default function TabelaClientes({
   clientes,
   busca,
@@ -16,12 +21,10 @@ export default function TabelaClientes({
   reativandoId,
   onLimparBusca,
 }: TabelaClientesProps) {
-  return (
-    <Tabela
-      colunas={colunasDeClientes(estado)}
-      vazio={
-        clientes.length === 0 && (
-          <EstadoVazio
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+
+  const vazio = clientes.length === 0 && (
+    <EstadoVazio
             /* Vazio por busca é diferente de vazio de verdade: sem
                distinguir, a pessoa acha que não cadastrou nada. E vazio por
                FILTRO é um terceiro caso: "nenhum cliente cadastrado" seria
@@ -33,27 +36,41 @@ export default function TabelaClientes({
                   ? "Nenhum cliente arquivado."
                   : "Nenhum cliente cadastrado ainda."
             }
-            acao={
-              busca && (
-                <Botao variante="ghost" onClick={onLimparBusca}>
-                  Limpar busca
-                </Botao>
-              )
-            }
-          />
+      acao={
+        busca && (
+          <Botao variante="ghost" onClick={onLimparBusca}>
+            Limpar busca
+          </Botao>
         )
       }
-    >
-      {clientes.map((c) => (
-        <LinhaCliente
-          key={c.cliente_id}
-          cliente={c}
-          estado={estado}
-          podeReativar={podeArquivar}
-          onReativar={() => onReativar(c)}
-          reativando={reativandoId === c.cliente_id}
-        />
-      ))}
-    </Tabela>
+    />
+  );
+
+  const propsDe = (c: (typeof clientes)[number]) => ({
+    cliente: c,
+    estado,
+    podeReativar: podeArquivar,
+    onReativar: () => onReativar(c),
+    reativando: reativandoId === c.cliente_id,
+  });
+
+  return (
+    <Box ref={medir}>
+      {estreita ? (
+        vazio || (
+          <Box px="6px">
+            {clientes.map((c) => (
+              <ItemDeCliente key={c.cliente_id} {...propsDe(c)} />
+            ))}
+          </Box>
+        )
+      ) : (
+        <Tabela colunas={colunasDeClientes(estado)} vazio={vazio}>
+          {clientes.map((c) => (
+            <LinhaCliente key={c.cliente_id} {...propsDe(c)} />
+          ))}
+        </Tabela>
+      )}
+    </Box>
   );
 }

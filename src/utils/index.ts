@@ -28,3 +28,5 @@ export * from "./select";
 export * from "./suporte";
 export * from "./texto";
 export * from "./selecao";
+export * from "./documentos";
+export * from "./clientes";

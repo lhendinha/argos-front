@@ -19,7 +19,6 @@ import {
   ModalDeDocumento,
   Pagination,
   Select,
-  Tabela,
 } from "../../components";
 import { useSubgruposBuscaveis } from "../../hooks/useSubgruposBuscaveis";
 import { useValorComEspera } from "../../hooks/useValorComEspera";
@@ -27,8 +26,7 @@ import { listarDocumentos } from "../../services";
 import { useToastOnQueryError } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
 import { contar } from "../../utils";
-import LinhaDeDocumento from "./components/LinhaDeDocumento";
-import { COLUNAS_DE_DOCUMENTOS } from "./constants";
+import ListaDeDocumentos from "./components/ListaDeDocumentos";
 import { useNomeDeSubgrupo } from "../../hooks/useNomeDeSubgrupo";
 import type { RespostaDeDocumentosPaginada } from "../../types/respostas";
 
@@ -157,8 +155,10 @@ export default function DocumentosPage() {
       ) : (
         <AreaAtualizando atualizando={query.isPlaceholderData}>
           <CartaoDeTabela>
-            <Tabela
-              colunas={COLUNAS_DE_DOCUMENTOS}
+            <ListaDeDocumentos
+              documentos={documentos}
+              subgrupoNome={subgrupoNome}
+              onAbrir={(d) => navegar(`/documentos/${d.subgrupo_id}/${d.documento_id}`)}
               vazio={
                 documentos.length === 0 ? (
                   <EstadoVazio
@@ -185,16 +185,7 @@ export default function DocumentosPage() {
                   />
                 ) : undefined
               }
-            >
-              {documentos.map((documento) => (
-                <LinhaDeDocumento
-                  key={`${documento.subgrupo_id}:${documento.documento_id}`}
-                  documento={documento}
-                  subgrupoNome={subgrupoNome}
-                  onAbrir={(d) => navegar(`/documentos/${d.subgrupo_id}/${d.documento_id}`)}
-                />
-              ))}
-            </Tabela>
+            />
 
           {/* ⚠️ Sem guarda de "tem linha": o `Pagination` já se esconde
               sozinho quando não há o que paginar (`total <= menor tamanho`),

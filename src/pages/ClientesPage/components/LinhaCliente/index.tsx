@@ -3,26 +3,9 @@ import { useNavigate } from "react-router-dom";
 
 import { Botao, Etiqueta } from "../../../../components";
 import { ESTADO_DE_CLIENTE_ARQUIVADOS, ESTADO_DE_CLIENTE_TODOS } from "../../../../constants";
-import { formatarDataDeInstante, mascararCpfCnpj, mascararTelefone } from "../../../../utils";
+import { formatarDataDeInstante, mascararCpfCnpj, mascararTelefone, tipoDeCliente } from "../../../../utils";
+import { CORES_DO_CLIENTE_ARQUIVADO } from "../../../../theme/cliente";
 import type { LinhaClienteProps } from "./types";
-
-/** Cinza de estado neutro, o mesmo das etiquetas de subgrupo: "Arquivado"
- * não é bom nem ruim, é um lugar onde o cliente está. */
-const CORES_DO_ARQUIVADO = {
-  bg: "border.subtle",
-  color: "fg.muted",
-  borderColor: "border",
-} as const;
-
-/** Pessoa física ou jurídica, pelo tamanho do documento -- 11 dígitos é
- * CPF, 14 é CNPJ. Sem documento não dá pra afirmar nem uma coisa nem
- * outra, então não afirma. */
-function tipoDoCliente(cpfCnpj?: string | null): string {
-  const digitos = (cpfCnpj || "").replace(/\D/g, "");
-  if (digitos.length === 11) return "Pessoa física";
-  if (digitos.length === 14) return "Pessoa jurídica";
-  return "";
-}
 
 /** Uma linha da tabela de clientes.
  *
@@ -36,7 +19,7 @@ function tipoDoCliente(cpfCnpj?: string | null): string {
  */
 export default function LinhaCliente({ cliente, estado, podeReativar, onReativar, reativando }: LinhaClienteProps) {
   const navegar = useNavigate();
-  const tipo = tipoDoCliente(cliente.cpf_cnpj);
+  const tipo = tipoDeCliente(cliente.cpf_cnpj);
   const arquivado = Boolean(cliente.arquivado_em);
   /* A coluna de ação existe fora de "Ativos" -- ali nenhuma linha tem
      "Reativar", e uma coluna vazia é ruído. */
@@ -69,7 +52,7 @@ export default function LinhaCliente({ cliente, estado, podeReativar, onReativar
           {/* Só em "Todos": nas outras duas listas o filtro já disse o que
               cada linha é, e repetir a etiqueta em todas não informa nada. */}
           {arquivado && estado === ESTADO_DE_CLIENTE_TODOS && (
-            <Etiqueta cores={CORES_DO_ARQUIVADO}>Arquivado</Etiqueta>
+            <Etiqueta cores={CORES_DO_CLIENTE_ARQUIVADO}>Arquivado</Etiqueta>
           )}
         </Flex>
         {/* No arquivado, quem arquivou e quando ocupam a linha do tipo:

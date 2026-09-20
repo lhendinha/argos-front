@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
@@ -9,6 +10,8 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
+import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { usePaginacaoDaLista } from "../../../../hooks/usePaginacaoDaLista";
 import { useValorComEspera } from "../../../../hooks/useValorComEspera";
 import { useSubgruposBuscaveis } from "../../../../hooks/useSubgruposBuscaveis";
@@ -22,6 +25,7 @@ import { COLUNAS_DE_LANCAMENTOS } from "../../constants";
 import { useFiltrosDeLancamentos } from "../../hooks/useFiltrosDeLancamentos";
 import CartoesDeTotais from "../CartoesDeTotais";
 import FiltrosDeLancamentos from "../FiltrosDeLancamentos";
+import ItemDeLancamento from "../ItemDeLancamento";
 import LinhaDeLancamento from "../LinhaDeLancamento";
 
 /** A lista de lançamentos: os três cards, os filtros e a tabela.
@@ -39,6 +43,9 @@ import LinhaDeLancamento from "../LinhaDeLancamento";
  */
 export default function ListaDeLancamentos() {
   const navegar = useNavigate();
+  /* Tabela onde as seis colunas cabem, itens de várias linhas onde não
+     cabem -- ver `TabelaProcessos`, que estabeleceu o padrão. */
+  const [medirLista, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
   const { filtros, intervalo, mudar } = useFiltrosDeLancamentos();
   const { pagina, setPagina, tamanhoPagina, setTamanhoPagina } = usePaginacaoDaLista();
   const departamentos = useSubgruposBuscaveis(true);
@@ -121,6 +128,24 @@ export default function ListaDeLancamentos() {
         </CartaoDeTabela>
       ) : (
         <CartaoDeTabela>
+          <Box ref={medirLista}>
+          {estreita ? (
+            lancamentos.length === 0 ? (
+              <EstadoVazio mensagem="Nenhum lançamento neste período." />
+            ) : (
+              <Box px="6px">
+                {lancamentos.map((l) => (
+                  <ItemDeLancamento
+                    key={l.lancamento_id}
+                    lancamento={l}
+                    categoriaNome={nomeDaCategoria(l.categoria_id)}
+                    contaNome={contaDoLancamento(l, catalogo.data)}
+                    onAbrir={() => navegar(`/financeiro/lancamentos/${l.lancamento_id}`)}
+                  />
+                ))}
+              </Box>
+            )
+          ) : (
           <Tabela
             colunas={COLUNAS_DE_LANCAMENTOS}
             vazio={
@@ -139,6 +164,8 @@ export default function ListaDeLancamentos() {
               />
             ))}
           </Tabela>
+          )}
+          </Box>
           <Pagination
             pagina={pagina}
             totalPaginas={query.data?.total_paginas ?? 0}

@@ -2,30 +2,8 @@ import { Table, Text } from "@chakra-ui/react";
 
 import { CelulaComSub, EtiquetasDeSubgrupo } from "../../../../components";
 import { rotuloDoTipo } from "../../../../constants";
-import { formatarDataDeInstante, mascararNumeroProcesso } from "../../../../utils";
-import type { Documento } from "../../../../types";
+import { formatarDataDeInstante, vinculoDoDocumento } from "../../../../utils";
 import type { LinhaDeDocumentoProps } from "./types";
-
-/** A que este documento pertence, numa frase curta.
- *
- * Prioriza o vínculo MAIS ESPECÍFICO: um documento ligado a um processo e ao
- * cliente daquele processo é encontrado pelo processo, e repetir o cliente na
- * mesma célula só gasta a largura.
- */
-function vinculoDe(d: Documento): { principal: string; sub?: string } {
-  const clientes = (d.cliente_nomes?.length ? d.cliente_nomes : d.cliente_ids) ?? [];
-  if (d.processo_numero) {
-    return {
-      principal: mascararNumeroProcesso(d.processo_numero),
-      sub: clientes.join(", ") || undefined,
-    };
-  }
-  if (d.atendimento_id) {
-    return { principal: "Atendimento", sub: clientes.join(", ") || undefined };
-  }
-  if (clientes.length) return { principal: clientes.join(", ") };
-  return { principal: "—" };
-}
 
 /** Uma linha da tabela de documentos.
  *
@@ -36,7 +14,7 @@ function vinculoDe(d: Documento): { principal: string; sub?: string } {
  * caminho nenhum pra abrir um documento.
  */
 export default function LinhaDeDocumento({ documento, subgrupoNome, onAbrir }: LinhaDeDocumentoProps) {
-  const vinculo = vinculoDe(documento);
+  const vinculo = vinculoDoDocumento(documento);
 
   return (
     <Table.Row
@@ -65,7 +43,7 @@ export default function LinhaDeDocumento({ documento, subgrupoNome, onAbrir }: L
       <CelulaComSub principal={rotuloDoTipo(documento.tipo)} />
       <CelulaComSub
         principal={
-          vinculo.principal === "—" ? (
+          !vinculo.principal ? (
             <Text as="span" color="fg.subtle">
               —
             </Text>

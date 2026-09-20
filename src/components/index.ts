@@ -33,6 +33,7 @@ export { default as Cartao } from "./Cartao";
 export { default as Abas } from "./Abas";
 export { default as PainelDaAba } from "./PainelDaAba";
 export { default as LinhaDeLista } from "./LinhaDeLista";
+export { default as ItemDeLista } from "./ItemDeLista";
 export { default as CabecalhoDePagina } from "./CabecalhoDePagina";
 export { default as EtiquetaDeMetadado } from "./EtiquetaDeMetadado";
 export { default as BotaoDeTexto } from "./BotaoDeTexto";

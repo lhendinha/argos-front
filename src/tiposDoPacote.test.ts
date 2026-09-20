@@ -35,9 +35,11 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    `MenuDaCasca`, o estado do menu da casca, e a fase 3 trouxe `AreaVisivel`,
    o pedaço de tela que o teclado deixou à mostra -- os dois moram em
    `types/ui` e não no `types.ts` da pasta porque quem os produz é um hook, e
-   hook não declara tipo. O número é o guarda: tipo novo sem pensar não
-   passa. */
-const TIPOS_NO_PACOTE = 136;
+   hook não declara tipo. A fase 6 trouxe `VinculoDoDocumento`: a lista de
+   documentos passou a ter duas formas, e a função que resolve o vínculo saiu
+   de dentro da linha para `utils/` -- o tipo do retorno dela foi junto. O
+   número é o guarda: tipo novo sem pensar não passa. */
+const TIPOS_NO_PACOTE = 137;
 
 const dominios = readdirSync(PASTA)
   .filter((a) => a.endsWith(".ts") && !FORA_DO_INDICE.has(a))

@@ -9,15 +9,8 @@ import { toastErroMutation } from "../../../../services/queryClient";
 import { apenasDigitos, emailValido, formatarDataDeInstante, mascararCep, mascararCpfCnpj, mascararTelefone } from "../../../../utils";
 import type { EnderecoDoCliente } from "../../../../types";
 import { TAMANHO_MAXIMO_DO_NOME_DE_CLIENTE } from "../../../../constants";
+import { CORES_DO_CLIENTE_ARQUIVADO } from "../../../../theme/cliente";
 import type { FormularioClienteProps } from "./types";
-
-/** Cinza de estado neutro, o mesmo da linha da listagem: "Arquivado" não é
- * bom nem ruim, é um lugar onde o cliente está. */
-const CORES_DO_ARQUIVADO = {
-  bg: "border.subtle",
-  color: "fg.muted",
-  borderColor: "border",
-} as const;
 
 /** Cabeçalho + formulário de edição do cliente, como no artifact: o nome
  * como título, as ações à direita da mesma linha, e os campos num cartão.
@@ -110,7 +103,7 @@ export default function FormularioCliente({
               artefato: a etiqueta diz O QUE é, a linha diz de onde veio. */}
           {arquivado && (
             <Flex align="center" gap="8px" mt="6px">
-              <Etiqueta cores={CORES_DO_ARQUIVADO}>Arquivado</Etiqueta>
+              <Etiqueta cores={CORES_DO_CLIENTE_ARQUIVADO}>Arquivado</Etiqueta>
               <Text fontSize="12.5px" color="fg.subtle">
                 {`Por ${cliente.arquivado_por ?? "—"} em ${formatarDataDeInstante(cliente.arquivado_em ?? "")}`}
               </Text>
