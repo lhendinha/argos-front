@@ -69,7 +69,24 @@ export default function DocumentoDaFatura({
         >
           {fatura.lancamentos.map((l) => (
             <Table.Row key={l.lancamento_id}>
-              <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">
+              {/* 🔴 **A descrição QUEBRA, e é o que faz a tabela caber.**
+                  Medido em 360px: 375px de tabela em 318 visíveis, e o
+                  mínimo era igual ao máximo porque a `Table.Cell` do Chakra
+                  nasce `nowrap` -- nem a única coluna de texto livre podia
+                  quebrar, então as três empurravam juntas. Soltando esta,
+                  o mínimo cai para a maior PALAVRA e a tabela passa a caber.
+                  As outras duas continuam `nowrap` de propósito: data e
+                  valor partidos em duas linhas não se leem.
+
+                  ⚠️ Quebrar, e não truncar como as listas fazem: isto é o
+                  documento que vai ao cliente, e esconder o que está sendo
+                  cobrado atrás de reticências é o contrário do que ele é. */}
+              <Table.Cell
+                p="13px 14px"
+                whiteSpace="normal"
+                borderBottomWidth="1px"
+                borderBottomColor="border.subtle"
+              >
                 <Text fontSize="13px" fontWeight="700">{l.descricao}</Text>
                 {/* ⚠️ A linha de reembolso se anuncia: ela não é honorário,
                     é a devolução de uma despesa que o escritório adiantou. */}

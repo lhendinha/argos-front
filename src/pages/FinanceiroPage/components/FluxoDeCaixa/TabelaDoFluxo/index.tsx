@@ -1,8 +1,13 @@
-import { Box, Flex, Table, Text } from "@chakra-ui/react";
+import { Flex, Table, Text } from "@chakra-ui/react";
 
+import { RolagemHorizontal } from "../../../../../components";
 import { NATUREZA_ENTRADA, NATUREZA_SAIDA } from "../../../../../constants";
 import { mesDaColuna } from "../../../../../utils";
-import { ehPrevisao, legendaDoFluxo, naturezaDaColuna } from "../legendaDoFluxo";
+import {
+  ehPrevisao,
+  legendaDoFluxo,
+  naturezaDaColuna,
+} from "../legendaDoFluxo";
 import Celula from "./Celula";
 import FaixaDaSecao from "./FaixaDaSecao";
 import LinhaDeSaldo from "./LinhaDeSaldo";
@@ -31,15 +36,22 @@ import type { TabelaDoFluxoProps } from "./types";
  * ➡️ `../index.test.tsx`.
  */
 export default function TabelaDoFluxo({
-  fluxo, mesCorrente, rotuloDoPeriodo, dobrados, onAlternar,
+  fluxo,
+  mesCorrente,
+  rotuloDoPeriodo,
+  dobrados,
+  onAlternar,
 }: TabelaDoFluxoProps) {
   const { meses } = fluxo;
   const colunas = meses.length + 2;
 
   return (
-    <Box overflowX="auto">
-      {/* A legenda atravessa a tabela e não rola com ela: é o resumo do que
-          se está olhando, e rolar para a direita não muda esse resumo. */}
+    <>
+      {/* 🔴 **A legenda fica FORA do rolador.** Ela é o resumo do que se
+          está olhando, e rolar para a direita não muda esse resumo -- mas
+          dentro do rolador ela rolava junto: medido em 390px, ao chegar ao
+          fim dos doze meses ela estava em -1606px, fora da vista. O
+          comentário antigo já dizia que ela não rolava; ela rolava. */}
       <Text
         p="12px 14px"
         fontSize="10.5px"
@@ -53,98 +65,112 @@ export default function TabelaDoFluxo({
         {legendaDoFluxo(meses, mesCorrente, rotuloDoPeriodo)}
       </Text>
 
-      <Table.Root minW={`${300 + meses.length * 120}px`}>
-        <Table.Header>
-          <Table.Row>
-            <Celula cabecalho fixa>DESCRIÇÃO</Celula>
-            {meses.map((mes) => (
-              <Celula
-                key={mes}
-                cabecalho
-                aDireita
-                previsao={ehPrevisao(mes, mesCorrente)}
-              >
-                {/* Duas linhas, como no artefato: o mês e o que ele é. */}
-                <Flex direction="column" align="flex-end" gap="2px">
-                  <Text as="span" fontSize="11px" fontWeight="800">
-                    {mesDaColuna(mes)}
-                  </Text>
-                  <Text
-                    as="span"
-                    fontSize="9px"
-                    fontWeight="700"
-                    color="fg.subtle"
-                    letterSpacing="0.4px"
-                  >
-                    {naturezaDaColuna(mes, mesCorrente)}
-                  </Text>
-                </Flex>
+      <RolagemHorizontal
+        rotulo="Fluxo de caixa, mês a mês"
+        /* ⚠️ "Role", e não o "Arraste" do quadro: a tabela rola no desktop
+           também (1975px em 1107), e lá ninguém arrasta -- usa a barra ou a
+           roda. Uma palavra que serve aos dois gestos. */
+        dica="Role a tabela para ver os outros meses"
+      >
+        <Table.Root minW={`${300 + meses.length * 120}px`}>
+          <Table.Header>
+            <Table.Row>
+              <Celula cabecalho fixa>
+                DESCRIÇÃO
               </Celula>
-            ))}
-            <Celula cabecalho aDireita>TOTAL</Celula>
-          </Table.Row>
-        </Table.Header>
+              {meses.map((mes) => (
+                <Celula
+                  key={mes}
+                  cabecalho
+                  aDireita
+                  previsao={ehPrevisao(mes, mesCorrente)}
+                >
+                  {/* Duas linhas, como no artefato: o mês e o que ele é. */}
+                  <Flex direction="column" align="flex-end" gap="2px">
+                    <Text as="span" fontSize="11px" fontWeight="800">
+                      {mesDaColuna(mes)}
+                    </Text>
+                    <Text
+                      as="span"
+                      fontSize="9px"
+                      fontWeight="700"
+                      color="fg.subtle"
+                      letterSpacing="0.4px"
+                    >
+                      {naturezaDaColuna(mes, mesCorrente)}
+                    </Text>
+                  </Flex>
+                </Celula>
+              ))}
+              <Celula cabecalho aDireita>
+                TOTAL
+              </Celula>
+            </Table.Row>
+          </Table.Header>
 
-        <Table.Body>
-          {/* 🔴 De onde se partiu, ANTES do que entrou e do que saiu. */}
-          {fluxo.saldo_disponivel && (
-            <LinhaDeSaldo
-              rotulo="Saldo anterior"
-              valores={fluxo.saldo_anterior_por_mes}
-              meses={meses}
-              mesCorrente={mesCorrente}
-              forte
-            />
-          )}
-
-          <SecaoDoFluxo
-            natureza={NATUREZA_ENTRADA}
-            rotulo="ENTRADAS"
-            rotuloDoTotal="Total de entradas"
-            linhas={fluxo.linhas.filter((l) => l.natureza === NATUREZA_ENTRADA)}
-            meses={meses}
-            totalPorMes={fluxo.entradas_por_mes}
-            mesCorrente={mesCorrente}
-            dobrada={dobrados.includes(NATUREZA_ENTRADA)}
-            onAlternar={onAlternar}
-          />
-          <SecaoDoFluxo
-            natureza={NATUREZA_SAIDA}
-            rotulo="SAÍDAS"
-            rotuloDoTotal="Total de saídas"
-            linhas={fluxo.linhas.filter((l) => l.natureza === NATUREZA_SAIDA)}
-            meses={meses}
-            totalPorMes={fluxo.saidas_por_mes}
-            mesCorrente={mesCorrente}
-            dobrada={dobrados.includes(NATUREZA_SAIDA)}
-            onAlternar={onAlternar}
-          />
-
-          {fluxo.saldo_disponivel && (
-            <>
-              <FaixaDaSecao
-                rotulo="SALDO"
-                quantasColunas={colunas}
-                fundo="bg.brand.subtle"
-                cor="brand.darker"
-              />
+          <Table.Body>
+            {/* 🔴 De onde se partiu, ANTES do que entrou e do que saiu. */}
+            {fluxo.saldo_disponivel && (
               <LinhaDeSaldo
-                rotulo="Saldo do período"
-                valores={fluxo.saldo_do_periodo_por_mes}
-                meses={meses}
-                mesCorrente={mesCorrente}
-              />
-              <LinhaDeSaldo
-                rotulo="Saldo final"
-                valores={fluxo.saldo_final_por_mes}
+                rotulo="Saldo anterior"
+                valores={fluxo.saldo_anterior_por_mes}
                 meses={meses}
                 mesCorrente={mesCorrente}
                 forte
               />
-            </>
-          )}
-        </Table.Body>
-      </Table.Root>
-    </Box>
+            )}
+
+            <SecaoDoFluxo
+              natureza={NATUREZA_ENTRADA}
+              rotulo="ENTRADAS"
+              rotuloDoTotal="Total de entradas"
+              linhas={fluxo.linhas.filter(
+                (l) => l.natureza === NATUREZA_ENTRADA,
+              )}
+              meses={meses}
+              totalPorMes={fluxo.entradas_por_mes}
+              mesCorrente={mesCorrente}
+              dobrada={dobrados.includes(NATUREZA_ENTRADA)}
+              onAlternar={onAlternar}
+            />
+            <SecaoDoFluxo
+              natureza={NATUREZA_SAIDA}
+              rotulo="SAÍDAS"
+              rotuloDoTotal="Total de saídas"
+              linhas={fluxo.linhas.filter((l) => l.natureza === NATUREZA_SAIDA)}
+              meses={meses}
+              totalPorMes={fluxo.saidas_por_mes}
+              mesCorrente={mesCorrente}
+              dobrada={dobrados.includes(NATUREZA_SAIDA)}
+              onAlternar={onAlternar}
+            />
+
+            {fluxo.saldo_disponivel && (
+              <>
+                <FaixaDaSecao
+                  rotulo="SALDO"
+                  quantasColunas={colunas}
+                  fundo="bg.brand.subtle"
+                  cor="brand.darker"
+                />
+                <LinhaDeSaldo
+                  rotulo="Saldo do período"
+                  valores={fluxo.saldo_do_periodo_por_mes}
+                  meses={meses}
+                  mesCorrente={mesCorrente}
+                />
+                <LinhaDeSaldo
+                  rotulo="Saldo final"
+                  valores={fluxo.saldo_final_por_mes}
+                  meses={meses}
+                  mesCorrente={mesCorrente}
+                  forte
+                />
+              </>
+            )}
+          </Table.Body>
+        </Table.Root>
+      </RolagemHorizontal>
+    </>
   );
 }

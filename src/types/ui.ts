@@ -175,3 +175,12 @@ export interface OpcoesBuscaveis {
   buscar: (termo: string) => void;
   tentarDeNovo: () => void;
 }
+
+/** De que lados um conteúdo largo continua depois da borda, de
+ * `useBordasDaRolagem`. */
+export interface BordasDaRolagem {
+  /** Há conteúdo à esquerda: já se rolou para fora do começo. */
+  antes: boolean;
+  /** Há conteúdo à direita: ainda falta rolar. */
+  depois: boolean;
+}

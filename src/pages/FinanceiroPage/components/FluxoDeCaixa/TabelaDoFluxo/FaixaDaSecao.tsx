@@ -22,8 +22,16 @@ import type { FaixaDaSecaoProps } from "./types";
 export default function FaixaDaSecao({
   rotulo, natureza, quantasColunas, fundo, cor, dobrada, onAlternar,
 }: FaixaDaSecaoProps) {
+  /* 🔴 **Quem gruda é o NOME, e não a célula.** A célula já era
+     `position: sticky; left: 0` -- e não grudava: medido em 390px, ao rolar
+     até dezembro ela estava em -1606px, e a faixa de ENTRADAS chegava ao fim
+     da rolagem VAZIA, sem dizer de que seção eram as linhas. A razão é que
+     `sticky` desloca o elemento dentro do que sobra do bloco que o contém, e
+     uma célula com `colSpan` de toda a tabela ocupa a linha inteira: sobra
+     zero, então não há para onde deslizar. O nome, dentro dela, tem os
+     1975px da célula como folga. */
   const nome = (
-    <Flex align="center" gap="8px">
+    <Flex align="center" gap="8px" position="sticky" left="0" w="fit-content">
       {onAlternar && natureza && (
         <Flex
           as="span"
@@ -43,7 +51,8 @@ export default function FaixaDaSecao({
   return (
     <Table.Row bg={fundo}>
       {/* 🔴 Uma célula só, atravessando a tabela: é o que faz a faixa ir de
-          ponta a ponta mesmo com a rolagem horizontal. */}
+          ponta a ponta mesmo com a rolagem horizontal. O que gruda na
+          esquerda é o conteúdo dela -- ver o comentário do `nome`. */}
       <Table.Cell
         colSpan={quantasColunas}
         p="10px 14px"
@@ -51,8 +60,6 @@ export default function FaixaDaSecao({
         color={cor}
         borderBottomWidth="1px"
         borderBottomColor="border.subtle"
-        position="sticky"
-        left="0"
       >
         {onAlternar && natureza ? (
           <BotaoNu
@@ -62,6 +69,11 @@ export default function FaixaDaSecao({
             color={cor}
             display="flex"
             alignItems="center"
+            /* O botão é o pai do `nome`; sem herdar o grude, ele voltaria a
+               ser uma caixa de 1975px com o rótulo na ponta esquerda. */
+            position="sticky"
+            left="0"
+            w="fit-content"
           >
             {nome}
           </BotaoNu>

@@ -43,6 +43,7 @@ export { default as ModalDeConfirmacao } from "./ModalDeConfirmacao";
 export { default as ModalDeTarefa } from "./ModalDeTarefa";
 export { default as ModalDeAviso } from "./ModalDeAviso";
 export { default as CelulaComSub } from "./CelulaComSub";
+export { default as RolagemHorizontal } from "./RolagemHorizontal";
 export { default as Tabela } from "./Tabela";
 export { default as EstadoVazio } from "./EstadoVazio";
 export { default as EstadoDeErro } from "./EstadoDeErro";

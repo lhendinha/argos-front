@@ -45,7 +45,12 @@ export default function SecaoDoFluxo({
       {!dobrada && linhas.map((linha) => (
         <Table.Row key={linha.categoria_id}>
           <Celula fixa>
-            <Flex align="center" gap="10px" pl="10px">
+            {/* ⚠️ `minW="0"` e `truncate`: sem os dois, o nome da categoria
+                era CORTADO no meio da letra pelo teto da célula, sem
+                reticências -- "Honorários de ê". A caixa flex não encolhe
+                abaixo do conteúdo por padrão, e reticências são do texto,
+                não de quem o contém. */}
+            <Flex align="center" gap="10px" pl="10px" minW="0">
               {/* O quadradinho de cor da categoria, como no artefato -- e a
                   mesma cor que a lista de lançamentos usa. Categoria sem cor
                   (apagada do catálogo) não desenha nada. */}
@@ -55,7 +60,7 @@ export default function SecaoDoFluxo({
                   css={{ background: linha.cor }}
                 />
               )}
-              <Text as="span" fontSize="13px">{linha.nome}</Text>
+              <Text as="span" fontSize="13px" truncate>{linha.nome}</Text>
             </Flex>
           </Celula>
           {meses.map((mes) => (

@@ -43,6 +43,26 @@ export default function Celula({
       position={fixa ? "sticky" : undefined}
       left={fixa ? "0" : undefined}
       zIndex={fixa ? 1 : undefined}
+      /* 🔴 **Um teto de 40% do que se VÊ, e não da tabela.** Medido em
+         390px: a coluna de rótulos ficava com 222px dos 348 visíveis (64%),
+         e sobravam 126px para números -- menos que uma coluna de mês, que
+         mede 135. Nunca dava para ver um mês inteiro ao lado do rótulo que
+         diz de que linha ele é, que é a única razão de a coluna ser fixa. O
+         `cqw` é do `RolagemHorizontal`, e é o que faz isto ser uma
+         proporção e não um ponto de virada escolhido a dedo: no desktop
+         40% de 1107px são 443, e os 222px naturais passam intactos. */
+      maxW={fixa ? "40cqw" : undefined}
+      overflow={fixa ? "hidden" : undefined}
+      textOverflow={fixa ? "ellipsis" : undefined}
+      /* A sombra diz que esta coluna está POR CIMA e o resto passa por
+         baixo -- e só acende depois que se rolou, senão ela promete uma
+         profundidade que não existe. Quem liga o `data-rolou` é o
+         `RolagemHorizontal`. */
+      css={
+        fixa
+          ? { "[data-rolou] &": { boxShadow: "6px 0 8px -6px rgba(15,32,45,.18)" } }
+          : undefined
+      }
     >
       {children}
     </Como>

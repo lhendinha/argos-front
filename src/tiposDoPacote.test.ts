@@ -39,7 +39,7 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    documentos passou a ter duas formas, e a função que resolve o vínculo saiu
    de dentro da linha para `utils/` -- o tipo do retorno dela foi junto. O
    número é o guarda: tipo novo sem pensar não passa. */
-const TIPOS_NO_PACOTE = 137;
+const TIPOS_NO_PACOTE = 138;
 
 const dominios = readdirSync(PASTA)
   .filter((a) => a.endsWith(".ts") && !FORA_DO_INDICE.has(a))
