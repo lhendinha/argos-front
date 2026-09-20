@@ -1,23 +1,19 @@
-import { Table, Text } from "@chakra-ui/react";
+import { Box, Text } from "@chakra-ui/react";
 
 import {
   CartaoDeTabela,
   Esqueleto,
   EstadoDeErro,
   EstadoVazio,
-  Etiqueta,
   Pagination,
   Tabela,
 } from "../../../../components";
-import { coresDaFatura } from "../../../../theme/fatura";
-import {
-  ROTULO_DA_FATURA,
-  contar,
-  formatarCentavos,
-  formatarData,
-  situacaoDaFaturaNaTela,
-} from "../../../../utils";
+import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
+import { contar } from "../../../../utils";
 import { COLUNAS_DE_FATURAS } from "../../constants";
+import ItemDeFatura from "../ItemDeFatura";
+import LinhaDeFatura from "../LinhaDeFatura";
 import type { SecaoEmitidasProps } from "./types";
 
 /** As faturas já emitidas.
@@ -40,6 +36,12 @@ import type { SecaoEmitidasProps } from "./types";
 export default function SecaoEmitidas({
   faturas, carregando, erro, onTentarDeNovo, paginacao, nomeDoCliente, onAbrir,
 }: SecaoEmitidasProps) {
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const vazio =
+    faturas.length === 0 ? (
+      <EstadoVazio mensagem="Nenhuma fatura emitida neste período." />
+    ) : undefined;
+
   if (carregando) return <Esqueleto linhas={4} />;
   if (erro) {
     return (
@@ -61,60 +63,33 @@ export default function SecaoEmitidas({
       </Text>
 
       <CartaoDeTabela>
-        <Tabela
-          colunas={COLUNAS_DE_FATURAS}
-          vazio={
-            faturas.length === 0 ? (
-              <EstadoVazio mensagem="Nenhuma fatura emitida neste período." />
-            ) : undefined
-          }
-        >
-          {faturas.map((f) => {
-            const situacao = situacaoDaFaturaNaTela(f);
-            return (
-              <Table.Row
-                key={f.fatura_id}
-                tabIndex={0}
-                cursor="pointer"
-                _hover={{ bg: "bg.canvas" }}
-                onClick={() => onAbrir(f.fatura_id)}
-                onKeyDown={(e) => {
-                  if (e.target !== e.currentTarget) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onAbrir(f.fatura_id);
-                  }
-                }}
-              >
-                <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">
-                  <Text fontSize="12.5px" fontFamily="mono" whiteSpace="nowrap">{f.numero}</Text>
-                </Table.Cell>
-                <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">
-                  <Text fontSize="13px" fontWeight="700" truncate>{nomeDoCliente(f.cliente_id)}</Text>
-                </Table.Cell>
-                <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">
-                  <Text fontSize="13px" whiteSpace="nowrap">{formatarData(f.data_vencimento)}</Text>
-                </Table.Cell>
-                <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">
-                  {/* ⚠️ Travessão, não vazio: vazio lê-se como "não carregou". */}
-                  <Text fontSize="13px" whiteSpace="nowrap" color={f.pago_em ? undefined : "fg.subtle"}>
-                    {f.pago_em ? formatarData(f.pago_em) : "—"}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell p="13px 14px" textAlign="right" borderBottomWidth="1px" borderBottomColor="border.subtle">
-                  <Text fontSize="13px" fontWeight="700" fontFamily="mono" whiteSpace="nowrap">
-                    R$ {formatarCentavos(f.valor_total_centavos)}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">
-                  <Etiqueta cores={coresDaFatura(situacao)}>
-                    {ROTULO_DA_FATURA[situacao] ?? situacao}
-                  </Etiqueta>
-                </Table.Cell>
-              </Table.Row>
-            );
-          })}
-        </Tabela>
+        <Box ref={medir}>
+          {estreita ? (
+            vazio || (
+              <Box px="6px">
+                {faturas.map((f) => (
+                  <ItemDeFatura
+                    key={f.fatura_id}
+                    fatura={f}
+                    nomeDoCliente={nomeDoCliente}
+                    onAbrir={onAbrir}
+                  />
+                ))}
+              </Box>
+            )
+          ) : (
+            <Tabela colunas={COLUNAS_DE_FATURAS} vazio={vazio}>
+              {faturas.map((f) => (
+                <LinhaDeFatura
+                  key={f.fatura_id}
+                  fatura={f}
+                  nomeDoCliente={nomeDoCliente}
+                  onAbrir={onAbrir}
+                />
+              ))}
+            </Tabela>
+          )}
+        </Box>
         <Pagination {...paginacao} />
       </CartaoDeTabela>
     </>
