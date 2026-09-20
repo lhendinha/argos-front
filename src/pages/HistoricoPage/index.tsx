@@ -19,7 +19,7 @@ import { useTodosOsSubgrupos } from "../../hooks/useTodosOsSubgrupos";
 import { mascararNumeroProcesso } from "../../utils";
 import DetalheHistorico from "./components/DetalheHistorico";
 import FiltroDeMenu from "./components/FiltroDeMenu";
-import ItemDeHistorico from "./components/ItemDeHistorico";
+import ListaDeHistorico from "./components/ListaDeHistorico";
 import ResumoDaLista from "./components/ResumoDaLista";
 import { useAbrirEnvio } from "./hooks/useAbrirEnvio";
 import { useLinkProfundoDoHistorico } from "./hooks/useLinkProfundoDoHistorico";
@@ -296,14 +296,11 @@ export default function HistoricoPage({
           ) : (
             <>
               <AreaAtualizando atualizando={query.isPlaceholderData}>
-                {historico.map((h, i) => (
-                  <ItemDeHistorico
-                    key={`${h.numero_processo}-${h.enviado_em}-${i}`}
-                    item={h}
-                    subgruposVisiveis={subgruposVisiveis}
-                    onAbrir={abrirEnvio}
-                  />
-                ))}
+                <ListaDeHistorico
+                  historico={historico}
+                  subgruposVisiveis={subgruposVisiveis}
+                  onAbrir={abrirEnvio}
+                />
               </AreaAtualizando>
               <Pagination
                 pagina={pagina}

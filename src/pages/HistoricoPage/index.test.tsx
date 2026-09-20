@@ -821,7 +821,12 @@ describe("o lido de cada pessoa", () => {
   const LIDO = { ...ITEM, enviado_em: "2026-08-14T03:02:13.990064+00:00", comunicacao_id: 1, sequencia: 1, lido: true };
   const CONTAGENS = { total: 2, [LEITURA_NAO_LIDOS]: 1, [LEITURA_LIDOS]: 1 };
   const chamadasDaLista = () => mocks.listarHistorico.mock.calls.filter(([o]) => o?.tamanhoPagina !== 1).length;
-  const linha = (estado: "não lido" | "lido") => screen.findByRole("button", { name: new RegExp(`, ${estado}$`) });
+  /* 🔴 `row`, e não `button`. A linha do histórico FINGIA ser botão -- papel
+     declarado à mão, `tabIndex` e teclas próprias -- dentro de uma lista que
+     não era tabela. Agora ela é `<tr>` de verdade, com o mesmo padrão de
+     teclado de `LinhaProcesso`. O nome acessível e o `data-lido` seguem
+     iguais: são eles que o resto destes testes lê. */
+  const linha = (estado: "não lido" | "lido") => screen.findByRole("row", { name: new RegExp(`, ${estado}$`) });
 
   beforeEach(() => {
     mocks.contarNaoLidosDoHistorico.mockResolvedValue({ nao_lidos: 1 });
@@ -847,7 +852,7 @@ describe("o lido de cada pessoa", () => {
     await user.click(naoLido);
 
     expect(mocks.marcarEnvioComoLido).toHaveBeenCalledWith({ sequencia: 2 });
-    await waitFor(() => expect(screen.getAllByRole("button", { name: /, lido$/ })).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole("row", { name: /, lido$/ })).toHaveLength(2));
     expect(chamadasDaLista()).toBe(antes);
     await waitFor(() => expect(mocks.contarNaoLidosDoHistorico.mock.calls.length).toBeGreaterThan(contadorAntes));
     expect(await screen.findByText(/· 0 não lidos/)).toBeInTheDocument();
@@ -871,7 +876,7 @@ describe("o lido de cada pessoa", () => {
     const user = userEvent.setup();
     mocks.listarHistorico.mockResolvedValue({ historico: [item], total: 1, total_paginas: 1 });
     renderComRota(<HistoricoPage />);
-    await user.click(await screen.findByRole("button", { name: /, (não )?lido$/ }));
+    await user.click(await screen.findByRole("row", { name: /, (não )?lido$/ }));
     await screen.findByText("Detalhes do envio");
     expect(mocks.marcarEnvioComoLido).not.toHaveBeenCalled();
   });

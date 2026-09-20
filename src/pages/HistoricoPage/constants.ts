@@ -67,3 +67,24 @@ export const FILTROS_DE_PERIODO = [
   { id: "todos", valor: 0, rotulo: "Todos os períodos" },
   { id: "recente", valor: DIAS_DA_JANELA_RECENTE, rotulo: `Últimos ${DIAS_DA_JANELA_RECENTE} dias` },
 ] as const;
+
+/** As cinco colunas da tabela do histórico.
+ *
+ * 🔴 **Elas já existiam -- grudadas por pontos numa linha só.** A meta do
+ * item era `data e hora · tipo · órgão` num texto só: três campos colados,
+ * que a tabela apenas descola. E "quais falharam no envio" deixa de ser uma
+ * caçada linha a linha para ser uma coluna.
+ *
+ * ⚠️ **"Envio e subgrupos", e não "Situação".** A coluna carrega as duas
+ * coisas, como em `COLUNAS_DE_ATENDIMENTOS` -- mas aqui a lista de subgrupos
+ * pode vir VAZIA, e `EtiquetasDeSubgrupo` desenha um travessão nesse caso.
+ * Sob um cabeçalho que dizia só "Situação", o traço ao lado de "ENVIADO" não
+ * tinha a que se referir.
+ */
+export const COLUNAS_DO_HISTORICO = [
+  "Processo",
+  "Tipo",
+  "Órgão ou destinatário",
+  "Envio e subgrupos",
+  { rotulo: "Enviado em", aDireita: true },
+] as const;

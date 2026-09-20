@@ -40,6 +40,7 @@ export default function ItemDeLista({
   onAbrir,
   rotulo,
   selecao,
+  destacado,
   identificador,
   identificadorMono,
   apoio,
@@ -53,6 +54,7 @@ export default function ItemDeLista({
     <Flex
       align={selecao ? "flex-start" : "center"}
       gap="10px"
+      bg={destacado ? "brand.faint" : undefined}
       borderBottomWidth="1px"
       borderBottomStyle="solid"
       borderBottomColor="border.subtle"
@@ -84,7 +86,7 @@ export default function ItemDeLista({
         flex="1 1 auto"
         minW="0"
         p={selecao ? "14px 14px 14px 0" : "14px"}
-        _hover={{ bg: "bg.canvas" }}
+        _hover={{ bg: destacado ? "bg.brand.subtle" : "bg.canvas" }}
         _focusVisible={{ outline: "2px solid", outlineColor: "fg.brand", outlineOffset: "-2px" }}
       >
         <Flex align="flex-start" justify="space-between" gap="12px" minW="0">

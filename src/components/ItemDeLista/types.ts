@@ -37,6 +37,17 @@ export interface ItemDeListaProps {
    * ⚠️ Fora do botão, como `acoes`: `<button>` dentro de `<button>` é
    * inválido. */
   selecao?: ReactNode;
+  /** O item pede atenção -- hoje só o envio NÃO LIDO do histórico.
+   *
+   * 🔴 É estado, não conteúdo: um booleano que escolhe entre dois fundos do
+   * tema, e não uma cor que quem chama inventa. Sem ele, o não lido chegaria
+   * ao celular com o ponto e mais nada, e a tela inteira de marcar como lido
+   * perderia seu sinal mais visível.
+   *
+   * ⚠️ O peso do identificador NÃO muda com ele. A lista antiga escrevia o
+   * lido em 400 e o não lido em 600, e as duas metades pareciam listas
+   * diferentes; o fundo e o ponto dizem a mesma coisa sem isso. */
+  destacado?: boolean;
   /** O nome da coisa. Obrigatório, e nunca a data.
    *
    * 🔴 É `string`, e não `ReactNode`, e essa é a diferença entre um
