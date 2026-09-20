@@ -6,9 +6,11 @@ import {
   Etiqueta,
   Tabela,
 } from "../../../../components";
-import { NATUREZA_ENTRADA, NATUREZA_SAIDA } from "../../../../constants";
+import { LIMIAR_DA_LISTA_EM_ITENS, NATUREZA_ENTRADA, NATUREZA_SAIDA } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { contar } from "../../../../utils";
 import { COLUNAS_DE_CATEGORIAS } from "../../constants";
+import ItemDoCatalogo from "../ItemDoCatalogo";
 import LinhaDoCatalogo from "../LinhaDoCatalogo";
 import Celula from "../LinhaDoCatalogo/Celula";
 import SubcabecalhoDaLista from "../SubcabecalhoDaLista";
@@ -37,6 +39,7 @@ export default function ListaDeCategorias({
   onEditar,
   onAlternarAtivo,
 }: ListaDeCategoriasProps) {
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
   /** ⚠️ Quantas filhas cada agrupadora tem -- o artefato escreve o número
    * ("agrupador de 3 categorias"), e ele sai do próprio catálogo, sem
    * leitura extra. */
@@ -66,6 +69,33 @@ export default function ListaDeCategorias({
         }
       />
       <CartaoDeTabela>
+        <Box ref={medir}>
+          {estreita ? (
+            <Box px="6px">
+              {categorias.map((categoria) => (
+                <ItemDoCatalogo
+                  key={categoria.categoria_id}
+                  nome={categoria.nome}
+                  ativo={categoria.ativa}
+                  onAbrir={podeEscrever ? () => onEditar(categoria) : undefined}
+                  onAlternarAtivo={podeEscrever ? () => onAlternarAtivo(categoria) : undefined}
+                  apoio={detalheDaCategoria(
+                    categoria,
+                    filhasPorAgrupador.get(categoria.categoria_id) ?? 0,
+                  )}
+                  etiquetas={
+                    <Etiqueta
+                      cores={
+                        CORES_DA_NATUREZA[categoria.natureza] ?? CORES_DA_NATUREZA[NATUREZA_SAIDA]
+                      }
+                    >
+                      {categoria.natureza === NATUREZA_ENTRADA ? "Entrada" : "Saída"}
+                    </Etiqueta>
+                  }
+                />
+              ))}
+            </Box>
+          ) : (
         <Tabela colunas={COLUNAS_DE_CATEGORIAS}>
           {categorias.map((categoria) => (
             <LinhaDoCatalogo
@@ -119,6 +149,8 @@ export default function ListaDeCategorias({
             </LinhaDoCatalogo>
           ))}
         </Tabela>
+          )}
+        </Box>
       </CartaoDeTabela>
     </>
   );

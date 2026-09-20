@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Botao, CartaoDeTabela, EstadoDeErro, EstadoVazio, Esqueleto, Etiqueta, ModalDeConfirmacao, Pagination, Tabela } from "../../../../components";
 import { useToast } from "../../../../contexts/ToastContext";
-import { TAMANHO_PAGINA_PADRAO } from "../../../../constants";
+import { LIMIAR_DA_LISTA_EM_ITENS, TAMANHO_PAGINA_PADRAO } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { useTodosOsSubgrupos } from "../../../../hooks/useTodosOsSubgrupos";
 import {
   atualizarConfiguracoesDoGrupo,
@@ -14,6 +15,7 @@ import { ApiError } from "../../../../services/api/client";
 import { toastErroMutation } from "../../../../services/queryClient";
 import { qk } from "../../../../services/queryKeys";
 import { normalizarInscricao, partesDaInscricao } from "../../../../utils/oab";
+import ItemDaInscricao from "../ItemDaInscricao";
 import LinhaDaInscricao from "../LinhaDaInscricao";
 import ModalDaInscricao from "../ModalDaInscricao";
 import {
@@ -121,6 +123,10 @@ export default function InscricoesDoGrupo() {
     },
   });
 
+  /* ⚠️ Antes dos returns antecipados: gancho depois de `return` quebra a
+     ordem dos ganchos entre renderizações. */
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+
   if (query.isPending) return <Esqueleto linhas={3} />;
   if (query.isError) {
     return (
@@ -168,6 +174,34 @@ export default function InscricoesDoGrupo() {
           : [...atuais, nova],
     });
   }
+
+    /* 🔴 Os callbacks da linha ficam numa função SÓ, e não copiados nas duas
+     árvores. Este bloco tem o `onDesligar` que zera o destino espelhando o
+     servidor -- duas cópias dele divergiriam no primeiro ajuste, e a tela e o
+     banco passariam a discordar sobre o que foi pedido. */
+  const propsDaInscricao = (i: (typeof daPagina)[number]) => ({
+    inscricao: i,
+    subgrupos,
+    emAndamento: alvoEmVoo === i.inscricao,
+    onAbrir: () => {
+      setErroDoModal("");
+      setNoModal(i);
+    },
+    onDesligar: () =>
+      salvar.mutate({
+        alvo: i.inscricao,
+        aplicar: (atuais) =>
+          atuais.map((a) =>
+            a.inscricao === i.inscricao
+              ? /* Zerado ao desligar, espelhando o servidor: mandar destino
+                   com o interruptor em `false` faria a tela e o banco
+                   discordarem sobre o que foi pedido. */
+                { ...a, importacao_automatica: false, subgrupos_destino: [] }
+              : a,
+          ),
+      }),
+    onRemover: () => setParaRemover(i),
+  });
 
   return (
     <>
@@ -224,42 +258,32 @@ export default function InscricoesDoGrupo() {
           </Botao>
         </Flex>
 
-        <Tabela
-          colunas={COLUNAS_DAS_INSCRICOES}
-          vazio={
+        <Box ref={medir}>
+          {estreita ? (
             inscricoes.length === 0 ? (
               <EstadoVazio mensagem="Nenhuma inscrição cadastrada." />
-            ) : undefined
-          }
-        >
-          {daPagina.map((i) => (
-            <LinhaDaInscricao
-              key={i.inscricao}
-              inscricao={i}
-              subgrupos={subgrupos}
-              emAndamento={alvoEmVoo === i.inscricao}
-              onAbrir={() => {
-                setErroDoModal("");
-                setNoModal(i);
-              }}
-              onDesligar={() =>
-                salvar.mutate({
-                  alvo: i.inscricao,
-                  aplicar: (atuais) =>
-                    atuais.map((a) =>
-                      a.inscricao === i.inscricao
-                        ? /* Zerado ao desligar, espelhando o servidor: mandar
-                             destino com o interruptor em `false` faria a tela
-                             e o banco discordarem sobre o que foi pedido. */
-                          { ...a, importacao_automatica: false, subgrupos_destino: [] }
-                        : a,
-                    ),
-                })
+            ) : (
+              <Box px="6px">
+                {daPagina.map((i) => (
+                  <ItemDaInscricao key={i.inscricao} {...propsDaInscricao(i)} />
+                ))}
+              </Box>
+            )
+          ) : (
+            <Tabela
+              colunas={COLUNAS_DAS_INSCRICOES}
+              vazio={
+                inscricoes.length === 0 ? (
+                  <EstadoVazio mensagem="Nenhuma inscrição cadastrada." />
+                ) : undefined
               }
-              onRemover={() => setParaRemover(i)}
-            />
-          ))}
-        </Tabela>
+            >
+              {daPagina.map((i) => (
+                <LinhaDaInscricao key={i.inscricao} {...propsDaInscricao(i)} />
+              ))}
+            </Tabela>
+          )}
+        </Box>
 
         {/* Dentro do cartão, não embaixo: no artifact o cartão fecha DEPOIS da
             paginação, e é isso que faz a barra parecer parte da tabela em vez

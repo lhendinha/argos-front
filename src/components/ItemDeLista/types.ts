@@ -58,6 +58,14 @@ export interface ItemDeListaProps {
   /** O identificador é um número (de processo, de fatura) e vai em
    * monoespaçada. */
   identificadorMono?: boolean;
+  /** `id` do elemento que desenha o identificador, para um controle de
+   * `acoes` poder apontar para ele com `aria-labelledby`.
+   *
+   * 🔴 Existe porque o interruptor da inscrição da OAB precisa se chamar
+   * "263/MG Ligada", e o número que o nomeia é o identificador do item. Sem
+   * isto, a alternativa era o controle desenhar o número DE NOVO, escondido
+   * -- e aí o mesmo texto aparece duas vezes na árvore. */
+  idDoIdentificador?: string;
   /** A segunda linha: o que identifica em segundo lugar. */
   apoio?: string;
   apoioMono?: boolean;

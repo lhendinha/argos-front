@@ -1,6 +1,7 @@
-import { Switch, Table } from "@chakra-ui/react";
+import { Table } from "@chakra-ui/react";
 
 import { BotaoNu, BotaoQuadrado, EtiquetasDeSubgrupo, IconeLixeira } from "../../../../components";
+import InterruptorDaInscricao from "../InterruptorDaInscricao";
 import type { LinhaDaInscricaoProps } from "./types";
 
 /** Uma inscrição avulsa na tabela: interruptor, destinos e remover.
@@ -24,18 +25,7 @@ export default function LinhaDaInscricao({
   onRemover,
 }: LinhaDaInscricaoProps) {
   const ligada = inscricao.importacao_automatica;
-
-  /* 🔴 Os dois ids existem para o NOME ACESSÍVEL do interruptor, e a razão foi
-     medida: com `Switch.Label` presente, o Chakra emite `aria-labelledby`
-     apontando para ele -- e `aria-labelledby` VENCE `aria-label`. O
-     `aria-label` que eu tinha posto era ignorado em silêncio, e as 50 linhas
-     ficavam com interruptores todos chamados "Desligada".
-
-     ➡️ Apontar para os dois devolve "263/MG Ligada": identifica a linha e diz
-     o estado. E `Switch.Label` continua existindo, então clicar na palavra
-     ainda alterna -- que é o que se perderia pondo o texto fora do rótulo. */
-  const idDaInscricao = `inscricao-${inscricao.inscricao}`;
-  const idDoEstado = `estado-${inscricao.inscricao}`;
+  const idDoRotulo = `inscricao-${inscricao.inscricao}`;
 
   /* ⚠️ NOME, e não id: o servidor guarda `subgrupo_id`, e a etiqueta com o id
      cru não diz nada a ninguém. Um destino que não casa com subgrupo nenhum
@@ -57,7 +47,7 @@ export default function LinhaDaInscricao({
             baixo, e a fonte proporcional faz os dígitos dançarem de linha em
             linha. */}
         <BotaoNu
-          id={idDaInscricao}
+          id={idDoRotulo}
           type="button"
           title="Editar inscrição"
           fontFamily="mono"
@@ -78,31 +68,14 @@ export default function LinhaDaInscricao({
         borderBottomColor="border.subtle"
         width="180px"
       >
-        <Switch.Root
-          checked={ligada}
-          /* 🔴 Ligar ABRE o modal em vez de ligar: sem destino guardado, o
-             servidor devolveria 400 -- e com destino guardado ele não existe,
-             porque desligar zera. Ver o docstring do componente. */
-          onCheckedChange={() => (ligada ? onDesligar() : onAbrir())}
-          disabled={emAndamento}
-        >
-          {/* ⚠️ **Sem `role="switch"`** -- ver `InterruptorDaImportacao`: o
-              Chakra v3 não emite `aria-checked`, e trocar o papel deixaria o
-              estado DESCONHECIDO. Medido lá, não presumido aqui. */}
-          <Switch.HiddenInput aria-labelledby={`${idDaInscricao} ${idDoEstado}`} />
-          {/* A cor da marca, explícita -- o Chakra v3 pinta o trilho ligado de
-              PRETO por padrão. Ver `InterruptorDaImportacao`. */}
-          <Switch.Control _checked={{ bg: "brand" }}>
-            <Switch.Thumb />
-          </Switch.Control>
-          {/* 🔴 A palavra ao lado, e não só o interruptor: cor e posição
-              sozinhas não contam o estado a quem não as distingue -- a mesma
-              régua de "(Arquivada)" em `LinhaDeOpcao`. Desligada em `fg.subtle`
-              porque é o estado neutro; ligada herda a cor do texto. */}
-          <Switch.Label id={idDoEstado} fontSize="12.5px" color={ligada ? undefined : "fg.subtle"}>
-            {ligada ? "Ligada" : "Desligada"}
-          </Switch.Label>
-        </Switch.Root>
+        <InterruptorDaInscricao
+          inscricao={inscricao.inscricao}
+          idDoRotulo={idDoRotulo}
+          ligada={ligada}
+          desabilitado={emAndamento}
+          onLigar={onAbrir}
+          onDesligar={onDesligar}
+        />
       </Table.Cell>
 
       <Table.Cell p="13px 14px" borderBottomWidth="1px" borderBottomColor="border.subtle">

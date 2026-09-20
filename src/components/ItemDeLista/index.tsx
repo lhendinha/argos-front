@@ -55,6 +55,7 @@ export default function ItemDeLista({
   destacado,
   identificador,
   identificadorMono,
+  idDoIdentificador,
   apoio,
   apoioMono,
   valor,
@@ -96,6 +97,7 @@ export default function ItemDeLista({
         <Flex align="flex-start" justify="space-between" gap="12px" minW="0">
           <BotaoNu
             type="button"
+            id={idDoIdentificador}
             onClick={onAbrir}
             aria-label={rotulo}
             display="block"

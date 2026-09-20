@@ -1,4 +1,4 @@
-import { Flex, Text } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 
 import {
   Botao,
@@ -8,8 +8,11 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
+import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { contar, formatarCentavos, formatarData } from "../../../../utils";
 import { COLUNAS_DE_CONTAS } from "../../constants";
+import ItemDoCatalogo from "../ItemDoCatalogo";
 import LinhaDoCatalogo from "../LinhaDoCatalogo";
 import Celula from "../LinhaDoCatalogo/Celula";
 import SubcabecalhoDaLista from "../SubcabecalhoDaLista";
@@ -41,6 +44,7 @@ export default function ListaDeContas({
   onEditar,
   onAlternarAtivo,
 }: ListaDeContasProps) {
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
   return (
     <>
       <SubcabecalhoDaLista
@@ -61,6 +65,27 @@ export default function ListaDeContas({
           <Esqueleto linhas={4} />
         ) : (
           <>
+            <Box ref={medir}>
+              {estreita ? (
+                <Box px="6px">
+                  {contas.map((conta) => (
+                    <ItemDoCatalogo
+                      key={conta.conta_id}
+                      nome={conta.nome}
+                      ativo={conta.ativa}
+                      onAbrir={podeEscrever ? () => onEditar(conta) : undefined}
+                      onAlternarAtivo={podeEscrever ? () => onAlternarAtivo(conta) : undefined}
+                      apoio={detalheDaConta(conta)}
+                      valor={{ texto: `R$ ${formatarCentavos(conta.saldo_centavos)}` }}
+                      etiquetas={
+                        conta.conta_id === contaPadraoId ? (
+                          <Etiqueta cores={CORES_DA_PADRAO}>Padrão</Etiqueta>
+                        ) : undefined
+                      }
+                    />
+                  ))}
+                </Box>
+              ) : (
             <Tabela colunas={COLUNAS_DE_CONTAS}>
               {contas.map((conta) => (
                 <LinhaDoCatalogo
@@ -107,6 +132,8 @@ export default function ListaDeContas({
                 </LinhaDoCatalogo>
               ))}
             </Tabela>
+              )}
+            </Box>
             <Pagination {...paginacao} />
           </>
         )}

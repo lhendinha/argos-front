@@ -33,7 +33,12 @@ const FONTES = import.meta.glob("/src/**/*.tsx", {
 /** As medidas que pertencem ao `ItemDeLista` e a mais ninguém.
  *
  * ⚠️ `mt=`/`mb=` entram porque o espaçamento ENTRE compartimentos é o que
- * dava a cada lista um ritmo próprio -- 3px numa, 8 noutra, 9 na terceira. */
+ * dava a cada lista um ritmo próprio -- 3px numa, 8 noutra, 9 na terceira.
+ *
+ * 🔴 **Casam com FRONTEIRA, e não como pedaço de palavra.** A primeira versão
+ * procurava `"p="` cru e acusava `gap="10px"` -- e acusaria `top=` e
+ * `flexGrow=` também. Guarda que grita no lugar errado ensina a ignorá-lo,
+ * que é pior do que não existir. */
 const PROIBIDOS = [
   "fontSize=",
   "fontWeight=",
@@ -70,7 +75,11 @@ describe("as medidas do item de lista", () => {
     const faltas: string[] = [];
     for (const [caminho, codigo] of usamOItem) {
       for (const proibido of PROIBIDOS) {
-        if (codigo.includes(proibido)) faltas.push(`${caminho}: ${proibido}`);
+        /* A propriedade começa depois de espaço, chave ou início de linha --
+           nunca no meio de outro nome. */
+        if (new RegExp(`(^|[^A-Za-z])${proibido}`).test(codigo)) {
+          faltas.push(`${caminho}: ${proibido}`);
+        }
       }
     }
     expect(faltas).toEqual([]);
