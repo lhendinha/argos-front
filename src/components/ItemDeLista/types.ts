@@ -54,6 +54,16 @@ export interface ItemDeListaProps {
    * lido em 400 e o não lido em 600, e as duas metades pareciam listas
    * diferentes; o fundo e o ponto dizem a mesma coisa sem isso. */
   destacado?: boolean;
+  /** O registro saiu de uso -- arquivado, desativado. Desbota sem sumir.
+   *
+   * 🔴 **Está no contrato porque ENVOLVER o item quebrava a divisória.** O
+   * catálogo do Financeiro desbotava com um `<Box opacity>` em volta, e aí
+   * cada item virava filho ÚNICO do seu Box: a regra `_last`, que existe
+   * para tirar a risca do último, passava a valer para TODOS. Medido em
+   * 360px -- Clientes e Processos com 9 divisórias em 10 itens, Categorias
+   * com 0 em 17 e Contas com 0 em 10. Quem manda no desenho do item é o
+   * item; quem chama diz o ESTADO. */
+  esmaecido?: boolean;
   /** O nome da coisa. Obrigatório, e nunca a data.
    *
    * 🔴 É `string`, e não `ReactNode`, e essa é a diferença entre um

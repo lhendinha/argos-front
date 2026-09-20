@@ -14,6 +14,10 @@
  * mesma janela -- com o menu recolhido a área de conteúdo ganha uns 236px
  * sem a viewport mudar um pixel.
  *
+ * ⚠️ **Um por lista, com UMA exceção**: as três seções do catálogo do
+ * Financeiro (contas, categorias, centros) dividem o mesmo, porque são a
+ * mesma tela. O porquê está junto delas, embaixo.
+ *
  * ⚠️ **Cada número é a largura MÍNIMA medida da tabela dele**, com o banco
  * local cheio: a tabela renderizada num container estreito não encolhe abaixo
  * do conteúdo, então o `scrollWidth` ali é o mínimo. Dado maior que o do
@@ -41,13 +45,22 @@ export const LARGURA_MINIMA_DA_TABELA = {
   clientes: 896,
   faturas: 804,
   atendimentos: 797,
+  /* 🔴 As TRÊS seções do catálogo do Financeiro dividem o mesmo número, e é
+     a única exceção à regra de "um por lista". Elas são a mesma tela: a
+     pessoa troca de pílula sem sair dela, e com um limiar cada uma o iPad
+     mini mostrava Contas em itens e as outras duas em tabela -- a tela
+     mudava de forma ao trocar de pílula. 775 é o maior dos três, o único
+     medido por encaixe (Contas), e os outros dois o seguem. Categorias
+     caberia até 421 e Centros até 232; virar item antes do necessário não
+     custa nada, e a aba virando junta vale. */
   contas: 775,
+  categorias: 775,
+  centros: 775,
   naoCobradas: 725,
   membros: 691,
   emissaoDeFatura: 642,
   previaDaImportacao: 631,
   inscricoes: 525,
-  categorias: 421,
 } as const;
 
 /** Até onde o CONTEÚDO de um item de lista cresce.

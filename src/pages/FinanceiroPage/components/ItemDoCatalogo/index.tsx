@@ -1,6 +1,9 @@
-import { Box } from "@chakra-ui/react";
-
-import { BotaoQuadrado, IconeOlho, IconeOlhoCortado, ItemDeLista } from "../../../../components";
+import {
+  BotaoQuadrado,
+  IconeOlho,
+  IconeOlhoCortado,
+  ItemDeLista,
+} from "../../../../components";
 import type { ItemDoCatalogoProps } from "./types";
 
 /** A linha do catálogo do Financeiro onde não cabem as colunas -- conta,
@@ -28,40 +31,48 @@ export default function ItemDoCatalogo({
   valor,
 }: ItemDoCatalogoProps) {
   return (
-    /* O arquivado desbota, como na tabela: a linha continua legível e diz
-       que saiu de uso sem precisar de uma etiqueta a mais. */
-    <Box opacity={ativo ? 1 : 0.55}>
-      <ItemDeLista
-        onAbrir={() => onAbrir?.()}
-        rotulo={nome}
-        identificador={nome}
-        apoio={apoio}
-        valor={valor}
-        etiquetas={etiquetas}
-        acoes={
-          onAlternarAtivo ? (
-            <BotaoQuadrado
-              type="button"
-              tom={ativo ? "perigo" : "neutro"}
-              title={ativo ? "Arquivar" : "Reativar"}
-              aria-label={`${ativo ? "Arquivar" : "Reativar"} ${nome}`}
-              disabled={ocupada}
-              /* O item inteiro já abre a edição -- sem isto, o toque no botão
+    /* O arquivado desbota pelo CONTRATO, e não por um `<Box>` em volta: o
+       envoltório fazia cada item ser filho único do seu pai, e a regra que
+       tira a divisória do ÚLTIMO passava a valer para todos -- o catálogo
+       ficava sem risca nenhuma no celular. Ver `esmaecido`. */
+    <ItemDeLista
+      esmaecido={!ativo}
+      onAbrir={() => onAbrir?.()}
+      rotulo={nome}
+      identificador={nome}
+      apoio={apoio}
+      valor={valor}
+      etiquetas={etiquetas}
+      acoes={
+        onAlternarAtivo ? (
+          <BotaoQuadrado
+            type="button"
+            tom={ativo ? "perigo" : "neutro"}
+            title={ativo ? "Arquivar" : "Reativar"}
+            aria-label={`${ativo ? "Arquivar" : "Reativar"} ${nome}`}
+            disabled={ocupada}
+            /* O item inteiro já abre a edição -- sem isto, o toque no botão
                  dispararia as duas coisas. */
-              onClick={(e) => {
-                e.stopPropagation();
-                onAlternarAtivo();
-              }}
-              /* 🔴 16px no SVG: `IconeOlho` e `IconeOlhoCortado` NÃO trazem
+            onClick={(e) => {
+              e.stopPropagation();
+              onAlternarAtivo();
+            }}
+            /* 🔴 16px no SVG: `IconeOlho` e `IconeOlhoCortado` NÃO trazem
                  tamanho próprio. Sem a regra eles viram 32px e a linha incha
                  -- o mesmo que `LinhaDoCatalogo` já precisou declarar. */
-              css={{ "& svg": { width: "16px", height: "16px", flex: "0 0 auto" } }}
-            >
-              {ativo ? <IconeOlho /> : <IconeOlhoCortado />}
-            </BotaoQuadrado>
-          ) : undefined
-        }
-      />
-    </Box>
+            css={{
+              "& svg": { width: "16px", height: "16px", flex: "0 0 auto" },
+            }}
+          >
+            {/* ⚠️ O ícone é a AÇÃO, e não o estado: ativo mostra o olho
+                cortado porque o botão arquiva, que é o que o rótulo já diz.
+                Estava invertido aqui em relação à `LinhaDoCatalogo`, e as
+                duas formas da mesma lista mostravam ícones opostos para o
+                mesmo registro. */}
+            {ativo ? <IconeOlhoCortado /> : <IconeOlho />}
+          </BotaoQuadrado>
+        ) : undefined
+      }
+    />
   );
 }

@@ -1,4 +1,4 @@
-import { Flex, Text } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 
 import {
   Botao,
@@ -7,8 +7,11 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
+import { LARGURA_MINIMA_DA_TABELA } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { contar } from "../../../../utils";
 import { COLUNAS_DE_CENTROS } from "../../constants";
+import ItemDoCatalogo from "../ItemDoCatalogo";
 import LinhaDoCatalogo from "../LinhaDoCatalogo";
 import Celula from "../LinhaDoCatalogo/Celula";
 import SubcabecalhoDaLista from "../SubcabecalhoDaLista";
@@ -37,6 +40,10 @@ export default function ListaDeCentros({
   onEditar,
   onAlternarAtivo,
 }: ListaDeCentrosProps) {
+  const [medir, estreita] = useLarguraEstreita(
+    LARGURA_MINIMA_DA_TABELA.centros,
+  );
+
   return (
     <>
       <SubcabecalhoDaLista
@@ -57,32 +64,54 @@ export default function ListaDeCentros({
           <Esqueleto linhas={4} />
         ) : (
           <>
-            <Tabela colunas={COLUNAS_DE_CENTROS}>
-              {centros.map((centro) => (
-                <LinhaDoCatalogo
-                  key={centro.centro_id}
-                  nome={centro.nome}
-                  ativo={centro.ativo}
-                  onAbrir={podeEscrever ? () => onEditar(centro) : undefined}
-                  onAlternarAtivo={
-                    podeEscrever ? () => onAlternarAtivo(centro) : undefined
-                  }
-                >
-                  <Celula>
-                    <Flex align="center" gap="8px" minW="0">
-                      <Text fontSize="13px" fontWeight="700" truncate>
-                        {centro.nome}
-                      </Text>
-                      {!centro.ativo && (
-                        <Text fontSize="12px" color="fg.muted">
-                          (Arquivado)
-                        </Text>
-                      )}
-                    </Flex>
-                  </Celula>
-                </LinhaDoCatalogo>
-              ))}
-            </Tabela>
+            <Box ref={medir}>
+              {estreita ? (
+                <Box px="6px">
+                  {centros.map((centro) => (
+                    <ItemDoCatalogo
+                      key={centro.centro_id}
+                      nome={centro.nome}
+                      ativo={centro.ativo}
+                      onAbrir={
+                        podeEscrever ? () => onEditar(centro) : undefined
+                      }
+                      onAlternarAtivo={
+                        podeEscrever ? () => onAlternarAtivo(centro) : undefined
+                      }
+                    />
+                  ))}
+                </Box>
+              ) : (
+                <Tabela colunas={COLUNAS_DE_CENTROS}>
+                  {centros.map((centro) => (
+                    <LinhaDoCatalogo
+                      key={centro.centro_id}
+                      nome={centro.nome}
+                      ativo={centro.ativo}
+                      onAbrir={
+                        podeEscrever ? () => onEditar(centro) : undefined
+                      }
+                      onAlternarAtivo={
+                        podeEscrever ? () => onAlternarAtivo(centro) : undefined
+                      }
+                    >
+                      <Celula>
+                        <Flex align="center" gap="8px" minW="0">
+                          <Text fontSize="13px" fontWeight="700" truncate>
+                            {centro.nome}
+                          </Text>
+                          {!centro.ativo && (
+                            <Text fontSize="12px" color="fg.muted">
+                              (Arquivado)
+                            </Text>
+                          )}
+                        </Flex>
+                      </Celula>
+                    </LinhaDoCatalogo>
+                  ))}
+                </Tabela>
+              )}
+            </Box>
             <Pagination {...paginacao} />
           </>
         )}

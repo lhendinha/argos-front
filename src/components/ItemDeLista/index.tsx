@@ -54,6 +54,7 @@ export default function ItemDeLista({
   rotulo,
   selecao,
   destacado,
+  esmaecido,
   identificador,
   identificadorMono,
   idDoIdentificador,
@@ -70,6 +71,7 @@ export default function ItemDeLista({
       align={selecao ? "flex-start" : "center"}
       gap="10px"
       bg={destacado ? "brand.faint" : undefined}
+      opacity={esmaecido ? 0.55 : undefined}
       _hover={{ bg: destacado ? "bg.brand.subtle" : "bg.canvas" }}
       borderBottomWidth="1px"
       borderBottomStyle="solid"
@@ -139,7 +141,12 @@ export default function ItemDeLista({
                 {valor.texto}
               </Text>
               {valor.sub && (
-                <Text as="span" fontSize="11px" color="fg.muted" whiteSpace="nowrap">
+                <Text
+                  as="span"
+                  fontSize="11px"
+                  color="fg.muted"
+                  whiteSpace="nowrap"
+                >
                   {valor.sub}
                 </Text>
               )}
@@ -170,7 +177,13 @@ export default function ItemDeLista({
         {/* O rodapé só existe quando há o que pôr nele: um traço e um vazio
             gastariam uma linha para dizer nada. */}
         {rodape && (rodape.texto || rodape.destaque) && (
-          <Flex align="center" justify="space-between" gap="10px" mt="8px" minW="0">
+          <Flex
+            align="center"
+            justify="space-between"
+            gap="10px"
+            mt="8px"
+            minW="0"
+          >
             <Text
               as="span"
               fontSize="12px"
@@ -188,7 +201,14 @@ export default function ItemDeLista({
                  despesas não cobradas que trouxe isto: em `acoes`, o botão de
                  texto comia 140px da linha e espremia o identificador em
                  cinco linhas; no rodapé ele tem a faixa inteira. */
-              <Box as="span" position="relative" zIndex="1" flex="0 0 auto" fontSize="12px" color="fg.subtle">
+              <Box
+                as="span"
+                position="relative"
+                zIndex="1"
+                flex="0 0 auto"
+                fontSize="12px"
+                color="fg.subtle"
+              >
                 {rodape.destaque}
               </Box>
             )}
