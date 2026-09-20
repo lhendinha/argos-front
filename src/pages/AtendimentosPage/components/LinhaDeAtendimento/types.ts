@@ -14,5 +14,4 @@ export interface LinhaDeAtendimentoProps {
    * linha. */
   subgrupoNome: (id: string) => string;
   onAbrir: (atendimento: Atendimento) => void;
-  ultima?: boolean;
 }

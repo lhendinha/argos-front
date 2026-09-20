@@ -24,7 +24,7 @@ import {
 import { useToastOnQueryError } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
 import CabecalhoAtendimentos from "./components/CabecalhoAtendimentos";
-import LinhaDeAtendimento from "./components/LinhaDeAtendimento";
+import ListaDeAtendimentos from "./components/ListaDeAtendimentos";
 import NovoAtendimentoForm from "./components/NovoAtendimentoForm";
 import { STATUS_TODOS, statusParaApi } from "./constants";
 import { useSubgruposBuscaveis } from "../../hooks/useSubgruposBuscaveis";
@@ -153,46 +153,39 @@ export default function AtendimentosPage() {
       ) : (
         <AreaAtualizando atualizando={query.isPlaceholderData}>
           <CartaoDeTabela>
-            {atendimentos.length === 0 ? (
-              <EstadoVazio
-                /* Distingue "não existe nada" de "seus filtros não acharam
-                   nada" -- confundir os dois faz a pessoa concluir que o
-                   sistema está vazio. */
-                mensagem={
-                  temFiltro
-                    ? "Nenhum atendimento com os filtros atuais."
-                    : "Nenhum atendimento registrado ainda."
-                }
-                acao={
-                  temFiltro ? (
-                    <Botao variante="ghost" onClick={limparFiltros}>
-                      Limpar filtros
-                    </Botao>
-                  ) : undefined
-                }
-              />
-            ) : (
-              <>
-                {atendimentos.map((atendimento, indice) => (
-                  <LinhaDeAtendimento
-                    key={`${atendimento.subgrupo_id}:${atendimento.atendimento_id}`}
-                    atendimento={atendimento}
-                    subgrupoNome={subgrupoNome}
-                    onAbrir={(a) =>
-                      navigate(`/atendimentos/${a.subgrupo_id}/${a.atendimento_id}`)
-                    }
-                    ultima={indice === atendimentos.length - 1}
-                  />
-                ))}
-                <Pagination
-                  pagina={pagina}
-                  totalPaginas={query.data?.total_paginas ?? 1}
-                  tamanhoPagina={tamanhoPagina}
-                  total={total}
-                  onMudarPagina={setPagina}
-                  onMudarTamanho={setTamanhoPagina}
+            <ListaDeAtendimentos
+              atendimentos={atendimentos}
+              subgrupoNome={subgrupoNome}
+              onAbrir={(a) => navigate(`/atendimentos/${a.subgrupo_id}/${a.atendimento_id}`)}
+              vazio={
+                <EstadoVazio
+                  /* Distingue "não existe nada" de "seus filtros não acharam
+                     nada" -- confundir os dois faz a pessoa concluir que o
+                     sistema está vazio. */
+                  mensagem={
+                    temFiltro
+                      ? "Nenhum atendimento com os filtros atuais."
+                      : "Nenhum atendimento registrado ainda."
+                  }
+                  acao={
+                    temFiltro ? (
+                      <Botao variante="ghost" onClick={limparFiltros}>
+                        Limpar filtros
+                      </Botao>
+                    ) : undefined
+                  }
                 />
-              </>
+              }
+            />
+            {atendimentos.length > 0 && (
+              <Pagination
+                pagina={pagina}
+                totalPaginas={query.data?.total_paginas ?? 1}
+                tamanhoPagina={tamanhoPagina}
+                total={total}
+                onMudarPagina={setPagina}
+                onMudarTamanho={setTamanhoPagina}
+              />
             )}
           </CartaoDeTabela>
         </AreaAtualizando>

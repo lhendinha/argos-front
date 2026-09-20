@@ -33,3 +33,21 @@ export const OPCOES_DE_STATUS = [
 export function statusParaApi(status: string): string | undefined {
   return status === STATUS_TODOS ? undefined : status;
 }
+
+/** As cinco colunas da tabela de atendimentos.
+ *
+ * 🔴 **Cinco, e não seis.** Situação e subgrupo dividem UMA coluna, como já
+ * dividiam uma fileira na lista que esta tabela substitui. Medi a diferença
+ * que isso faz: com seis colunas, "Último registro" fica com 230px e mostra
+ * 34-39 caracteres de uma nota de 105; com cinco, fica com 371 e mostra
+ * 58-62 -- contra 64-69 da caixa que existia antes. A escolha entre lista e
+ * tabela nunca foi sobre o formato: era sobre quantas colunas disputam
+ * 1181px.
+ */
+export const COLUNAS_DE_ATENDIMENTOS = [
+  "Assunto",
+  "Cliente",
+  "Situação",
+  "Último registro",
+  { rotulo: "Atualizado", aDireita: true },
+] as const;

@@ -160,7 +160,9 @@ describe("lista", () => {
   it("abre o detalhe pelo par (subgrupo, id)", async () => {
     /* O id sozinho não endereça: a chave primária é o par. */
     await montar();
-    await userEvent.click(await screen.findByRole("button", { name: /Revisão de contrato/ }));
+    /* A linha da tabela, e não um `<button>`: acima do limiar esta lista é
+       tabela como as outras sete, e a linha carrega `tabIndex` + Enter. */
+    await userEvent.click(await screen.findByText("Revisão de contrato"));
     expect(navegou).toHaveBeenCalledWith("/atendimentos/s1/a1");
   });
 });
@@ -313,30 +315,33 @@ describe("erro", () => {
   });
 });
 
-describe("fidelidade ao artifact", () => {
-  /* Foram três divergências reportadas de uma vez, todas por eu ter escrito
-   * "parecido" em vez de conferir o CSS. O teste trava o que dá pra travar
-   * em jsdom -- as MEDIDAS ficam na verificação em Chrome. */
+describe("a forma de tabela", () => {
+  /* 🔴 **Estes dois testes travavam o desenho que foi SUBSTITUÍDO.** Um
+   * exigia a data de criação como elemento próprio, em primeiro lugar --
+   * esta era a única lista do sistema que começava por QUANDO em vez de por
+   * O QUÊ. O outro exigia o ícone de pessoas antes do nome do cliente, que
+   * numa tabela é o cabeçalho quem diz.
+   *
+   * Eles não foram apagados por incômodo: a lista virou tabela de cinco
+   * colunas, e o que eles travavam deixou de existir. O que fica travado é
+   * o que a tabela precisa ter. */
 
-  it("a data de criação é um elemento PRÓPRIO, separada do assunto", async () => {
-    /* Ela é azul da marca e em mono no artifact -- é o que faz a lista se
-     * ler por data sem que a data precise de rótulo. A COR não se testa
-     * aqui: o jsdom não resolve as variáveis do tema, e a verificação real
-     * é a medição em Chrome (rgb(0,143,213), IBM Plex Mono, 13.5px). O que
-     * este teste trava é o que jsdom sabe: que a data não está grudada no
-     * assunto, sem elemento próprio pra receber aquele estilo. */
+  it("tem cabeçalho, e é ele que nomeia as colunas", async () => {
+    /* A lista antiga não tinha nenhum: data, assunto, duas pílulas e um
+       avatar, e você aprendia a ler pela posição. */
     await montar();
-    const data = await screen.findByText("10/08/2026");
-    expect(data.tagName.toLowerCase()).toBe("span");
-    expect(data.textContent).toBe("10/08/2026");
+    expect(await screen.findByText("Assunto")).toBeInTheDocument();
+    for (const coluna of ["Cliente", "Situação", "Último registro", "Atualizado"]) {
+      expect(screen.getByText(coluna)).toBeInTheDocument();
+    }
   });
 
-  it("o cliente vem atrás do ícone de pessoas", async () => {
-    // Diz o que aquele nome É sem gastar a palavra "cliente" em toda linha.
+  it("a linha é alcançável pelo teclado", async () => {
+    /* A linha inteira é clicável e não há ação dentro dela: sem `tabIndex`,
+       quem navega por Tab não abre atendimento nenhum. */
     await montar();
-    const cliente = await screen.findByText("Maria Souza");
-    const linha = cliente.closest("button");
-    expect(linha?.querySelector("svg")).toBeTruthy();
+    const linha = (await screen.findByText("Revisão de contrato")).closest("tr");
+    expect(linha).toHaveAttribute("tabindex", "0");
   });
 });
 

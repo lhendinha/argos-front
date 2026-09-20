@@ -1,32 +1,28 @@
-import { Box, Flex, Text } from "@chakra-ui/react";
+import { Flex, Table, Text } from "@chakra-ui/react";
 
-import { Avatar, BotaoNu, Etiqueta, EtiquetasDeSubgrupo, IconeClientes } from "../../../../components";
+import { Avatar, Etiqueta, EtiquetasDeSubgrupo } from "../../../../components";
 import { coresDoStatus } from "../../../../theme/atendimento";
 import { formatarDataDeInstante } from "../../../../utils";
 import type { LinhaDeAtendimentoProps } from "./types";
 
-/** Uma linha da lista de atendimentos (`.at-item` do artifact).
+/** O atendimento como LINHA de tabela, acima do limiar da lista.
  *
- * Mostra a prévia do ÚLTIMO registro, não do primeiro: a pergunta de quem
- * varre a lista é "em que pé isso está", e o primeiro registro é o que ela
- * já sabe.
+ * 🔴 **Era uma lista de itens no meio de sete tabelas.** Medido em 1440px:
+ * as sete tabelas do sistema usam célula `13px 14px`, cabeçalho
+ * `0 14px 10px · 11px/800` e divisória de 1px -- iguais, porque
+ * `celulaDeTabela.test.ts` cobra. Atendimentos e Histórico eram as duas
+ * exceções, com recuo e tipografia próprios e sem cabeçalho nenhum: nada
+ * nomeava a data, o assunto, as pílulas nem o avatar.
  *
- * As medidas do artifact aqui não são decorativas:
- * - a data é AZUL da marca e em mono (`.at-date`) -- é o que faz a lista se
- *   ler por data sem que a data precise de um rótulo;
- * - o cliente vem atrás do ícone de pessoas de 13px, que diz o que aquele
- *   nome É sem gastar a palavra "cliente" em toda linha;
- * - a prévia é uma CAIXA (fundo, borda, raio), não texto solto: é o que a
- *   separa do assunto quando os dois são frases parecidas.
+ * 🔴 **Situação e subgrupo dividem uma coluna** -- ver
+ * `COLUNAS_DE_ATENDIMENTOS`. É o que devolve 141px à coluna do último
+ * registro, e o que faz a tabela mostrar quase o mesmo que a caixa antiga.
  */
 export default function LinhaDeAtendimento({
   atendimento,
   subgrupoNome,
   onAbrir,
-  ultima,
 }: LinhaDeAtendimentoProps) {
-  /* 🔴 O último registro vem pronto no atendimento (`ultimo_registro`): a
-     lista não traz a linha do tempo (regra 9 da seção 0). */
   const ultimo = atendimento.ultimo_registro;
 
   /* Id que não resolve cai no próprio id -- some da tela seria pior: a
@@ -36,84 +32,67 @@ export default function LinhaDeAtendimento({
   ).join(", ");
 
   return (
-    <BotaoNu
-      type="button"
-      onClick={() => onAbrir(atendimento)}
-      display="flex"
-      alignItems="center"
-      gap="16px"
-      w="100%"
-      textAlign="left"
-      p="16px 18px"
-      borderBottomWidth={ultima ? "0" : "1px"}
-      borderBottomStyle="solid"
-      borderBottomColor="border.subtle"
+    <Table.Row
+      /* A linha inteira é clicável, então precisa ser alcançável pelo
+         teclado: `tabIndex` + Enter/Espaço, como em `LinhaProcesso`. Sem
+         isso, quem navega por Tab não abre atendimento nenhum -- e não há
+         outro caminho, porque não existe ação na linha. */
+      tabIndex={0}
+      cursor="pointer"
       _hover={{ bg: "bg.canvas" }}
+      /* Última linha sem divisória: a borda do cartão já fecha a tabela. */
+      _last={{ "& td": { borderBottomWidth: 0 } }}
+      _focusVisible={{ outline: "2px solid", outlineColor: "fg.brand", outlineOffset: "-2px" }}
+      aria-label={atendimento.assunto}
+      onClick={() => onAbrir(atendimento)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onAbrir(atendimento);
+        }
+      }}
     >
-      <Box flex="1" minW="0">
-        <Flex align="center" gap="8px" wrap="wrap" fontWeight="800" fontSize="13.5px">
-          <Text as="span" color="fg.brand" fontFamily="mono" fontWeight="700">
-            {formatarDataDeInstante(atendimento.criado_em)}
-          </Text>
-          <Text as="span">— {atendimento.assunto}</Text>
-          <Etiqueta cores={coresDoStatus(atendimento.status)}>{atendimento.status}</Etiqueta>
-          {/* 🔴 Ao lado da etiqueta de status, e não numa linha própria: a
-              lista mistura os subgrupos da pessoa, e aqui já existe uma
-              etiqueta -- agrupar as duas é mais limpo que espalhá-las.
+      <Table.Cell p="13px 14px" borderBottomColor="border.subtle">
+        <Text fontWeight="700" truncate>
+          {atendimento.assunto}
+        </Text>
+      </Table.Cell>
 
-              ⚠️ O `Flex` acima tem `wrap`, e medi em Chrome antes de escrever
-              isto: sobram 124px na linha, contra ~90px da etiqueta. Ela entra
-              sem quebrar. Se um assunto muito longo comer a folga, o `wrap`
-              desce a etiqueta em vez de estourar a linha. */}
+      <Table.Cell p="13px 14px" borderBottomColor="border.subtle" color="fg.muted">
+        <Text truncate>{clientes}</Text>
+      </Table.Cell>
+
+      <Table.Cell p="13px 14px" borderBottomColor="border.subtle">
+        <Flex align="center" wrap="wrap" gap="6px">
+          <Etiqueta cores={coresDoStatus(atendimento.status)}>{atendimento.status}</Etiqueta>
           <EtiquetasDeSubgrupo nomes={[subgrupoNome(atendimento.subgrupo_id)]} />
         </Flex>
+      </Table.Cell>
 
-        {clientes && (
-          <Flex align="center" gap="6px" mt="3px" color="fg.muted" fontSize="12.5px" minW="0">
-            <Box color="fg.subtle" flexShrink="0" display="flex">
-              <IconeClientes tamanho={13} />
-            </Box>
-            <Text truncate>{clientes}</Text>
+      <Table.Cell p="13px 14px" borderBottomColor="border.subtle" color="fg.muted">
+        {/* A coluna mais larga da tabela, e de propósito: é a única que
+            responde "preciso abrir este?" sem abrir. */}
+        <Text truncate>{ultimo?.texto ?? ""}</Text>
+      </Table.Cell>
+
+      <Table.Cell p="13px 14px" borderBottomColor="border.subtle" textAlign="right">
+        {ultimo && (
+          <Flex align="center" justify="flex-end" gap="8px">
+            {/* 🔴 O nome vem NO registro (`autor_nome`), resolvido pelo
+                servidor. Esta linha recebia um tradutor, e quem o montava
+                baixava TODAS as pessoas do grupo -- numa consulta que só
+                rodava pra `manager` pra cima, então o avatar de quem é
+                `user` mostrava iniciais de e-mail.
+
+                `?? autor_id` cobre quem não tem apelido e quem é de outro
+                grupo. */}
+            <Avatar nome={ultimo.autor_nome ?? ultimo.autor_id} tamanho="pequeno" />
+            <Text color="fg.subtle" whiteSpace="nowrap">
+              {formatarDataDeInstante(ultimo.registrado_em)}
+            </Text>
           </Flex>
         )}
-      </Box>
-
-      {/* A caixa some nas telas estreitas: espremida vira duas palavras e
-          reticências, que não respondem nada. */}
-      {ultimo && (
-        <Text
-          flex="1"
-          maxW="420px"
-          minW="0"
-          truncate
-          bg="bg.canvas"
-          borderWidth="1px"
-          borderStyle="solid"
-          borderColor="border.subtle"
-          borderRadius="sm"
-          p="9px 12px"
-          fontSize="12.5px"
-          color="fg.muted"
-          display={{ base: "none", lg: "block" }}
-        >
-          {ultimo.texto}
-        </Text>
-      )}
-
-      {ultimo && (
-        <Flex align="center" gap="12px" flex="0 0 auto">
-          {/* 🔴 O nome vem NO registro (`autor_nome`), resolvido pelo servidor.
-              Esta linha recebia um tradutor, e quem o montava baixava TODAS as
-              pessoas do grupo -- numa consulta que só rodava pra `manager` pra
-              cima, então o avatar de quem é `user` mostrava iniciais de e-mail.
-
-              `?? autor_id` cobre quem não tem apelido e quem é de outro grupo. */}
-          <Avatar nome={ultimo.autor_nome ?? ultimo.autor_id} tamanho="pequeno" />
-          <Text fontSize="11px" color="fg.subtle" textAlign="right" whiteSpace="nowrap">
-            {formatarDataDeInstante(ultimo.registrado_em)}
-          </Text>
-        </Flex>
-      )}
-    </BotaoNu>
+      </Table.Cell>
+    </Table.Row>
   );
 }
