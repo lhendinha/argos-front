@@ -4,6 +4,7 @@ import { Botao, CampoDeBusca, PilulaDeMenu } from "../../../../components";
 import { ESTADO_DE_CLIENTE_ATIVOS } from "../../../../constants";
 import { OPCOES_DE_ESTADO } from "../../constants";
 import { contar } from "../../../../utils";
+import { ACOES_DO_CABECALHO, LINHA_DE_FILTROS } from "../../../../theme/cabecalho";
 import type { CabecalhoClientesProps } from "./types";
 
 /** Cabeçalho da tela de Clientes: título, ação, busca e contagem -- mesma
@@ -22,8 +23,14 @@ export default function CabecalhoClientes({
 }: CabecalhoClientesProps) {
   return (
     <Box mb="14px">
-      <Flex align="flex-start" justify="space-between" gap="16px" mb="18px">
-        <Box>
+      {/* 🔴 **Quebra, como o `CabecalhoDePagina` das outras telas.** Este
+          cabeçalho é próprio e tinha ficado de fora: sem `wrap`, e com o
+          botão `flexShrink: 0`, "+ Novo cliente" ficava colado ao lado do
+          título mesmo no celular, espremendo "Contatos e partes vinculadas
+          aos processos" em três linhas. Agora ele desce para baixo do
+          subtítulo e ocupa a linha, como nas irmãs. */}
+      <Flex align="flex-start" justify="space-between" wrap="wrap" gap="12px 16px" mb="18px">
+        <Box flex="1 1 240px" minW="0">
           <Heading as="h1" fontSize="23px" fontWeight="800" letterSpacing="-0.01em">
             Clientes
           </Heading>
@@ -32,7 +39,7 @@ export default function CabecalhoClientes({
           </Text>
         </Box>
         {podeCriar && (
-          <Box flexShrink={0}>
+          <Box css={ACOES_DO_CABECALHO}>
             <Botao onClick={onNovoCliente}>+ Novo cliente</Botao>
           </Box>
         )}
@@ -41,7 +48,9 @@ export default function CabecalhoClientes({
       {/* O chip fica na LINHA DA BUSCA, como o status em Atendimentos: é
           onde a tela já tem uma barra de filtro, e o artefato validado o
           desenha ali. */}
-      <Flex gap="10px" mb="10px" align="center" wrap="wrap">
+      {/* A busca ocupa a linha no celular e as pílulas descem -- ver
+          `LINHA_DE_FILTROS`, que pede a busca como primeiro filho. */}
+      <Flex gap="10px" mb="10px" align="center" wrap="wrap" css={LINHA_DE_FILTROS}>
         <CampoDeBusca
           rotulo="Pesquisar cliente"
           placeholder="Pesquisar cliente"

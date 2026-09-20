@@ -1,4 +1,4 @@
-import { Flex, Heading, Input } from "@chakra-ui/react";
+import { Box, Flex, Heading, Input } from "@chakra-ui/react";
 import { useRef, useState, type FormEvent } from "react";
 import { useMutation } from "@tanstack/react-query";
 
@@ -8,6 +8,7 @@ import { atualizarProcesso } from "../../../../services";
 import { camposAlterados } from "../../../../utils/processos";
 import { toastErroMutation } from "../../../../services/queryClient";
 import { mascararNumeroProcesso } from "../../../../utils";
+import { ACOES_DO_CABECALHO } from "../../../../theme/cabecalho";
 import CamposProcesso from "../../../ProcessosPage/components/CamposProcesso";
 import type { CamposOpcionaisProcesso } from "../../../../types";
 import { TAMANHO_MAXIMO_DO_APELIDO_DE_PROCESSO } from "../../../../constants";
@@ -89,7 +90,9 @@ export default function FormularioProcesso({
             {faseRotulo && <EtiquetaDeMetadado>{faseRotulo}</EtiquetaDeMetadado>}
           </Flex>
         </div>
-        <Flex gap="8px" wrap="wrap" maxW="100%">
+        {/* A mesma regra do cabeçalho de tela: no celular os dois botões
+            ocupam a linha e dividem entre si. Ver `ACOES_DO_CABECALHO`. */}
+        <Box css={ACOES_DO_CABECALHO}>
           {/* Lixeira + rótulo, como no artifact: só o texto não distingue
               a ação destrutiva das outras à primeira vista. */}
           <Botao variante="perigoContorno" onClick={onRemover}>
@@ -99,7 +102,7 @@ export default function FormularioProcesso({
           <Botao type="submit" disabled={salvarMutation.isPending}>
             {salvarMutation.isPending ? "Salvando…" : "Salvar"}
           </Botao>
-        </Flex>
+        </Box>
       </Flex>
 
       <Cartao>

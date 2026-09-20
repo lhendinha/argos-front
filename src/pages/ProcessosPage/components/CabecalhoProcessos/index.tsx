@@ -5,6 +5,7 @@ import { RESPONSAVEL_EU, SEM_RESPONSAVEL } from "../../constants";
 import FiltroDatas from "../FiltroDatas";
 import { comOpcaoEscolhida } from "../../../../utils/opcoesEscolhidas";
 import { contar } from "../../../../utils";
+import { ACOES_DO_CABECALHO, LINHA_DE_FILTROS } from "../../../../theme/cabecalho";
 import type { CabecalhoProcessosProps } from "./types";
 
 /** Cabeçalho da tela de Processos: título, ação, filtros e contagem.
@@ -56,8 +57,17 @@ export default function CabecalhoProcessos({
         </Box>
         {/* 🔴 Sem `flexShrink: 0`: com ele o grupo não estreita abaixo da
             soma dos botões numa linha, e o `flexWrap` ao lado nunca chega a
-            disparar. Era o que mantinha esta tela em 455px numa de 360. */}
-        <Flex gap="9px" flexWrap="wrap" maxW="100%">
+            disparar. Era o que mantinha esta tela em 455px numa de 360.
+
+            🔴 **A regra de largura vem do tema, e não copiada de novo.** O
+            comentário acima previa isto: "as duas correções abaixo são as
+            mesmas que ele levou, e precisaram ser feitas duas vezes". Esta
+            seria a TERCEIRA vez. A marcação continua duplicada pelos 2px de
+            recuo, mas o comportamento passou a ter um dono só.
+
+            ⚠️ O intervalo virou 8px, o do sistema, contra os 9px que esta
+            cópia tinha -- um pixel entre os dois botões, no desktop. */}
+        <Box css={ACOES_DO_CABECALHO}>
           {/* ⚠️ Dois botões, não um menu: "Novo processo" é uso diário e
               "Importar por OAB" se procura com intenção. Esconder a segunda
               atrás de um clique a mais não ajudaria nenhuma das duas. */}
@@ -87,10 +97,23 @@ export default function CabecalhoProcessos({
           >
             + Novo processo
           </Button>
-        </Flex>
+        </Box>
       </Flex>
 
-      <Wrap gap="10px" mb="10px">
+      <Wrap gap="10px" mb="10px" css={LINHA_DE_FILTROS}>
+        {/* 🔴 **Primeiro, e não por último.** Ela era o último item da
+            fileira, depois até dos filtros de data -- nas outras três listas
+            do sistema a busca sempre veio na frente. E a posição aqui não é
+            só ordem: `LINHA_DE_FILTROS` dá a linha inteira ao PRIMEIRO
+            filho no celular, e quem precisa de largura para digitar é ela. */}
+        <CampoDeBusca
+          rotulo="Pesquisar processo por número, cliente ou apelido"
+          placeholder="Pesquisar número, cliente ou apelido"
+          valor={busca}
+          onMudar={onBuscar}
+          larguraMaxima="420px"
+          buscando={buscando}
+        />
         {/* Situação e fase aceitam VÁRIOS valores (é o que o artifact faz,
             e o backend passou a suportar em 21/08). Cliente é valor único --
             no artifact o painel dele usa botões, não caixas.
@@ -205,16 +228,6 @@ export default function CabecalhoProcessos({
           dataVerificarAte={filtros.dataVerificarAte}
           prazoFinalAte={filtros.prazoFinalAte}
           onMudar={onMudarFiltro}
-        />
-        {/* `flex` + `minW` mantêm o campo utilizável quando os chips
-            quebram pra segunda linha em tela estreita. */}
-        <CampoDeBusca
-          rotulo="Pesquisar processo por número, cliente ou apelido"
-          placeholder="Pesquisar número, cliente ou apelido"
-          valor={busca}
-          onMudar={onBuscar}
-          larguraMaxima="420px"
-          buscando={buscando}
         />
       </Wrap>
 

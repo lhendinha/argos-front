@@ -1,4 +1,5 @@
 import { Box, Flex, Heading, Text } from "@chakra-ui/react";
+import { ACOES_DO_CABECALHO } from "../../theme/cabecalho";
 import type { CabecalhoDePaginaProps } from "./types";
 
 /** Título e subtítulo de uma tela (`.page-head` do artifact): 23px/800 com
@@ -53,10 +54,13 @@ export default function CabecalhoDePagina({ titulo, subtitulo, acoes }: Cabecalh
            em 381px até isto sair. Ele existia para o título longo não
            espremer os botões; com o pai quebrando, quem não cabe desce em
            vez de ser espremido, que é o mesmo remédio sem o efeito
-           colateral. */
-        <Flex align="center" gap="8px" wrap="wrap" maxW="100%">
-          {acoes}
-        </Flex>
+           colateral.
+
+           ⚠️ E no celular elas ocupam a linha inteira e dividem entre si. A
+           regra mora em `ACOES_DO_CABECALHO` porque os cabeçalhos PRÓPRIOS
+           das telas de detalhe -- lançamento e processo -- seguem a mesma, e
+           três cópias divergiriam no primeiro ajuste. */
+        <Box css={ACOES_DO_CABECALHO}>{acoes}</Box>
       )}
     </Flex>
   );

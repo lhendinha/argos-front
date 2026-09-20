@@ -26,6 +26,7 @@ import { listarDocumentos } from "../../services";
 import { useToastOnQueryError } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
 import { contar } from "../../utils";
+import { LINHA_DE_FILTROS } from "../../theme/cabecalho";
 import ListaDeDocumentos from "./components/ListaDeDocumentos";
 import { useNomeDeSubgrupo } from "../../hooks/useNomeDeSubgrupo";
 import type { RespostaDeDocumentosPaginada } from "../../types/respostas";
@@ -98,7 +99,9 @@ export default function DocumentosPage() {
           }
         />
 
-        <Flex align="center" gap="8px" wrap="wrap" mb="10px">
+        {/* A busca ocupa a linha no celular e os filtros descem -- ver
+            `LINHA_DE_FILTROS`, que pede a busca como primeiro filho. */}
+        <Flex align="center" gap="8px" wrap="wrap" mb="10px" css={LINHA_DE_FILTROS}>
           <CampoDeBusca
             rotulo="Buscar documentos"
             valor={buscaInput}

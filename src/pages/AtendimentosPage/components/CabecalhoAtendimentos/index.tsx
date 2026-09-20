@@ -11,6 +11,7 @@ import {
 import { contar } from "../../../../utils";
 import { OPCOES_DE_STATUS, STATUS_TODOS } from "../../constants";
 import type { CabecalhoAtendimentosProps } from "./types";
+import { LINHA_DE_FILTROS } from "../../../../theme/cabecalho";
 
 export default function CabecalhoAtendimentos({
   carregando,
@@ -39,7 +40,9 @@ export default function CabecalhoAtendimentos({
         }
       />
 
-      <Flex align="center" gap="8px" wrap="wrap" mb="10px">
+      {/* A busca ocupa a linha no celular e os filtros descem -- ver
+          `LINHA_DE_FILTROS`, que pede a busca como primeiro filho. */}
+      <Flex align="center" gap="8px" wrap="wrap" mb="10px" css={LINHA_DE_FILTROS}>
         <CampoDeBusca
           rotulo="Buscar atendimentos"
           valor={busca}

@@ -125,3 +125,22 @@ export const TELA_DE_DUAS_COLUNAS = "(min-width: 480px)";
  * mais que isto e continua tabela.
  */
 export const CONTAINER_PARA_EMPILHAR_O_DOCUMENTO = "(max-width: 420px)";
+
+/** Abaixo desta largura de CONTAINER, a área de conteúdo é de celular: as
+ * ações do cabeçalho ocupam a linha inteira e os filtros descem para baixo
+ * da busca.
+ *
+ * 🔴 **De container, e não de janela**, pela razão de sempre: a área de
+ * conteúdo encolhe quando o menu fixo aparece. Medido: até 744px de janela
+ * ela vale a janela inteira; numa janela de 1024 ela tem 812, e numa de 1440,
+ * 1181. Uma régua de janela responderia "desktop" para uma coluna de 812.
+ *
+ * ⚠️ **480 separa celular de tablet, e é escolha de desenho.** Botão que
+ * ocupa a linha toda é certo no polegar e estranho num iPad mini em pé, que
+ * tem 744px de container -- lá os botões continuam do tamanho do texto.
+ *
+ * ⚠️ O container já existe: o `AppShell` declara `containerType` na área de
+ * conteúdo, que é o que dá as medidas em `cqi` do recuo do `main`. Esta
+ * régua lê o mesmo.
+ */
+export const CONTAINER_DE_CELULAR = "(max-width: 480px)";

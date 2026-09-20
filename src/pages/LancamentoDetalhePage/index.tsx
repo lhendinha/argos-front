@@ -1,4 +1,6 @@
 import { Box, Flex, Heading, Text } from "@chakra-ui/react";
+
+import { ACOES_DO_CABECALHO } from "../../theme/cabecalho";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -342,9 +344,12 @@ export default function LancamentoDetalhePage() {
         </Box>
 
         {/* ⚠️ `flex="0 1 auto"` e não `flexShrink={0}`: indivisível, ele
-            empurrava a página em vez de descer. Descendo, ocupa a linha e se
-            alinha à direita, como no desktop. */}
-        <Flex gap="8px" flex="0 1 auto" wrap="wrap" justify="flex-end">
+            empurrava a página em vez de descer.
+
+            ⚠️ A largura dos botões é a mesma regra do cabeçalho de tela --
+            no celular eles ocupam a linha e dividem entre si, em vez de
+            descerem um por fileira encostados à direita. */}
+        <Flex flex="0 1 auto" justify="flex-end" css={ACOES_DO_CABECALHO}>
           {podeExcluir && (
             <Botao
               variante="perigoContorno"
