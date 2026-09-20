@@ -15,9 +15,10 @@ import {
   SeletorData,
   Tabela,
 } from "../../../../components";
-import { NATUREZA_SAIDA } from "../../../../constants";
+import { LIMIAR_DA_LISTA_EM_ITENS, NATUREZA_SAIDA } from "../../../../constants";
 import { useToast } from "../../../../contexts/ToastContext";
 import { useGuardaDeDescarte } from "../../../../hooks/useGuardaDeDescarte";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import {
   emitirFatura,
   listarAFaturarDoCliente,
@@ -31,6 +32,7 @@ import type { Lancamento } from "../../../../types";
 import type { RespostaAFaturarDoCliente } from "../../../../types/respostas";
 import { contar, formatarCentavos, formatarData, hojeISO } from "../../../../utils";
 import { COLUNAS_DA_EMISSAO } from "../../constants";
+import ItemDaEmissao from "../ItemDaEmissao";
 import type { ModalDeEmissaoProps } from "./types";
 
 /** Emitir a fatura de um cliente.
@@ -77,6 +79,7 @@ import type { ModalDeEmissaoProps } from "./types";
  * ➡️ `index.test.tsx`.
  */
 export default function ModalDeEmissao({ cliente, onFechar, onEmitida }: ModalDeEmissaoProps) {
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
   const queryClient = useQueryClient();
   const toast = useToast();
   const doCliente = useQuery<RespostaAFaturarDoCliente>({
@@ -179,6 +182,27 @@ export default function ModalDeEmissao({ cliente, onFechar, onEmitida }: ModalDe
   } else {
     previa = (
       <CartaoDeTabela>
+        <Box ref={medir}>
+          {estreita ? (
+            lancamentos.length === 0 ? (
+              /* ⚠️ Alguém pode ter faturado este cliente entre a lista e o
+                 clique: a lista é de antes. */
+              <EstadoVazio mensagem="Nada deste cliente para faturar." />
+            ) : (
+              <Box px="6px">
+                {lancamentos.map((l) => (
+                  <ItemDaEmissao
+                    key={l.lancamento_id}
+                    lancamento={l}
+                    incluido={!desmarcados.includes(l.lancamento_id)}
+                    naoCobrarEmVoo={naoCobrar.isPending}
+                    onAlternar={() => alternar(l.lancamento_id)}
+                    onNaoCobrar={(alvo) => naoCobrar.mutate(alvo)}
+                  />
+                ))}
+              </Box>
+            )
+          ) : (
         <Tabela
           colunas={COLUNAS_DA_EMISSAO}
           vazio={
@@ -247,6 +271,8 @@ export default function ModalDeEmissao({ cliente, onFechar, onEmitida }: ModalDe
             );
           })}
         </Tabela>
+          )}
+        </Box>
 
         <Flex justify="space-between" align="center" p="12px 14px" borderTopWidth="1px" borderTopColor="border">
           <Text fontSize="13px" fontWeight="700">

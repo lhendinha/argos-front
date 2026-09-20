@@ -17,9 +17,11 @@ import {
   rotuloDeResponsavel,
   selecionaveis,
 } from "../../../../utils/importacao";
-import { TAMANHO_PAGINA_PADRAO } from "../../../../constants";
+import { LIMIAR_DA_LISTA_EM_ITENS, TAMANHO_PAGINA_PADRAO } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { COLUNAS_DA_PREVIA, ESTILO_DE_LINK } from "../../constants";
 import AvisoDaImportacao from "../AvisoDaImportacao";
+import ItemDaPrevia from "../ItemDaPrevia";
 import LinhaDaPrevia from "../LinhaDaPrevia";
 import ResumoDaPrevia from "../ResumoDaPrevia";
 import type { PreviaDaImportacaoProps } from "./types";
@@ -39,6 +41,7 @@ export default function PreviaDaImportacao({
   onImportar,
   onVoltar,
 }: PreviaDaImportacaoProps) {
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
   const disponiveis = useMemo(() => selecionaveis(previa.processos), [previa.processos]);
   /* 🔴 Abre marcando tudo que dá para importar, MENOS o que este subgrupo já
      apagou de propósito. Quem apagou tomou uma decisão, e o padrão da tela
@@ -213,6 +216,19 @@ export default function PreviaDaImportacao({
       {/* ⚠️ Durante a gravação a tabela inteira trava: desmarcar no meio
           mudaria o contador sem mudar o que está sendo gravado. */}
       <Box opacity={importando ? 0.55 : 1} pointerEvents={importando ? "none" : "auto"}>
+        <Box ref={medir}>
+          {estreita ? (
+            <Box px="6px">
+              {daPagina.map((p) => (
+                <ItemDaPrevia
+                  key={p.numero_processo}
+                  processo={p}
+                  marcado={marcados.has(p.numero_processo)}
+                  onAlternar={() => alternar(p.numero_processo)}
+                />
+              ))}
+            </Box>
+          ) : (
         <Tabela colunas={COLUNAS_DA_PREVIA}>
           {daPagina.map((p) => (
             <LinhaDaPrevia
@@ -223,6 +239,8 @@ export default function PreviaDaImportacao({
             />
           ))}
         </Tabela>
+          )}
+        </Box>
 
         {/* ⚠️ A mesma barra das outras listas, e pelo mesmo motivo: 500
             linhas numa caixa rolante escondem o rodapé de confirmação, e a
