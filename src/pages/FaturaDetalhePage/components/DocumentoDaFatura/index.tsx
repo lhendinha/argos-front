@@ -7,7 +7,7 @@ import {
   EstadoVazio,
   Tabela,
 } from "../../../../components";
-import { NATUREZA_SAIDA } from "../../../../constants";
+import { NATUREZA_SAIDA, TELA_DE_DUAS_COLUNAS } from "../../../../constants";
 import { contar, formatarCentavos, formatarData } from "../../../../utils";
 import { COLUNAS_DO_DOCUMENTO } from "../../../FinanceiroPage/constants";
 import type { DocumentoDaFaturaProps } from "./types";
@@ -132,10 +132,11 @@ export default function DocumentoDaFatura({
 
       <Cartao titulo="Dados da fatura">
         <SimpleGrid
-          /* Uma coluna por padrão, duas a partir de 480px -- e a media query
-             é CRUA, sem `screen`, para valer no papel também. */
+          /* Uma coluna por padrão, duas quando o par cabe -- e a media
+             query é CRUA, sem `screen`, para valer no papel também. Ver
+             `TELA_DE_DUAS_COLUNAS`. */
           templateColumns="1fr"
-          css={{ "@media (min-width: 480px)": { gridTemplateColumns: "1fr 1fr" } }}
+          css={{ [`@media ${TELA_DE_DUAS_COLUNAS}`]: { gridTemplateColumns: "1fr 1fr" } }}
           columnGap="14px"
           rowGap="16px"
         >

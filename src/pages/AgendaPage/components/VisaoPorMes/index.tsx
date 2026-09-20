@@ -2,6 +2,7 @@ import { Box, Flex, Grid } from "@chakra-ui/react";
 
 import { BotaoNu } from "../../../../components";
 
+import { TELA_SEM_ESPACO_PARA_O_MES } from "../../../../constants";
 import { DIAS_DA_SEMANA_CURTOS, PONTOS_POR_CELULA } from "../../constants";
 import { gradeDoMes } from "../../../../utils/calendario";
 import type { VisaoPorMesProps } from "./types";
@@ -63,11 +64,11 @@ export default function VisaoPorMes({ data, isoDeHoje, porDia, onEscolherDia }: 
             w="100%"
             minH="84px"
             p="6px"
-            /* Célula mais baixa no celular (640px do artifact): com 84px a
-               grade de seis semanas não cabe na tela e o mês fica sem
-               visão de conjunto, que é o motivo de existir esta visão. */
+            /* Célula mais baixa onde a grade de seis semanas não cabe --
+               por largura OU por altura. A régua e a medida que a corrigiu
+               estão em `TELA_SEM_ESPACO_PARA_O_MES`. */
             css={{
-              "@media (max-width: 640px)": { minHeight: "52px", padding: "4px" },
+              [`@media ${TELA_SEM_ESPACO_PARA_O_MES}`]: { minHeight: "52px", padding: "4px" },
             }}
             display="flex"
             flexDirection="column"

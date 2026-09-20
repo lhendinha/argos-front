@@ -24,6 +24,7 @@ export * from "./documento";
 export * from "./financeiro";
 export * from "./processo";
 export * from "./dialogo";
+export * from "./telas";
 export * from "./arraste";
 export * from "./lista";
 export * from "./formulario";
