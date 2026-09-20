@@ -147,7 +147,7 @@ export default function CamposDeEndereco({
         </Campo>
       </LinhaDeCampos>
 
-      <Campo rotulo="UF" para={id("uf")}>
+      <Campo rotulo="UF" para={id("uf")} curto>
         <Select
           id={id("uf")}
           /* 🔴 A opção vazia é EXPLÍCITA: o `Select` não é clearable, e sem
@@ -158,7 +158,7 @@ export default function CamposDeEndereco({
           valor={valores.uf}
           onMudar={(v) => mudarCampo("uf", v)}
           desabilitado={somenteLeitura}
-          largura="120px"
+          largura="100%"
         />
       </Campo>
     </>

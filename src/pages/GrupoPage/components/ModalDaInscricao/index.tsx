@@ -143,6 +143,7 @@ export default function ModalDaInscricao({
           <Campo
             rotulo="UF"
             para="uf-da-inscricao"
+            curto
             obrigatorio={!editando}
             erro={
               tentou && erroDeFormato?.campo === "ufOab" ? erroDeFormato.mensagem : undefined
@@ -153,7 +154,7 @@ export default function ModalDaInscricao({
                 canto com o cadeado. Escolher entre 27 opções é o gesto de
                 cadastrar; aqui não há o que escolher. */
             editando ? (
-              <CampoComCadeado largura="120px">
+              <CampoComCadeado largura="100%">
                 <Input id="uf-da-inscricao" value={uf} disabled pr="38px" />
               </CampoComCadeado>
             ) : (
@@ -164,7 +165,7 @@ export default function ModalDaInscricao({
                 onMudar={setUf}
                 placeholder="UF"
                 comOpcaoTodas={false}
-                largura="120px"
+                largura="100%"
               />
             )}
           </Campo>

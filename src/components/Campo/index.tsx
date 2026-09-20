@@ -1,5 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 
+import { LARGURA_DE_CAMPO_CURTO } from "../../constants";
 import { Rotulo } from "../Rotulo";
 import type { CampoProps } from "./types";
 
@@ -10,7 +11,7 @@ import type { CampoProps } from "./types";
  * em `bad`, como no artifact.
  */
 export default function Campo({
-  rotulo, para, obrigatorio, dica, erro, aposORotulo, children,
+  rotulo, para, obrigatorio, dica, erro, aposORotulo, curto, children,
 }: CampoProps) {
   return (
     <Box mb="16px" position="relative">
@@ -25,7 +26,17 @@ export default function Campo({
         </Rotulo>
         {aposORotulo}
       </Flex>
-      {children}
+      {/* 🔴 A largura envolve SÓ o controle, e não o campo inteiro: o erro e
+          a dica são irmãos aqui embaixo, e 120px os quebrariam em cinco
+          linhas de duas palavras.
+
+          ⚠️ O ponto de virada é o MESMO de `LinhaDeCampos` (`sm`), e não um
+          número escolhido aqui. Enquanto a linha tem duas colunas, a UF curta
+          ao lado do número é o desenho; quando a linha vira uma coluna só, a
+          UF fica sozinha numa faixa vazia e o formulário parece desalinhado.
+          Dois pontos de virada diferentes dariam uma terceira aparência, no
+          intervalo entre eles. */}
+      {curto ? <Box maxW={{ base: "100%", sm: LARGURA_DE_CAMPO_CURTO }}>{children}</Box> : children}
       {erro ? (
         <Text fontSize="11.5px" color="status.bad" mt="5px" role="alert">
           {erro}

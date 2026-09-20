@@ -221,7 +221,7 @@ export default function EditarMembroForm({
                     placeholder="Só os dígitos"
                   />
                 </Campo>
-                <Campo rotulo="UF" para="uf-oab-membro">
+                <Campo rotulo="UF" para="uf-oab-membro" curto>
                   <Select
                     id="uf-oab-membro"
                     /* 🔴 A opção vazia é EXPLÍCITA, como no perfil: é o vazio
@@ -231,7 +231,7 @@ export default function EditarMembroForm({
                              ...UFS.map((uf) => ({ value: uf, label: uf }))]}
                     valor={ufOab}
                     onMudar={setUfOab}
-                    largura="120px"
+                    largura="100%"
                   />
                 </Campo>
               </LinhaDeCampos>

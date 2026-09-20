@@ -4,8 +4,15 @@ import type { LinhaDeCamposProps } from "./types";
 /** Dois campos lado a lado (`.field-row` do artifact): grade de 1fr 1fr com
  * 14px de intervalo.
  *
- * Vira uma coluna só abaixo de 640px -- dois campos de data espremidos num
- * celular não são utilizáveis, e o artifact faz o mesmo no seu media query.
+ * Vira uma coluna só abaixo do token `sm` -- dois campos de data espremidos
+ * num celular não são utilizáveis, e o artifact faz o mesmo no seu media
+ * query.
+ *
+ * ⚠️ **Este comentário dizia 640px, e o CSS que sai é 30rem (480).** O `sm`
+ * do Chakra v3 é 30rem; 640 é o `sm` de OUTRAS bibliotecas, e entrou aqui
+ * por hábito. Conferido lendo a regra no navegador:
+ * `@media screen and (min-width: 30rem){grid-template-columns:1fr 1fr}`.
+ * Fica como aviso porque o número errado sobreviveu a várias leituras.
  */
 export default function LinhaDeCampos({ proporcoes, children }: LinhaDeCamposProps) {
   return (

@@ -153,6 +153,7 @@ export default function FormularioDaInscricao() {
         <Campo
           rotulo="UF"
           para="uf-oab-perfil"
+          curto
           erro={erro?.campo === "ufOab" ? erro.mensagem : undefined}
         >
           <Select
@@ -164,7 +165,7 @@ export default function FormularioDaInscricao() {
             opcoes={[{ value: "", label: "Nenhuma" }, ...UFS.map((uf) => ({ value: uf, label: uf }))]}
             valor={ufOab}
             onMudar={setUfOab}
-            largura="120px"
+            largura="100%"
           />
         </Campo>
       </LinhaDeCampos>

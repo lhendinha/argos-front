@@ -24,5 +24,17 @@ export interface CampoProps {
    * balão abriria e fecharia no mesmo clique. Como irmão, o "i" é só um
    * botão. */
   aposORotulo?: ReactNode;
+  /** O controle tem conteúdo CURTO (a UF, de duas letras) e não merece a
+   * largura inteira da linha -- enquanto houver linha.
+   *
+   * 🔴 Aqui, e não uma `largura` fixa no controle. O `Select` da UF nasceu
+   * com `largura="120px"` em QUATRO formulários, e nos três em que ele divide
+   * uma `LinhaDeCampos` o celular empilha a linha: o número fica com a faixa
+   * inteira e a UF, logo abaixo, com 120px de um lado e um vazio do outro.
+   * Quem apontou foi o usuário, olhando as telas de cliente e de inscrição.
+   *
+   * ⚠️ É teto, não largura: abaixo de `sm` o controle ocupa a faixa toda,
+   * como os campos vizinhos. */
+  curto?: boolean;
   children: ReactNode;
 }
