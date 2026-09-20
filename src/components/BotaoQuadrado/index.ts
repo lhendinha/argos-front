@@ -48,7 +48,23 @@ export const BotaoQuadrado = chakra("button", {
       },
     },
     tamanho: {
-      padrao: { width: "34px", height: "34px" },
+      /* 🔴 **34px no apontador fino, 44 no grosso.** Medido em 375px com
+         toque: renomear e remover um subgrupo, e virar o mês na Agenda,
+         eram alvos de 34x34 -- o dedo cobre uns 44, e a régua de toque é
+         essa. Aqui o botão CRESCE de verdade, e não por uma camada
+         invisível como no círculo de concluir: ele é um quadrado com borda,
+         então esticar o desenho é o que mantém alvo e desenho no mesmo
+         lugar. Duas camadas seriam duas verdades.
+
+         ⚠️ A linha onde ele mora já tem 48px ou mais, então nada cresce por
+         causa disto -- conferido nas listas de catálogo e de membros. */
+      padrao: {
+        width: "34px",
+        height: "34px",
+        "@media (pointer: coarse)": { width: "44px", height: "44px" },
+      },
+      /* ⚠️ O compacto NÃO cresce: ele é a seta dentro da célula do
+         calendário, e um quadrado de 44px ali empurraria a grade do mês. */
       compacto: { width: "26px", height: "26px" },
     },
   },

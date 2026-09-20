@@ -66,6 +66,11 @@ export default function Abas<T extends string>({ abas, ativa, onMudar, grupo }: 
               flex="0 0 auto"
               whiteSpace="nowrap"
               p="11px 4px"
+              /* 🔴 44px no apontador grosso. Medida: com 11px de recuo a aba
+                 fica em 42 -- dois pixels da régua de toque, em TODA tela com
+                 abas. Um pixel a mais em cima e embaixo fecha a conta, e a
+                 divisória desce junto com ela: no apontador fino nada muda. */
+              css={{ "@media (pointer: coarse)": { paddingBlock: "12px" } }}
               mr="22px"
               mb="-1px"
               fontSize="13.5px"

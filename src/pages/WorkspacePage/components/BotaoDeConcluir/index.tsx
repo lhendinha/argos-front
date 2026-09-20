@@ -33,12 +33,13 @@ export default function BotaoDeConcluir({ rotulo, desabilitado, onConcluir }: Bo
          o resultado esperado. Esticar o círculo até 44 estragaria a lista
          (o docstring acima explica por que ele é discreto), então quem
          cresce é um retângulo invisível por cima. `inset` negativo de 12px
-         dá ~43px de alvo, e ele some onde o apontador é fino. */
+         dava 43px de alvo -- um pixel curto da régua, medido. 12.5 fecha os
+         44, e o pseudo-elemento some onde o apontador é fino. */
       position="relative"
       _after={{
         content: '""',
         position: "absolute",
-        inset: "-12px",
+        inset: "-12.5px",
         "@media (pointer: fine)": { display: "none" },
       }}
       css={{ "& svg": { width: "11px", height: "11px" } }}

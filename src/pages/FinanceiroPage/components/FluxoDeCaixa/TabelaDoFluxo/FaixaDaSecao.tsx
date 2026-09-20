@@ -71,9 +71,24 @@ export default function FaixaDaSecao({
             alignItems="center"
             /* O botão é o pai do `nome`; sem herdar o grude, ele voltaria a
                ser uma caixa de 1975px com o rótulo na ponta esquerda. */
-            position="sticky"
             left="0"
             w="fit-content"
+            /* 🔴 44px no apontador grosso: este botão dobra e desdobra a
+               seção inteira, e media 20px de altura. Cresce a ÁREA, não o
+               desenho -- a faixa é fina de propósito no artefato, e um
+               retângulo invisível de -12px em cima e embaixo cobre a linha
+               toda sem mexer nela.
+
+               ⚠️ `sticky` JÁ é posicionado, então o pseudo resolve contra
+               ele -- não dá para trocar por `relative` sem perder o grude. */
+            position="sticky"
+            _after={{
+              content: '""',
+              position: "absolute",
+              insetBlock: "-12px",
+              insetInline: "0",
+              "@media (pointer: fine)": { display: "none" },
+            }}
           >
             {nome}
           </BotaoNu>

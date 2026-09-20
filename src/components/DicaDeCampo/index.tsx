@@ -47,6 +47,19 @@ export default function DicaDeCampo({ rotulo, children }: DicaDeCampoProps) {
           ml="5px"
           w="16px"
           h="16px"
+          /* 🔴 **A ÁREA de toque cresce, o desenho não.** Medido: 16x16 num
+             alvo de dedo que cobre uns 44. Esticar o círculo estragaria a
+             linha do rótulo, onde ele é um "i" discreto ao lado do texto --
+             então cresce um retângulo invisível por cima, como no círculo de
+             concluir da Área de trabalho. `inset` de -14px dá 44, e ele some
+             onde o apontador é fino. */
+          position="relative"
+          _after={{
+            content: '""',
+            position: "absolute",
+            inset: "-14px",
+            "@media (pointer: fine)": { display: "none" },
+          }}
           display="inline-flex"
           alignItems="center"
           justifyContent="center"

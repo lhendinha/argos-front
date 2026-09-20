@@ -9,6 +9,16 @@ const ESTILO = {
   justifyContent: "space-between",
   width: "100%",
   p: "9px 0",
+  /* 🔴 44px no apontador grosso. Medida: 38px de linha, e cada uma delas é
+     um atalho que leva para outra tela com um filtro pronto -- errar de
+     linha aqui abre a lista errada. Três pixels de recuo a mais em cima e
+     embaixo, e só no toque.
+
+
+  ⚠️ `minHeight` junto do recuo: com o recuo sozinho duas linhas paravam em
+     43px, porque a altura do texto delas era um pixel menor. O piso fecha a
+     conta seja qual for o conteúdo. */
+  "@media (pointer: coarse)": { paddingBlock: "12px", minHeight: "44px" },
   fontSize: "13px",
   fontWeight: "700",
   borderBottomWidth: "1px",
