@@ -34,6 +34,10 @@ const DE_FORA = new Set([
   // React, React Query, React Router, Chakra, react-select, TypeScript
   "useDeferredValue", "useQueries", "removeQueries", "partialMatchKey",
   "setSearchParams", "setState", "BoxProps", "DateValue", "valueAsString",
+  // `ScrollRestoration` é do roteador de DADOS do React Router, e
+  // `useRolagemPreservada` cita justamente para dizer por que não o usa:
+  // este app monta com `BrowserRouter`, onde ele não existe.
+  "ScrollRestoration",
   "setMonth", "periodRange", "selectOptions", "visiblePageNumbers",
   "backspaceRemovesValue", "isolatedModules", "VoidFunction", "Label",
   // Receitas e tipos do Chakra/Ark citados na explicação da caixa de marcar

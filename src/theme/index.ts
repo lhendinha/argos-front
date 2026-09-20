@@ -427,6 +427,31 @@ export const system = createSystem(defaultConfig, {
     /** Foco visível em tudo que recebe foco por teclado. Sem isto, quem
      * navega por Tab não enxerga onde está -- e a maior parte dos nossos
      * componentes não declara anel próprio. */
+    /** 🔴 **O retorno de toque, e só no dedo.** Todo estado de "estou
+     * apertando" deste sistema era `_hover` -- e hover não existe no toque.
+     * Apertar um botão no celular não devolvia nada até a tela mudar, e numa
+     * rede lenta isso são segundos sem sinal de que o toque foi registrado:
+     * a pessoa aperta de novo.
+     *
+     * ⚠️ **Opacidade, e não cor.** Um botão sólido da marca, uma pílula
+     * branca e uma linha de tabela têm fundos diferentes; uma cor de apertado
+     * precisaria de um token por família. A opacidade funciona em cima de
+     * qualquer um e não inventa nenhum.
+     *
+     * ⚠️ **`pointer: coarse` apenas.** No desktop o `_hover` de cada
+     * componente continua sozinho, e nada muda -- a mesma régua dos alvos de
+     * 44px.
+     *
+     * ⚠️ Desabilitado não responde: sinal de toque em botão travado promete
+     * o que não vai acontecer.
+     *
+     * ⚠️ O seletor fica FORA e a media query dentro, como as regras de
+     * impressão logo acima: a tipagem do `globalCss` só aceita seletor no
+     * topo, e o caminho inverso dá `TS2353`. O CSS que sai é o mesmo. */
+    "button:not(:disabled):active, a:active, tr[tabindex]:active": {
+      "@media (pointer: coarse)": { opacity: 0.62 },
+    },
+
     ":focus-visible": {
       outline: "2px solid",
       outlineColor: "brand",

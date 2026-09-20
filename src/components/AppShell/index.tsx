@@ -2,6 +2,7 @@ import { Box, Flex } from "@chakra-ui/react";
 import { Outlet } from "react-router-dom";
 
 import { useMenuDaCasca } from "../../hooks/useMenuDaCasca";
+import { useRolagemPreservada } from "../../hooks/useRolagemPreservada";
 import Gaveta from "./Gaveta";
 import MenuLateral from "./MenuLateral";
 import Topbar from "./Topbar";
@@ -38,6 +39,7 @@ import type { AppShellProps } from "./types";
  */
 export default function AppShell({ onSair }: AppShellProps) {
   const menu = useMenuDaCasca();
+  useRolagemPreservada();
   const gavetaAberta = !menu.fixo && menu.aberto;
 
   return (
