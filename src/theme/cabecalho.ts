@@ -40,6 +40,10 @@ export const ACOES_DO_CABECALHO: SystemStyleObject = {
  * ficava com o que sobrasse das pílulas. Filtro se escolhe de vez em quando;
  * busca se usa toda hora, e é ela que precisa da largura.
  *
+ * ⚠️ **Só a BUSCA estica; os filtros ficam do tamanho deles.** Quem escolhe
+ * um filtro lê o rótulo e toca; esticá-lo de ponta a ponta não ganha nada e
+ * faz a fileira parecer uma pilha de botões iguais.
+ *
  * ⚠️ **O campo de busca tem de ser o PRIMEIRO filho.** A regra é de
  * posição, não de classe, porque a fileira é montada com componentes
  * diferentes em cada tela. Foi por isso que a busca de Processos mudou de
@@ -52,6 +56,11 @@ export const ACOES_DO_CABECALHO: SystemStyleObject = {
  */
 export const LINHA_DE_FILTROS: SystemStyleObject = {
   [`@container ${CONTAINER_DE_CELULAR}`]: {
-    "& > *:first-of-type": { flexBasis: "100%", maxWidth: "100%" },
+    /* 🔴 `:first-child`, e NUNCA `:first-of-type`. Com `*`, o segundo casa
+       com o primeiro de CADA tipo de elemento: o campo de busca é um `div` e
+       a pílula de filtro é um `button`, então os dois levavam a linha
+       inteira. Visto na tela -- "ATIVOS" e "TODOS OS SUBGRUPOS" esticados de
+       ponta a ponta, que não era o pedido nem faz sentido para um filtro. */
+    "& > *:first-child": { flexBasis: "100%", maxWidth: "100%" },
   },
 };
