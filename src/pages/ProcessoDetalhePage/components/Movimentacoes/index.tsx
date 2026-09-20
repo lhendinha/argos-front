@@ -94,6 +94,12 @@ export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
     );
   }
 
+  /* 🔴 A coluna do ponto só existe se ALGUMA movimentação foi avisada. Sem
+     isto, contra uma API que ainda não devolve `lido` -- nenhuma tem aviso
+     --, toda linha ganharia um recuo vazio de 44px. Olha a página INTEIRA e
+     não só a visível: a coluna não pode aparecer e sumir ao paginar. */
+  const algumAvisado = comunicacoes.some((c) => c.lido !== undefined);
+
   const totalPaginas = Math.ceil(comunicacoes.length / tamanhoPagina);
   const inicio = (pagina - 1) * tamanhoPagina;
   const visiveis = comunicacoes.slice(inicio, inicio + tamanhoPagina);
@@ -132,6 +138,7 @@ export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
                  toda movimentação que nunca notificou ninguém acenderia, ou
                  seja, a lista inteira. */
               aviso={c.lido === false ? "naoLido" : c.lido === true ? "lido" : undefined}
+              reservarColuna={algumAvisado}
               onAbrir={() => trocarAberta(String(c.comunicacao_id))}
             />
           ))}

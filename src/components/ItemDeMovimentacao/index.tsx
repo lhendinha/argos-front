@@ -29,7 +29,13 @@ import type { ItemDeMovimentacaoProps } from "./types";
  * container. Quem lista precisa é envolver os itens numa caixa própria, para
  * que a barra de paginação não conte como "o último".
  */
-export default function ItemDeMovimentacao({ titulo, meta, aviso, onAbrir }: ItemDeMovimentacaoProps) {
+export default function ItemDeMovimentacao({
+  titulo,
+  meta,
+  aviso,
+  reservarColuna,
+  onAbrir,
+}: ItemDeMovimentacaoProps) {
   const naoLida = aviso === "naoLido";
 
   return (
@@ -49,12 +55,13 @@ export default function ItemDeMovimentacao({ titulo, meta, aviso, onAbrir }: Ite
          ponto nenhum: um vazado ali diria "lida", que é falso -- ninguém
          nunca avisou. O compartimento continua ocupando o lugar para a
          coluna de pontos não serrilhar quando 7 de 10 linhas não têm aviso. */
+      /* ⚠️ A coluna só existe quando ALGUMA linha da lista tem aviso: numa
+         lista onde nada foi avisado ela seria um recuo de 44px em toda
+         linha, sem nada dentro. Ver `reservarColuna`. */
       selecao={
-        aviso ? (
-          <Ponto tom="marca" vazado={aviso === "lido"} noTopo />
-        ) : (
-          <Box aria-hidden="true" />
-        )
+        reservarColuna ? (
+          aviso ? <Ponto tom="marca" vazado={aviso === "lido"} noTopo /> : <Box aria-hidden="true" />
+        ) : undefined
       }
       rodape={{ texto: meta }}
     />
