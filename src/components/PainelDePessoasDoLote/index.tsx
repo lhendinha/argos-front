@@ -1,4 +1,5 @@
 import { Box, Menu, Portal, Text } from "@chakra-ui/react";
+import { POSICAO_DO_MENU } from "../../theme/menu";
 import { useState } from "react";
 
 import Avatar from "../Avatar";
@@ -39,7 +40,7 @@ export default function PainelDePessoasDoLote({ tarefas, desabilitado, onEscolhe
   const membros = useTodosOsMembros(aberto);
 
   return (
-    <Menu.Root open={aberto} onOpenChange={(e) => setAberto(e.open)}>
+    <Menu.Root open={aberto} onOpenChange={(e) => setAberto(e.open)} positioning={POSICAO_DO_MENU}>
       <Menu.Trigger asChild>
         <Botao variante="ghost" disabled={desabilitado}>
           <IconePessoa />

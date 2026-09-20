@@ -6,6 +6,21 @@ import type { SystemStyleObject } from "@chakra-ui/react";
  * tipagem de `BoxProps` (um handler de evento) colidia com o `onSelect` do
  * `Menu.Item` (um `VoidFunction`) e o TypeScript recusava.
  */
+/** Onde o painel de menu nasce em relação ao gatilho.
+ *
+ * 🔴 **`bottom-start`, e não o centro que é o padrão do Chakra.** Medido em
+ * 390px: o painel de "+ Novo lançamento" tem 220px e o botão fica a 16px da
+ * borda -- centralizado, ele nascia em **-29px**, com 29 pixels fora da tela.
+ * Alinhado pelo começo, ele cresce para o lado onde há espaço.
+ *
+ * ⚠️ É a MESMA lição que `DicaDeCampo` já tinha aprendido e escrito, sobre o
+ * balão do "i" que saía do cartão. Ela estava documentada num componente e
+ * não valia para os outros cinco menus -- que é o que acontece quando a
+ * decisão mora no lugar onde doeu em vez de morar no tema.
+ *
+ * ⚠️ O usuário viu antes da régua: `medir-mobile.mjs` não abre menu nenhum. */
+export const POSICAO_DO_MENU = { placement: "bottom-start", gutter: 6 } as const;
+
 export const PAINEL_DE_MENU: SystemStyleObject = {
   minWidth: "216px",
   padding: "6px",

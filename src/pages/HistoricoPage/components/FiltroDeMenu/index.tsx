@@ -1,7 +1,7 @@
 import { Menu, Portal, Text } from "@chakra-ui/react";
 
 import { PilulaDeFiltro } from "../../../../components";
-import { CONTAGEM_NA_OPCAO, OPCAO_COM_CONTAGEM, OPCAO_DE_MENU, OPCAO_DE_MENU_ATIVA, PAINEL_DE_MENU } from "../../../../theme/menu";
+import { CONTAGEM_NA_OPCAO, OPCAO_COM_CONTAGEM, OPCAO_DE_MENU, OPCAO_DE_MENU_ATIVA, PAINEL_DE_MENU, POSICAO_DO_MENU } from "../../../../theme/menu";
 import { formatarQuantidade } from "../../../../utils";
 import type { FiltroDeMenuProps } from "./types";
 
@@ -30,7 +30,7 @@ export default function FiltroDeMenu<T extends string | number | boolean>({
   const contagemAtual = contagens?.[atual.id];
 
   return (
-    <Menu.Root>
+    <Menu.Root positioning={POSICAO_DO_MENU}>
       <Menu.Trigger asChild>
         <PilulaDeFiltro ativo={ativo}>
           {atual.rotulo}

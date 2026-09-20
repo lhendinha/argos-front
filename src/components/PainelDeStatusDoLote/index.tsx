@@ -1,4 +1,5 @@
 import { Box, Menu, Portal, Text } from "@chakra-ui/react";
+import { POSICAO_DO_MENU } from "../../theme/menu";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -51,7 +52,7 @@ export default function PainelDeStatusDoLote({
   for (const t of tarefas) jaAqui.set(t.coluna_id, (jaAqui.get(t.coluna_id) ?? 0) + 1);
 
   return (
-    <Menu.Root open={aberto} onOpenChange={(e) => setAberto(e.open)}>
+    <Menu.Root open={aberto} onOpenChange={(e) => setAberto(e.open)} positioning={POSICAO_DO_MENU}>
       <Menu.Trigger asChild>
         <Botao variante="ghost" disabled={Boolean(motivo) || desabilitado} title={motivo || undefined}>
           <IconeMover />

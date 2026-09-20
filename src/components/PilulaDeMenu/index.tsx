@@ -3,7 +3,7 @@ import { Menu, Portal } from "@chakra-ui/react";
 /* Irmão direto, não pelo índice: este componente é exportado por ele, e
    importar de lá criaria um ciclo. */
 import { PilulaDeFiltro } from "../PilulaDeFiltro";
-import { OPCAO_DE_MENU, OPCAO_DE_MENU_ATIVA, PAINEL_DE_MENU } from "../../theme/menu";
+import { OPCAO_DE_MENU, OPCAO_DE_MENU_ATIVA, PAINEL_DE_MENU, POSICAO_DO_MENU } from "../../theme/menu";
 import type { PilulaDeMenuProps } from "./types";
 
 /** Pílula da barra de filtros que abre um menu de escolha única.
@@ -15,7 +15,7 @@ export default function PilulaDeMenu({ opcoes, selecionado, ativo, onEscolher }:
   const atual = opcoes.find((o) => o.id === selecionado) ?? opcoes[0];
 
   return (
-    <Menu.Root>
+    <Menu.Root positioning={POSICAO_DO_MENU}>
       <Menu.Trigger asChild>
         <PilulaDeFiltro ativo={ativo}>{atual?.rotulo ?? ""}</PilulaDeFiltro>
       </Menu.Trigger>

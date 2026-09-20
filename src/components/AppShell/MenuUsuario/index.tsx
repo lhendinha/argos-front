@@ -7,7 +7,7 @@ import { getEmail } from "../../../services";
 import Avatar from "../../Avatar";
 import { BotaoNu } from "../../BotaoNu";
 import IconeChevron from "../../Icons/IconeChevron";
-import { OPCAO_DE_MENU, PAINEL_DE_MENU } from "../../../theme/menu";
+import { OPCAO_DE_MENU, PAINEL_DE_MENU, POSICAO_DO_MENU } from "../../../theme/menu";
 import type { MenuUsuarioProps } from "./types";
 
 /** Chip do usuário na topbar, abrindo menu com "Meu perfil" e "Sair".
@@ -30,7 +30,7 @@ export default function MenuUsuario({ onSair }: MenuUsuarioProps) {
   const nome = apelido || getEmail() || "";
 
   return (
-    <Menu.Root>
+    <Menu.Root positioning={POSICAO_DO_MENU}>
       <Menu.Trigger asChild>
         {/* `.user-chip` do artifact: avatar de 22px, o nome em 700/13 e a
             seta -- sem a linha do papel, que lá não existe. */}
