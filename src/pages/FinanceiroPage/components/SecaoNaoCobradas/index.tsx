@@ -1,4 +1,4 @@
-import { Table, Text } from "@chakra-ui/react";
+import { Box, Table, Text } from "@chakra-ui/react";
 
 import {
   Botao,
@@ -10,8 +10,11 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
+import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { formatarCentavos, formatarData } from "../../../../utils";
 import { COLUNAS_NAO_COBRADAS } from "../../constants";
+import ItemNaoCobrado from "../ItemNaoCobrado";
 import type { SecaoNaoCobradasProps } from "./types";
 
 /** As despesas tiradas de "A faturar" por "Não cobrar".
@@ -29,6 +32,12 @@ import type { SecaoNaoCobradasProps } from "./types";
 export default function SecaoNaoCobradas({
   itens, carregando, erro, onTentarDeNovo, paginacao, onAbrir, onVoltarACobrar, voltando,
 }: SecaoNaoCobradasProps) {
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const vazio =
+    itens.length === 0 ? (
+      <EstadoVazio mensagem="Nenhuma despesa marcada como não cobrar." />
+    ) : undefined;
+
   if (carregando) return <Esqueleto linhas={4} />;
   if (erro) {
     return (
@@ -49,13 +58,25 @@ export default function SecaoNaoCobradas({
       </Text>
 
       <CartaoDeTabela>
+        <Box ref={medir}>
+          {estreita ? (
+            vazio || (
+              <Box px="6px">
+                {itens.map((d) => (
+                  <ItemNaoCobrado
+                    key={d.lancamento_id}
+                    despesa={d}
+                    voltando={voltando}
+                    onAbrir={onAbrir}
+                    onVoltarACobrar={onVoltarACobrar}
+                  />
+                ))}
+              </Box>
+            )
+          ) : (
         <Tabela
           colunas={COLUNAS_NAO_COBRADAS}
-          vazio={
-            itens.length === 0 ? (
-              <EstadoVazio mensagem="Nenhuma despesa marcada como não cobrar." />
-            ) : undefined
-          }
+          vazio={vazio}
         >
           {itens.map((d) => (
             <Table.Row
@@ -103,6 +124,8 @@ export default function SecaoNaoCobradas({
             </Table.Row>
           ))}
         </Tabela>
+          )}
+        </Box>
         <Pagination {...paginacao} />
       </CartaoDeTabela>
     </>

@@ -1,4 +1,4 @@
-import { Table, Text } from "@chakra-ui/react";
+import { Box, Table, Text } from "@chakra-ui/react";
 
 import {
   CartaoDeTabela,
@@ -9,8 +9,11 @@ import {
   Pagination,
   Tabela,
 } from "../../../../components";
+import { LIMIAR_DA_LISTA_EM_ITENS } from "../../../../constants";
+import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { contar, formatarCentavos, formatarData } from "../../../../utils";
 import { COLUNAS_A_FATURAR } from "../../constants";
+import ItemAFaturar from "../ItemAFaturar";
 import type { SecaoAFaturarProps } from "./types";
 
 /** Os clientes com dinheiro esperando cobrança.
@@ -41,6 +44,12 @@ import type { SecaoAFaturarProps } from "./types";
 export default function SecaoAFaturar({
   clientes, carregando, erro, onTentarDeNovo, paginacao, onEmitir,
 }: SecaoAFaturarProps) {
+  const [medir, estreita] = useLarguraEstreita(LIMIAR_DA_LISTA_EM_ITENS);
+  const vazio =
+    clientes.length === 0 ? (
+      <EstadoVazio mensagem="Nada a faturar: todo honorário e toda despesa de cliente já foram cobrados." />
+    ) : undefined;
+
   if (carregando) return <Esqueleto linhas={4} />;
   if (erro) {
     return (
@@ -62,13 +71,19 @@ export default function SecaoAFaturar({
       </Text>
 
       <CartaoDeTabela>
+        <Box ref={medir}>
+          {estreita ? (
+            vazio || (
+              <Box px="6px">
+                {clientes.map((c) => (
+                  <ItemAFaturar key={c.cliente_id} cliente={c} onEmitir={onEmitir} />
+                ))}
+              </Box>
+            )
+          ) : (
         <Tabela
           colunas={COLUNAS_A_FATURAR}
-          vazio={
-            clientes.length === 0 ? (
-              <EstadoVazio mensagem="Nada a faturar: todo honorário e toda despesa de cliente já foram cobrados." />
-            ) : undefined
-          }
+          vazio={vazio}
         >
           {clientes.map((c) => (
             <Table.Row
@@ -108,6 +123,8 @@ export default function SecaoAFaturar({
             </Table.Row>
           ))}
         </Tabela>
+          )}
+        </Box>
         <Pagination {...paginacao} />
       </CartaoDeTabela>
     </>

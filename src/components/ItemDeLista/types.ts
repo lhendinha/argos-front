@@ -16,7 +16,13 @@ export interface RodapeDoItem {
   texto?: string;
   /** O texto é um número (documento, processo) e vai em monoespaçada. */
   mono?: boolean;
-  /** À direita: uma `Etiqueta`, uma data, um contador. */
+  /** À direita: uma `Etiqueta`, uma data, um contador -- ou um CONTROLE.
+   *
+   * ⚠️ Ele fica acima da camada que abre o registro, então botão aqui
+   * funciona. É onde mora uma ação de TEXTO: em `acoes`, ao lado do
+   * conteúdo, "Voltar a cobrar" comia 140px de uma faixa de 322 e o
+   * identificador quebrava em cinco linhas. `acoes` é para o que tem
+   * tamanho de ícone. */
   destaque?: ReactNode;
 }
 

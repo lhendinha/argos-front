@@ -176,7 +176,13 @@ export default function ItemDeLista({
               {rodape.texto}
             </Text>
             {rodape.destaque && (
-              <Box as="span" flex="0 0 auto" fontSize="12px" color="fg.subtle">
+              /* 🔴 `relative` + `zIndex`: o destaque pode ser um CONTROLE, e
+                 controle sob a camada que abre o registro seria só decoração
+                 -- o toque cairia no item. Foi o "Voltar a cobrar" das
+                 despesas não cobradas que trouxe isto: em `acoes`, o botão de
+                 texto comia 140px da linha e espremia o identificador em
+                 cinco linhas; no rodapé ele tem a faixa inteira. */
+              <Box as="span" position="relative" zIndex="1" flex="0 0 auto" fontSize="12px" color="fg.subtle">
                 {rodape.destaque}
               </Box>
             )}
