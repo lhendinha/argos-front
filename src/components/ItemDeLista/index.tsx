@@ -1,5 +1,6 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
 
+import { LARGURA_MAXIMA_DO_ITEM } from "../../constants";
 import { BotaoNu } from "../BotaoNu";
 import type { ItemDeListaProps } from "./types";
 
@@ -93,7 +94,12 @@ export default function ItemDeLista({
         </Flex>
       )}
 
-      <Box flex="1 1 auto" minW="0" p={selecao ? "14px 14px 14px 0" : "14px"}>
+      <Box
+        flex="1 1 auto"
+        minW="0"
+        maxW={LARGURA_MAXIMA_DO_ITEM}
+        p={selecao ? "14px 14px 14px 0" : "14px"}
+      >
         <Flex align="flex-start" justify="space-between" gap="12px" minW="0">
           <BotaoNu
             type="button"

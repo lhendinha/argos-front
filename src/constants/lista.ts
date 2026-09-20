@@ -41,3 +41,22 @@ export const LARGURA_MINIMA_DA_TABELA = {
   inscricoes: 525,
   categorias: 421,
 } as const;
+
+/** Até onde o CONTEÚDO de um item de lista cresce.
+ *
+ * 🔴 **O item foi desenhado para 390px, e agora ele aparece em 675.** Desde
+ * que cada lista ganhou o seu próprio limiar, um iPad mini em pé mostra itens
+ * onde antes mostrava tabela -- e esticado ao dobro o item respira demais: o
+ * nome fica na borda esquerda e "0 processos" na direita, com 400px de nada
+ * entre os dois. Não é defeito de rolagem, e a régua do mobile não pega: é o
+ * `space-between` cumprindo ordens numa largura para a qual ninguém o pensou.
+ *
+ * ⚠️ **520px é 60 caracteres**, a régua tipográfica de sempre -- medida nesta
+ * fonte, com identificadores reais do banco local: 7px por caractere em
+ * média. O nome mais longo que existe lá (91 caracteres, 640px) quebra em
+ * duas linhas, que é menos do que as três em que ele já quebra no celular.
+ *
+ * ⚠️ Teto, não largura: abaixo disso o item ocupa o que tem, e no celular
+ * este número nunca entra em jogo.
+ */
+export const LARGURA_MAXIMA_DO_ITEM = "520px";
