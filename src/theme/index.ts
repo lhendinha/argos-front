@@ -129,7 +129,26 @@ export const system = createSystem(defaultConfig, {
           borderColor: "border",
           borderRadius: "sm",
           bg: "bg.surface",
+          /* 🔴 **14px na tela, 16px no apontador grosso -- e os 16 nao sao
+             gosto, sao o limite do iOS.** Campo com fonte MENOR que 16px faz
+             o Safari ampliar a pagina ao receber foco, para o texto ficar
+             legivel. Medido no iPhone do usuario, lendo o aparelho ao vivo:
+             com 14px, `visualViewport.scale` ia a 1,1431818 -- que e
+             exatamente 16/14. E ao trocar de campo ele recentraliza essa
+             vista ampliada no novo campo: e isso que se ve como "a tela pula
+             a cada toque".
+
+             Horas foram gastas tratando isso como layout -- moldura fixa,
+             recuo, ancoragem, compressao -- e nenhuma podia funcionar,
+             porque o deslocamento nao era rolagem, era ZOOM.
+
+             (!) Nao e `user-scalable=no`. Desabilitar o zoom na meta
+             viewport tambem resolveria, e e o que fazem alguns apps, mas
+             tira de quem precisa ampliar a unica forma de fazer isso.
+
+             (!) So no apontador grosso: no desktop os 14px continuam. */
           fontSize: "14px",
+          "@media (pointer: coarse)": { fontSize: "16px" },
           /* Mesmo cinza que o artifact usa no placeholder dos selects
              (`.csel-trigger.placeholder`). Lá os campos de texto ficaram com
              o cinza padrão do navegador (#757575) por omissão -- aqui vale a

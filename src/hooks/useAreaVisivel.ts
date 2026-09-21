@@ -39,7 +39,7 @@ import { ENCOLHIMENTO_QUE_E_TECLADO, PISO_PARA_RODAPE_PRESO } from "../constants
 import type { AreaVisivel } from "../types/ui";
 
 export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
-  const [area, setArea] = useState<AreaVisivel>({ altura: null, deslocamento: 0, layoutEncolheu: false });
+  const [area, setArea] = useState<AreaVisivel>({ altura: null, deslocamento: 0, alturaDeLayout: 0 });
   /* O MAIOR layout já visto nesta largura -- a régua do "sem teclado".
      Em ref porque é memória entre medições, não coisa que redesenhe a tela.
      A largura entra junto porque girar o aparelho muda o layout por motivo
@@ -69,19 +69,11 @@ export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
       } else if (window.innerHeight > maiorLayout.current.altura) {
         maiorLayout.current.altura = window.innerHeight;
       }
-      /* 🔴 **Duas perguntas diferentes, dois limites.** Misturei as duas num
-         número só e quebrei o iPhone: o piso de 120px existe para não
-         confundir teclado com a barra do navegador, mas no iOS o layout
-         encolhe só 89px (549 -> 460) -- abaixo do piso. `layoutEncolheu`
-         ficou falso, a tela de entrada voltou para a moldura fixa, e o salto
-         voltou junto. O usuário viu no aparelho dele.
-
-         "HÁ teclado?" precisa do piso, porque a barra do navegador também
-         mexe no `innerHeight` ao recolher. "O layout encolheu JUNTO?" não
-         precisa: ela só é consultada quando já se sabe que há teclado, e aí
-         qualquer encolhimento é do teclado. */
-      const encolhimento = maiorLayout.current.altura - window.innerHeight;
-      const encolheuMuito = encolhimento >= ENCOLHIMENTO_QUE_E_TECLADO;
+      /* ⚠️ O piso separa teclado de barra do navegador -- ver
+         `ENCOLHIMENTO_QUE_E_TECLADO`. Sem ele, recolher a barra ao rolar
+         seria lido como teclado abrindo. */
+      const encolheuMuito =
+        maiorLayout.current.altura - window.innerHeight >= ENCOLHIMENTO_QUE_E_TECLADO;
       /* A folga de 1px absorve o arredondamento do zoom que o Safari aplica
          ao campo em foco -- sem ela, a folha reagiria a uma diferença que
          ninguém enxerga. */
@@ -91,7 +83,7 @@ export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
       setArea({
         altura: fechado || curto ? null : Math.round(visual.height),
         deslocamento: fechado || curto ? 0 : Math.round(visual.offsetTop),
-        layoutEncolheu: encolhimento > 1,
+        alturaDeLayout: window.innerHeight,
       });
     };
     medir();
@@ -110,5 +102,5 @@ export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
   /* 🔴 Derivado, e não lido cru: com o diálogo fechado o estado guardado é
      o da última medição, e devolvê-lo prenderia a folha a uma altura de
      teclado que não existe mais. */
-  return ativo ? area : { altura: null, deslocamento: 0, layoutEncolheu: false };
+  return ativo ? area : { altura: null, deslocamento: 0, alturaDeLayout: 0 };
 }

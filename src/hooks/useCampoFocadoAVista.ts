@@ -20,6 +20,13 @@
  */
 import { useEffect } from "react";
 
+/** Um respiro entre o campo e a borda do teclado -- encostado, ele parece
+ * cortado, e o cursor fica rente à linha. */
+const FOLGA_ABAIXO_DO_CAMPO = 8;
+
+/** Quanto esperar antes de corrigir -- ver o porquê dentro do efeito. */
+const ESPERA_PELO_NAVEGADOR = 250;
+
 export function useCampoFocadoAVista(alturaVisivel: number | null, escopo?: string): void {
   useEffect(() => {
     /* Sem altura é teclado fechado: não há correção a fazer. */
@@ -27,24 +34,41 @@ export function useCampoFocadoAVista(alturaVisivel: number | null, escopo?: stri
     const focado = document.activeElement;
     if (!(focado instanceof HTMLElement)) return;
     if (escopo && !focado.closest(escopo)) return;
-    /* 🔴 **Só rola se o campo estiver FORA da faixa.** O efeito corre a cada
-       altura nova, e o teclado não entrega uma altura: entrega várias
-       enquanto anima. Medido num iPhone 17 Pro Max, contra o build de
-       produção: o iOS relatou 393 e depois 416, então `scrollIntoView` foi
-       chamado DUAS vezes -- a segunda com o campo já à vista. Num aparelho
-       de verdade a animação passa por mais alturas que a do simulador, e
-       cada uma era mais uma chamada; quem digita vê a página deslizar de
-       novo a cada uma.
+    /* 🔴 **Rola pela DIFERENÇA medida, e não por `scrollIntoView`.** Ele
+       alinha pelo viewport de LAYOUT, e é justamente o layout que não sabe
+       do teclado: no Android ele não encolhe, e no iOS encolhe às vezes --
+       medido no mesmo iPhone 17 Pro Max, mesma versão, o layout foi de 796
+       para 696 numa rodada e ficou em 796 na seguinte. Qualquer regra
+       apoiada nele varia sozinha.
 
-       ⚠️ Comparar com `alturaVisivel`, e não confiar no `"nearest"` para não
-       fazer nada: ele decide pelo que já está à vista SEGUNDO O LAYOUT, e o
-       teclado não encolhe o layout no Android -- lá a faixa visível é a
-       única que sabe onde o teclado está.
+       A faixa visível sabe. Então a conta é direta: o quanto o campo passa
+       dela é o quanto se rola, e ponto.
 
-       ⚠️ A guarda é idempotente de propósito: rolar duas vezes para o mesmo
-       lugar não é meio defeito, é o defeito. */
-    const caixa = focado.getBoundingClientRect();
-    if (caixa.top >= 0 && caixa.bottom <= alturaVisivel) return;
-    focado.scrollIntoView?.({ block: "nearest" });
+       ⚠️ **Só rola se passar.** O efeito corre a cada altura nova, e o
+       teclado não entrega uma altura: entrega várias enquanto anima, e
+       ainda troca de altura quando se vai do e-mail para a senha (medido:
+       393 e 416, teclados diferentes). Sem esta guarda, cada uma delas era
+       mais um empurrão -- e quem digita vê a tela deslizar a cada toque.
+
+       ⚠️ `scrollBy` na JANELA, e não no elemento: o que precisa mover é a
+       página, e mover o elemento mais próximo que rola escolheria uma caixa
+       interna qualquer. */
+    /* 🔴 **Espera o navegador agir primeiro, e só corrige o resto.** O
+       Safari também rola o campo em foco, e rolar por cima dele leva o campo
+       para longe demais: medido num iPhone SE, a senha ia parar em 174 numa
+       faixa de 274 -- 80px acima do necessário -- e em PAISAGEM terminava em
+       -4, ou seja, inteiramente fora da tela por cima. A bateria dizia "À
+       VISTA" porque só cobrava o lado de baixo.
+
+       ⚠️ 250ms é o tempo de o navegador terminar o que ele já faz. Medir
+       antes disso é medir o meio da animação, e corrigir o meio de uma
+       animação é a receita do pulo. */
+    const relogio = setTimeout(() => {
+      const caixa = focado.getBoundingClientRect();
+      const passa = caixa.bottom - alturaVisivel;
+      if (passa <= 1) return;
+      window.scrollBy({ top: passa + FOLGA_ABAIXO_DO_CAMPO, behavior: "auto" });
+    }, ESPERA_PELO_NAVEGADOR);
+    return () => clearTimeout(relogio);
   }, [alturaVisivel, escopo]);
 }

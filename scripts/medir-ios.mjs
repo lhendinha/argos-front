@@ -110,6 +110,7 @@ for (const ap of APARELHOS) {
       layout: innerHeight, largura: innerWidth,
       focado: (document.activeElement && (document.activeElement.id||document.activeElement.type))||'(nada)',
       fim: (function(){var e=document.querySelector('#senha');return e?Math.round(e.getBoundingClientRect().bottom):null;})(),
+      topo: (function(){var e=document.querySelector('#senha');return e?Math.round(e.getBoundingClientRect().top):null;})(),
       alturaDoCampo: (function(){var e=document.querySelector('#senha');return e?Math.round(e.getBoundingClientRect().height):null;})() }`);
     const antes = await ler();
     /* 🔴 **Dois predicados, e a ORDEM importa.** Por tipo é o certo -- é o
@@ -132,6 +133,10 @@ for (const ap of APARELHOS) {
        ⚠️ Recarregar entre as tentativas é o que separa esta insistência de
        uma repetição cega: é a única diferença conhecida entre o caso que
        funciona e o que não funciona. */
+    /* 🔴 **Os DOIS campos, e não só a senha.** A bateria media a senha e
+       aprovava; o usuário tocou no E-MAIL num iPad deitado e o cartão subiu
+       tanto que o campo saiu pela borda de cima. Um formulário tem mais de
+       um campo, e o de cima é o que mais sobe. */
     const tocarSenha = async () => {
       await s.tocarNativo("type == 'XCUIElementTypeSecureTextField'")
         .catch(() => s.tocarNativo("name == 'Senha'"))
@@ -152,7 +157,11 @@ for (const ap of APARELHOS) {
        não mudou -- e o teste imprimia "À VISTA", porque o campo cabia numa
        tela sem teclado. Isso não é aprovação, é teste que não rodou. */
     const subiu = dep.focado === "senha" && dep.visivel < antes.visivel;
-    const ok = subiu && dep.fim != null && dep.fim <= dep.visivel + 1;
+    /* 🔴 **Os DOIS lados.** Cobrar só o de baixo aprovava campo empurrado
+       para FORA por cima: medido num iPhone SE deitado, a senha terminava em
+       -4 -- fora da tela -- e isto aqui dizia "À VISTA". */
+    const ok =
+      subiu && dep.fim != null && dep.fim <= dep.visivel + 1 && dep.topo != null && dep.topo >= -1;
     /* 🔴 **Campo mais alto que a faixa não é defeito nosso: é o iOS.** Num
        iPhone SE DEITADO o teclado come 279 dos 311px e sobram 32 -- e o
        campo tem 40. Nenhuma rolagem faz 40 caber em 32, e `scrollIntoView`
@@ -166,7 +175,16 @@ for (const ap of APARELHOS) {
        nenhuma que tenha espaço escapa dela. */
     const naoCabe = subiu && !ok && dep.alturaDoCampo != null && dep.alturaDoCampo > dep.visivel;
     console.log(`\n  ${ap.nome} · ${orientacao === "PORTRAIT" ? "retrato" : "paisagem"} · ${antes.largura}x${antes.layout}`);
-    console.log(`    teclado${tentativas > 1 ? ` (2ª tentativa)` : ""}: visível ${antes.visivel} → ${dep.visivel} · foco "${dep.focado}" · senha termina em ${dep.fim} → ${!subiu ? "NÃO SUBIU (teste não rodou)" : ok ? "À VISTA" : naoCabe ? `LIMITE DO iOS (campo de ${dep.alturaDoCampo}px não cabe em ${dep.visivel}px)` : "ESCONDIDO"}`);
+    console.log(`    senha${tentativas > 1 ? " (2ª tentativa)" : ""}: visível ${antes.visivel} → ${dep.visivel} · termina em ${dep.fim} · topo ${dep.topo} → ${!subiu ? "NÃO SUBIU (teste não rodou)" : ok ? "À VISTA" : dep.topo != null && dep.topo < -1 ? `SAIU POR CIMA (topo ${dep.topo})` : naoCabe ? `LIMITE DO iOS (campo de ${dep.alturaDoCampo}px não cabe em ${dep.visivel}px)` : "ESCONDIDO"}`);
+
+    /* agora o campo de CIMA, com o teclado já aberto */
+    await s.js("document.querySelector('#email').focus(); return true;");
+    await espera(1200);
+    const email = await s.js(`var e = document.querySelector('#email'); var r = e.getBoundingClientRect();
+      return { topo: Math.round(r.top), fim: Math.round(r.bottom),
+               visivel: window.visualViewport ? Math.round(visualViewport.height) : null };`);
+    const emailOk = email.topo >= -1 && email.fim <= email.visivel + 1;
+    console.log(`    e-mail: ${email.topo}..${email.fim} na faixa ${email.visivel} → ${emailOk ? "À VISTA" : email.topo < -1 ? `SAIU POR CIMA (topo ${email.topo})` : "ESCONDIDO"}`);
 
     /* 2) o layout, nas rotas logadas */
     /* 🔴 **O login vai por JAVASCRIPT, e o motivo é o teclado.** O toque

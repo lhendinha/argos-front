@@ -68,55 +68,77 @@ export default function CartaoDeAutenticacao({ titulo, subtitulo, children }: Ca
       minH="100dvh"
       p="24px"
       bg="bg.canvas"
-      /* 🔴 **Dois caminhos, escolhidos pela MEDIDA -- não pelo aparelho.**
-         Quem decide é `layoutEncolheu`: o viewport de layout encolheu junto
-         com o teclado?
+      /* 🔴 **Um caminho só, e o recuo ancorado em `vh`.** Tudo que reage a
+         um número que o teclado mexe faz a tela se mexer junto -- e este
+         componente já perdeu duas versões para isso. A primeira prendia a
+         coluna ao viewport e perseguia o deslocamento com `translateY`, que
+         entra um render atrasado: no quadro do meio a tela inteira aparecia
+         fora do lugar. A segunda trocou por um recuo igual à FAIXA visível,
+         e a faixa muda quando se vai do e-mail para a senha -- medido num
+         iPhone 17 Pro Max: 393 com um teclado, 416 com o outro. Cada troca
+         mudava a altura do documento, e a rolagem pulava 35px atrás.
 
-         **Encolheu (iOS)**: só um recuo embaixo. O navegador já enxerga o
-         teclado e rola o campo em foco sozinho; prender a coluna ao viewport
-         aqui é o que causava o salto. Medido num iPhone 17 Pro Max: com a
-         moldura fixa, cada `focusin` deslocava mais o viewport (45, 173,
-         209, 336, 372, 403) e o topo da moldura ia a -128 e voltava a 0 em
-         100ms, porque o `translateY` que a compensava só entra no render
-         SEGUINTE. Era esse quadro que se via como "a tela deslizou".
+         `vh` é a única medida daqui que o teclado não toca: é o viewport
+         GRANDE, imune ao teclado e à barra do navegador. Metade dele sobra
+         para qualquer campo subir acima do teclado, e o número não muda
+         enquanto a pessoa digita.
 
-         **Não encolheu (Android)**: a moldura fixa continua, e é a única
-         coisa que sabe onde o teclado está. Medido: com faixa de 172px num
-         layout de 640, sem a moldura o campo de senha termina em 345 --
-         atrás do teclado -- porque `scrollIntoView` alinha pelo LAYOUT, que
-         ali não mudou. Com a moldura, termina em 172, exatamente na borda.
+         ⚠️ **Não escolhe caminho por plataforma, nem por "o layout
+         encolheu".** Eu tentei essa régua e ela varia sozinha: no mesmo
+         iPhone, mesma versão, o layout foi de 796 para 696 numa rodada e
+         ficou em 796 na seguinte. Quem sabe do teclado é a faixa visível, e
+         quem usa a faixa é o `useCampoFocadoAVista` -- que rola pela
+         diferença medida, sem depender de layout nenhum.
 
-         ⚠️ Eu tentei um caminho só e a medição derrubou: recuo para todos
-         conserta o iPhone e esconde o campo no Android. Dois caminhos não é
-         indecisão -- é que as duas plataformas informam coisas diferentes
-         sobre o mesmo teclado.
+         ⚠️ Sem teclado não há `style`, e o desktop fica idêntico. */
+      /* 🔴 **O cartão continua CENTRADO -- só que na faixa visível, e não
+         no layout.** O recuo de baixo é a altura do teclado (`100dvh` é o
+         layout, `altura` é a faixa, a diferença é o teclado), então a área
+         onde a margem automática centraliza passa a ser exatamente o que se
+         enxerga.
 
-         ⚠️ O recuo é a FAIXA inteira, e não `100dvh - altura`: no iOS o
-         `100dvh` já vem encolhido, então a diferença sai curta. Medido num
-         iPhone SE, com a diferença a rolagem batia no fim com o campo 4px
-         abaixo da faixa.
+         Medido no iPhone do usuário, com toque real, até chegar aqui:
 
-         ⚠️ Sem teclado não há `style` nenhum, e o desktop fica idêntico --
-         0 pixel de diferença nas quatro telas de portão. */
+         - Centrado no LAYOUT (696) com faixa de 391, metade do cartão caía
+           atrás do teclado e o Safari deslocava a tela a cada toque: cartão
+           de 69 para -11.
+         - Ancorado no TOPO, o deslocamento por toque diminuiu, mas ABRIR o
+           teclado virou um salto de 148px -- porque a ancoragem mudava de
+           centro para topo, que são dois lugares diferentes.
+
+         Centrando na faixa, a ancoragem é a MESMA nos dois estados: o
+         cartão só acompanha a área que sobrou, sem trocar de regra.
+
+         ⚠️ Sem teclado não há `style`, e o desktop fica idêntico. */
       style={
         areaVisivel.altura
-          ? areaVisivel.layoutEncolheu
-            ? ({ paddingBottom: `${areaVisivel.altura}px` } as CSSProperties)
-            : ({
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: `${areaVisivel.altura}px`,
-                minHeight: 0,
-                overflowY: "auto",
-                transform: `translateY(${areaVisivel.deslocamento}px)`,
-              } as CSSProperties)
+          ? ({
+              /* 🔴 **`minHeight` também sai do `dvh`, e o `dvh` mente.**
+                 Medido no iPhone do usuário, ao reabrir o teclado: o layout
+                 vem 642 e o `100dvh` computado continua **796** -- nas duas
+                 aberturas. O documento nasce 796 numa tela de 642, sobram
+                 154px, e o Safari rola essa diferença: `y` batia exatamente
+                 154 e o cartão ia de 54 para -23.
+
+                 Com a altura viva no lugar do `dvh`, o documento passa a
+                 ter o tamanho da tela e não há o que rolar. */
+              minHeight: `${areaVisivel.alturaDeLayout}px`,
+              paddingBottom: `${Math.max(0, areaVisivel.alturaDeLayout - areaVisivel.altura)}px`,
+            } as CSSProperties)
           : undefined
       }
     >
       <Box
-        m="auto"
+        /* 🔴 **Topo com o teclado aberto, centro sem ele.** Centralizar numa
+           faixa que MUDA de tamanho faz o cartão andar: os dois teclados do
+           iOS têm alturas diferentes (medido: 393 e 416), e meia diferença
+           vira deslocamento a cada troca de campo -- 12px, cobrados pela
+           guarda. Ancorado no topo, mudar a faixa não move nada.
+
+           ⚠️ `0 auto auto` mantém a margem de baixo automática: cartão mais
+           alto que a faixa (o de redefinir senha) começa do topo em vez de
+           ser cortado dos dois lados. */
+        m={areaVisivel.altura ? "0 auto auto" : "auto"}
         w="100%"
         maxW="380px"
         p={apertado ? "20px 30px" : "34px 30px"}
