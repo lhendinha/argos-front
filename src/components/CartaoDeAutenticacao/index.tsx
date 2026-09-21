@@ -1,6 +1,7 @@
 import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 import type { CSSProperties } from "react";
 
+import { FAIXA_QUE_COMPORTA_O_CARTAO_INTEIRO } from "../../constants";
 import { useAreaVisivel } from "../../hooks/useAreaVisivel";
 import { useCampoFocadoAVista } from "../../hooks/useCampoFocadoAVista";
 import MarcaArgos from "../MarcaArgos";
@@ -44,6 +45,22 @@ export default function CartaoDeAutenticacao({ titulo, subtitulo, children }: Ca
      de senha ficava atrás dele. Ver `useAreaVisivel`. */
   const areaVisivel = useAreaVisivel(true, false);
   useCampoFocadoAVista(areaVisivel.altura);
+
+  /* 🔴 **Comprime em vez de esconder.** O cartão tem 448px e o teclado
+     deixa 393 num iPhone 17 Pro Max -- não cabe, e o Safari rola a cada
+     troca de campo: a marca sai da tela e volta, o que se lê como a tela
+     "pulando". Cabendo, ele não rola, e o pulo acaba por não haver o que
+     rolar.
+
+     ⚠️ A marca NÃO some: ela troca para a forma deitada, que já existe (é a
+     da barra do topo). Empilhada são ~80px de altura; deitada, ~26. Com as
+     margens e o recuo menores, o cartão cai para ~350 e sobra folga.
+
+     ⚠️ Num iPhone SE isto não basta, e não há o que fazer: a faixa lá é
+     274px, e dois campos mais botão e cabeçalho não cabem nisso. Lá o
+     Safari continua rolando -- é espaço que não existe. */
+  const apertado =
+    areaVisivel.altura !== null && areaVisivel.altura < FAIXA_QUE_COMPORTA_O_CARTAO_INTEIRO;
 
   return (
     <Flex
@@ -102,15 +119,15 @@ export default function CartaoDeAutenticacao({ titulo, subtitulo, children }: Ca
         m="auto"
         w="100%"
         maxW="380px"
-        p="34px 30px"
+        p={apertado ? "20px 30px" : "34px 30px"}
         bg="bg.surface"
         borderWidth="1px"
         borderColor="border"
         borderRadius="lg"
         boxShadow="md"
       >
-        <Flex justify="center" mb="26px">
-          <MarcaArgos tamanho="gate" />
+        <Flex justify="center" mb={apertado ? "12px" : "26px"}>
+          <MarcaArgos tamanho={apertado ? "barra" : "gate"} />
         </Flex>
 
         <Heading as="h1" fontSize="18px" fontWeight="800" textAlign="center" mb="6px">

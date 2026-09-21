@@ -172,3 +172,31 @@ export const CONTAINER_DE_CELULAR = "(max-width: 480px)";
  * em 1440 deu zero. Quem muda é a faixa que estava quebrada.
  */
 export const CONTAINER_DE_DUAS_COLUNAS_DO_PAINEL = "(min-width: 980px)";
+
+/** Abaixo desta faixa visível, a tela de entrada se comprime.
+ *
+ * 🔴 **É a altura do próprio cartão, medida.** Ele tem 448px com a marca
+ * empilhada; quando o teclado deixa menos que isso, ele não cabe -- e o
+ * Safari passa a rolar a cada troca de campo, levando a marca e o título
+ * para fora da tela e trazendo de volta. Gravado num iPhone 17 Pro Max: a
+ * faixa é 393px, faltam 55, e o conteúdo sobe e desce a cada toque.
+ *
+ * ⚠️ **460 e não 448**: a folga de 12px evita comprimir e descomprimir em
+ * volta do próprio limite quando o teclado varia um pixel ao animar.
+ *
+ * ⚠️ A régua é a ALTURA da faixa, não a largura da tela -- é espaço
+ * vertical que falta, e quem o tira é o teclado.
+ */
+export const FAIXA_QUE_COMPORTA_O_CARTAO_INTEIRO = 460;
+
+/** Quanto o viewport de layout precisa encolher para valer como TECLADO.
+ *
+ * 🔴 **A barra do navegador também encolhe o layout, e não é teclado.** Ela
+ * recolhe e volta conforme a rolagem, mexendo no `innerHeight` em algumas
+ * dezenas de pixels. Um teclado tira muito mais: medido num Android real, de
+ * 536 para 213 -- 323px. Este piso separa os dois sem perguntar qual é qual.
+ *
+ * ⚠️ 120 é folgado de propósito: fica bem acima de qualquer barra de
+ * navegador (44 a 60px) e bem abaixo de qualquer teclado.
+ */
+export const ENCOLHIMENTO_QUE_E_TECLADO = 120;

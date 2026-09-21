@@ -2,7 +2,21 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- `interactive-widget=resizes-content`: o teclado passa a encolher o
+      viewport de LAYOUT, e não só o visual. Era assim no Chrome do Android
+      até a versão 108, que mudou para imitar o Safari -- e foi essa mudança
+      que criou a assimetria entre as duas plataformas. Com a palavra-chave,
+      `100dvh` enxerga o teclado nos dois e o navegador rola o campo em foco
+      sozinho. Medido num Android real com Chrome 134: sem ela, 536 de layout
+      e 172 de visual; com ela, 213 nos dois.
+
+      ⚠️ Navegador que não a conhece simplesmente a ignora, e cai no
+      comportamento clássico -- que `useAreaVisivel` continua detectando pelo
+      outro sinal. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content"
+    />
     <title>Argos — Monitoramento de processos</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

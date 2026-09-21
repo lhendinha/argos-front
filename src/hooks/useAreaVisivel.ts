@@ -35,14 +35,16 @@
  */
 import { useEffect, useRef, useState } from "react";
 
-import { PISO_PARA_RODAPE_PRESO } from "../constants";
+import { ENCOLHIMENTO_QUE_E_TECLADO, PISO_PARA_RODAPE_PRESO } from "../constants";
 import type { AreaVisivel } from "../types/ui";
 
 export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
   const [area, setArea] = useState<AreaVisivel>({ altura: null, deslocamento: 0, layoutEncolheu: false });
-  /* A altura de layout com o teclado FECHADO, para comparar depois. Em ref
-     porque é memória entre medições, não coisa que redesenhe a tela. */
-  const layoutComTecladoFechado = useRef<number | null>(null);
+  /* O MAIOR layout já visto nesta largura -- a régua do "sem teclado".
+     Em ref porque é memória entre medições, não coisa que redesenhe a tela.
+     A largura entra junto porque girar o aparelho muda o layout por motivo
+     legítimo, e a marca velha mentiria. */
+  const maiorLayout = useRef<{ largura: number; altura: number } | null>(null);
 
   useEffect(() => {
     const visual = typeof window !== "undefined" ? window.visualViewport : undefined;
@@ -51,25 +53,48 @@ export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
        embaixo -- não há estado velho a limpar aqui. */
     if (!ativo || !visual) return;
     const medir = () => {
+      /* 🔴 **DOIS sinais, porque há dois comportamentos de navegador.**
+         O clássico: o teclado encolhe só o viewport visual, e o layout fica
+         inteiro -- então `visual < innerHeight` denuncia o teclado. O novo,
+         que a meta `interactive-widget=resizes-content` liga: o layout
+         encolhe JUNTO, os dois ficam iguais, e o sinal clássico cala. Medido
+         num Android real com Chrome 134: sem a meta, 536 de layout e 172 de
+         visual; com ela, 213 nos dois.
+
+         Somar os dois cobre navegador que aceita a palavra-chave e navegador
+         que a ignora, sem perguntar qual é qual. */
+      const larguraAgora = window.innerWidth;
+      if (!maiorLayout.current || maiorLayout.current.largura !== larguraAgora) {
+        maiorLayout.current = { largura: larguraAgora, altura: window.innerHeight };
+      } else if (window.innerHeight > maiorLayout.current.altura) {
+        maiorLayout.current.altura = window.innerHeight;
+      }
+      /* ⚠️ O piso separa teclado de barra do navegador -- ver
+         `ENCOLHIMENTO_QUE_E_TECLADO`. Sem ele, recolher a barra ao rolar
+         seria lido como teclado abrindo. */
+      const encolheu = maiorLayout.current.altura - window.innerHeight >= ENCOLHIMENTO_QUE_E_TECLADO;
       /* A folga de 1px absorve o arredondamento do zoom que o Safari aplica
          ao campo em foco -- sem ela, a folha reagiria a uma diferença que
          ninguém enxerga. */
-      const fechado = visual.height >= window.innerHeight - 1;
-      if (fechado) layoutComTecladoFechado.current = window.innerHeight;
-      const base = layoutComTecladoFechado.current;
+      const visualMenor = visual.height < window.innerHeight - 1;
+      const fechado = !encolheu && !visualMenor;
       const curto = comPiso && visual.height < PISO_PARA_RODAPE_PRESO;
       setArea({
         altura: fechado || curto ? null : Math.round(visual.height),
         deslocamento: fechado || curto ? 0 : Math.round(visual.offsetTop),
-        layoutEncolheu: base != null && window.innerHeight < base - 1,
+        layoutEncolheu: encolheu,
       });
     };
     medir();
     visual.addEventListener("resize", medir);
     visual.addEventListener("scroll", medir);
+    /* ⚠️ A JANELA também: quando o layout encolhe junto com o teclado, é o
+       `innerHeight` que muda, e há navegador que dispara só este. */
+    window.addEventListener("resize", medir);
     return () => {
       visual.removeEventListener("resize", medir);
       visual.removeEventListener("scroll", medir);
+      window.removeEventListener("resize", medir);
     };
   }, [ativo, comPiso]);
 
