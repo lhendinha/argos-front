@@ -49,6 +49,10 @@ const DE_FORA = new Set([
   // DOM e CSS
   "defaultPrevented", "opener", "borderBottom", "paddingLeft", "classNames",
   "confirm", "back",
+  // `userAgent` é do navegador, e `useAreaVisivel` o cita para dizer que NÃO
+  // o usa: quem separa iOS de Android ali é a medida do viewport de layout,
+  // não uma lista de aparelhos.
+  "userAgent",
   // Nomes de ícone e de variante, não símbolos exportados
   "pencil", "trash", "bell", "plus", "olho", "olhoCortado", "semSeta",
   "success", "support",

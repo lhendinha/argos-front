@@ -86,6 +86,10 @@ const APARELHOS = [
   { nome: "iPad mini", udid: "A45F8030-6D75-44D4-A8E8-0BDE5248DE5C", modelo: "iPad mini (A17 Pro)" },
 ];
 const ROTAS = ["/", "/processos", "/clientes", "/agenda", "/financeiro", "/grupo", "/documentos"];
+/** ⚠️ Dá para apontar a bateria para o BUILD:
+ *   `BASE=http://localhost:4173 node scripts/medir-ios.mjs`. É o mesmo
+ *   motivo da régua -- o que o aparelho recebe é o bundle, não o dev. */
+const BASE = process.env.BASE ?? "http://localhost:5174";
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
 for (const ap of APARELHOS) {
@@ -99,7 +103,7 @@ for (const ap of APARELHOS) {
     await espera(2500);
 
     /* 1) o teclado, na tela de entrada */
-    await s.ir("http://localhost:5174/login");
+    await s.ir(`${BASE}/login`);
     await espera(5000);
     const ler = () => s.js(`return {
       visivel: window.visualViewport ? Math.round(visualViewport.height) : null,
@@ -138,7 +142,7 @@ for (const ap of APARELHOS) {
     let dep = await tocarSenha();
     let tentativas = 1;
     if (!(dep.focado === "senha" && dep.visivel < antes.visivel)) {
-      await s.ir("http://localhost:5174/login");
+      await s.ir(`${BASE}/login`);
       await espera(4000);
       dep = await tocarSenha();
       tentativas = 2;
@@ -182,7 +186,7 @@ for (const ap of APARELHOS) {
        ⚠️ `set` nativo e evento `input`: o campo é controlado pelo React, e
        atribuir `.value` direto não avisa o estado -- o formulário submeteria
        vazio. */
-    await s.ir("http://localhost:5174/login");
+    await s.ir(`${BASE}/login`);
     await espera(3500);
     const campos = await s.js("return document.querySelectorAll('input').length");
     if (campos === 2) {
@@ -199,7 +203,7 @@ for (const ap of APARELHOS) {
     let falhas = 0;
     let vazias = 0;
     for (const rota of ROTAS) {
-      await s.ir(`http://localhost:5174${rota}`);
+      await s.ir(`${BASE}${rota}`);
       await espera(2500);
       const m = await s.js(`var raiz = document.documentElement; var pior = null;
         var els = document.querySelectorAll('body *');

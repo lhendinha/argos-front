@@ -51,18 +51,50 @@ export default function CartaoDeAutenticacao({ titulo, subtitulo, children }: Ca
       minH="100dvh"
       p="24px"
       bg="bg.canvas"
+      /* 🔴 **Dois caminhos, escolhidos pela MEDIDA -- não pelo aparelho.**
+         Quem decide é `layoutEncolheu`: o viewport de layout encolheu junto
+         com o teclado?
+
+         **Encolheu (iOS)**: só um recuo embaixo. O navegador já enxerga o
+         teclado e rola o campo em foco sozinho; prender a coluna ao viewport
+         aqui é o que causava o salto. Medido num iPhone 17 Pro Max: com a
+         moldura fixa, cada `focusin` deslocava mais o viewport (45, 173,
+         209, 336, 372, 403) e o topo da moldura ia a -128 e voltava a 0 em
+         100ms, porque o `translateY` que a compensava só entra no render
+         SEGUINTE. Era esse quadro que se via como "a tela deslizou".
+
+         **Não encolheu (Android)**: a moldura fixa continua, e é a única
+         coisa que sabe onde o teclado está. Medido: com faixa de 172px num
+         layout de 640, sem a moldura o campo de senha termina em 345 --
+         atrás do teclado -- porque `scrollIntoView` alinha pelo LAYOUT, que
+         ali não mudou. Com a moldura, termina em 172, exatamente na borda.
+
+         ⚠️ Eu tentei um caminho só e a medição derrubou: recuo para todos
+         conserta o iPhone e esconde o campo no Android. Dois caminhos não é
+         indecisão -- é que as duas plataformas informam coisas diferentes
+         sobre o mesmo teclado.
+
+         ⚠️ O recuo é a FAIXA inteira, e não `100dvh - altura`: no iOS o
+         `100dvh` já vem encolhido, então a diferença sai curta. Medido num
+         iPhone SE, com a diferença a rolagem batia no fim com o campo 4px
+         abaixo da faixa.
+
+         ⚠️ Sem teclado não há `style` nenhum, e o desktop fica idêntico --
+         0 pixel de diferença nas quatro telas de portão. */
       style={
         areaVisivel.altura
-          ? ({
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: `${areaVisivel.altura}px`,
-              minHeight: 0,
-              overflowY: "auto",
-              transform: `translateY(${areaVisivel.deslocamento}px)`,
-            } as CSSProperties)
+          ? areaVisivel.layoutEncolheu
+            ? ({ paddingBottom: `${areaVisivel.altura}px` } as CSSProperties)
+            : ({
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: `${areaVisivel.altura}px`,
+                minHeight: 0,
+                overflowY: "auto",
+                transform: `translateY(${areaVisivel.deslocamento}px)`,
+              } as CSSProperties)
           : undefined
       }
     >

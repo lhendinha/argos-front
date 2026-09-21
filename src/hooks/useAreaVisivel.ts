@@ -33,13 +33,16 @@
  * ⚠️ Só mede enquanto `ativo`. Um diálogo fechado não precisa de ouvinte, e
  * são dois por modal aberto numa tela que pode ter dois.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { PISO_PARA_RODAPE_PRESO } from "../constants";
 import type { AreaVisivel } from "../types/ui";
 
 export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
-  const [area, setArea] = useState<AreaVisivel>({ altura: null, deslocamento: 0 });
+  const [area, setArea] = useState<AreaVisivel>({ altura: null, deslocamento: 0, layoutEncolheu: false });
+  /* A altura de layout com o teclado FECHADO, para comparar depois. Em ref
+     porque é memória entre medições, não coisa que redesenhe a tela. */
+  const layoutComTecladoFechado = useRef<number | null>(null);
 
   useEffect(() => {
     const visual = typeof window !== "undefined" ? window.visualViewport : undefined;
@@ -52,10 +55,13 @@ export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
          ao campo em foco -- sem ela, a folha reagiria a uma diferença que
          ninguém enxerga. */
       const fechado = visual.height >= window.innerHeight - 1;
+      if (fechado) layoutComTecladoFechado.current = window.innerHeight;
+      const base = layoutComTecladoFechado.current;
       const curto = comPiso && visual.height < PISO_PARA_RODAPE_PRESO;
       setArea({
         altura: fechado || curto ? null : Math.round(visual.height),
         deslocamento: fechado || curto ? 0 : Math.round(visual.offsetTop),
+        layoutEncolheu: base != null && window.innerHeight < base - 1,
       });
     };
     medir();
@@ -70,5 +76,5 @@ export function useAreaVisivel(ativo: boolean, comPiso = true): AreaVisivel {
   /* 🔴 Derivado, e não lido cru: com o diálogo fechado o estado guardado é
      o da última medição, e devolvê-lo prenderia a folha a uma altura de
      teclado que não existe mais. */
-  return ativo ? area : { altura: null, deslocamento: 0 };
+  return ativo ? area : { altura: null, deslocamento: 0, layoutEncolheu: false };
 }

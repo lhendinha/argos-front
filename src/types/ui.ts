@@ -45,6 +45,19 @@ export interface MenuDaCasca {
 export interface AreaVisivel {
   altura: number | null;
   deslocamento: number;
+  /** O viewport de LAYOUT encolheu junto com o teclado?
+   *
+   * 🔴 **É o que separa iOS de Android sem perguntar o aparelho.** No iOS o
+   * layout encolhe com o teclado (medido: 549 → 460), então `scrollIntoView`
+   * e a rolagem do próprio navegador já enxergam o teclado e resolvem
+   * sozinhos. No Android o layout NÃO encolhe (536 fixo, só o
+   * `visualViewport` cai para 172), e para o navegador o campo atrás do
+   * teclado está perfeitamente visível -- ali só uma caixa presa à faixa
+   * visível resolve.
+   *
+   * ⚠️ Medido, e não deduzido do `userAgent`: qualquer navegador que passe a
+   * encolher o layout entra no caminho bom sem ninguém mexer numa lista. */
+  layoutEncolheu: boolean;
 }
 
 /** Uma opção de menu de escolha única -- o filtro de período e a

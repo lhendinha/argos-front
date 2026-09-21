@@ -27,6 +27,24 @@ export function useCampoFocadoAVista(alturaVisivel: number | null, escopo?: stri
     const focado = document.activeElement;
     if (!(focado instanceof HTMLElement)) return;
     if (escopo && !focado.closest(escopo)) return;
+    /* 🔴 **Só rola se o campo estiver FORA da faixa.** O efeito corre a cada
+       altura nova, e o teclado não entrega uma altura: entrega várias
+       enquanto anima. Medido num iPhone 17 Pro Max, contra o build de
+       produção: o iOS relatou 393 e depois 416, então `scrollIntoView` foi
+       chamado DUAS vezes -- a segunda com o campo já à vista. Num aparelho
+       de verdade a animação passa por mais alturas que a do simulador, e
+       cada uma era mais uma chamada; quem digita vê a página deslizar de
+       novo a cada uma.
+
+       ⚠️ Comparar com `alturaVisivel`, e não confiar no `"nearest"` para não
+       fazer nada: ele decide pelo que já está à vista SEGUNDO O LAYOUT, e o
+       teclado não encolhe o layout no Android -- lá a faixa visível é a
+       única que sabe onde o teclado está.
+
+       ⚠️ A guarda é idempotente de propósito: rolar duas vezes para o mesmo
+       lugar não é meio defeito, é o defeito. */
+    const caixa = focado.getBoundingClientRect();
+    if (caixa.top >= 0 && caixa.bottom <= alturaVisivel) return;
     focado.scrollIntoView?.({ block: "nearest" });
   }, [alturaVisivel, escopo]);
 }
