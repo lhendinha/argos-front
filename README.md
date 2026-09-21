@@ -656,6 +656,53 @@ responde.
 `storageState` velho apontaria para o vazio. As 5 tentativas também não pesam
 lá — a conta nasce nova toda vez.
 
+## Medir em APARELHO — Android, iOS e iPad
+
+Três réguas, três alcances. A da esquerda é a mais barata e a que roda em CI;
+a da direita é a única que prova teclado de verdade.
+
+| roteiro | o que roda | dá DOM? | dá teclado real? |
+|---|---|---|---|
+| `medir-mobile.mjs` | Chromium sem janela, 4 formatos | sim | não |
+| `medir-aparelhos.mjs` | Chromium **e WebKit**, 5 formatos, 2 orientações | sim | não |
+| **Android por CDP** | Chrome de verdade no emulador | sim | **sim** |
+| `medir-ios.mjs` | **Safari de verdade** no simulador, via Appium | sim | **sim** |
+
+🔴 **As três primeiras não substituem a quarta, e vice-versa.** O piso de
+180px do `useAreaVisivel` passou por todas as réguas sem janela e só caiu no
+Android real: o teclado deixa 172px de área visível, abaixo do piso, e o
+campo de senha ficava atrás dele. Régua sem teclado não tem como ver isso.
+
+### Android — o caminho barato, sem Appium
+
+```bash
+~/Library/Android/sdk/emulator/emulator -avd SmallPhone36 &
+adb reverse tcp:5174 tcp:5174 && adb reverse tcp:8099 tcp:8099   # o emulador alcança o Mac
+adb shell am start -n com.android.chrome/com.google.android.apps.chrome.Main \
+  -a android.intent.action.VIEW -d "http://localhost:5174/login"
+adb forward tcp:9222 localabstract:chrome_devtools_remote
+```
+
+Daí em diante é o Playwright de sempre:
+`chromium.connectOverCDP("http://localhost:9222")`. Toque, digitação, DOM e
+teclado REAIS, sem ferramenta nova. Girar a tela é
+`adb shell settings put system user_rotation 0|1` (com
+`accelerometer_rotation 0` antes).
+
+### iOS e iPad — precisa de Appium
+
+```bash
+npm i -g appium && appium driver install xcuitest   # ~1 a 2 GB com o WDA
+appium server --port 4723 &
+```
+
+⚠️ **Antes de perder tempo, leia o cabeçalho de `medir-ios.mjs`.** Ele
+registra as cinco pedras que custaram uma sessão inteira: por que o WebKit do
+Playwright NÃO é o Safari do iOS, por que o `idb` come caractere, por que só
+o ÚLTIMO contexto de webview está vivo, por que sondar o contexto morto trava
+o depurador por dois minutos, e por que o teclado de software do simulador
+depende de um **⇧⌘K** dado por uma pessoa.
+
 ## `verificar-guarda-de-descarte.mjs` — o que o jsdom não alcança
 
 ```bash

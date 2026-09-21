@@ -1,0 +1,159 @@
+/** A bateria do iOS: Safari REAL, nas duas orientações, com teclado REAL.
+ *
+ *   appium server --port 4723 &            # uma vez por sessão
+ *   xcrun simctl boot <udid>               # o simulador precisa estar de pé
+ *   node scripts/medir-ios.mjs
+ *
+ * Contra o dev server da porta 5174 (API local), e não produção.
+ *
+ * ## O que NÃO serve, e por quê -- leia antes de tentar de novo
+ *
+ * 🔴 **`npx playwright install webkit` NÃO controla o Safari do iOS.** Ele
+ * baixa uma build do motor WebKit que roda no seu Mac, sem janela. Serve para
+ * comparar layout entre motores rápido (é o que `medir-aparelhos.mjs` faz, e
+ * foi assim que o estouro do iPad apareceu nos dois). Não prova comportamento
+ * de Safari em iOS.
+ *
+ * 🔴 **`idb` é automação de APARELHO, não de navegador.** Ele boota, instala,
+ * toca, digita e fotografa -- e não enxerga o DOM. Para ele o Safari é um
+ * retângulo. Medido: `idb ui text` COME CARACTERE ("chefe" virou "cefe", duas
+ * vezes), e tocar na barra de acessório do teclado não troca de campo. Uma
+ * sessão inteira foi gasta tentando pilotar o iOS assim, por coordenada e
+ * foto, antes de concluir -- erradamente -- que o iOS só permitia isso.
+ *
+ * ## O que serve
+ *
+ * Appium + driver XCUITest, com `browserName: "Safari"` e `app` vazio. Por
+ * baixo roda o WebDriverAgent, um servidor WebDriver dentro do simulador. A
+ * primeira sessão COMPILA o WDA e demora; as seguintes são rápidas.
+ *
+ * ## As cinco pedras, todas medidas nesta casa
+ *
+ * 🔴 **1. Existe MAIS DE UM contexto de webview, e só o ÚLTIMO está vivo.**
+ * Com o teclado aberto, o primeiro respondia `visualViewport` 549 e foco no
+ * e-mail -- o estado de ANTES --, e o segundo, 251 e foco na senha. Pegar o
+ * primeiro faz o teste medir uma página congelada e concluir que a correção
+ * não agiu. Foi defeito do instrumento, não do código.
+ *
+ * 🔴 **2. NÃO sonde qual contexto está vivo.** Rodar `document.hasFocus()` no
+ * contexto morto trava o depurador do Safari por dois minutos e a chamada
+ * volta 408. A ordem é o único sinal barato.
+ *
+ * 🔴 **3. `nativeWebTap` não funciona no iOS 26.** A calibração dele falha
+ * com "the calibration overlay has not observed this tap yet". Fica `false`.
+ *
+ * 🔴 **4. O jeito de subir o teclado real é o toque NATIVO, e ele é
+ * semântico.** O Safari expõe os campos da PÁGINA na árvore de acessibilidade:
+ * `<input type=password>` vira `XCUIElementTypeSecureTextField` e o rótulo
+ * vira o `name`. Então `name == 'Senha'` acha o campo, e o clique é de
+ * elemento -- zero coordenada. Converter caixa de elemento em ponto de tela
+ * também foi tentado e não serve: a webview reporta a tela inteira (y=0,
+ * 375x667) e o deslocamento da barra do Safari some na conta.
+ *
+ * 🔴 **5. Cada `simctl openurl` abre uma ABA NOVA.** Depois de umas dez, o
+ * depurador engasga e toda chamada volta 408. Por isso este roteiro derruba o
+ * Safari (`simctl terminate ... com.apple.mobilesafari`) antes de cada
+ * aparelho.
+ *
+ * ⚠️ **O teclado de software do simulador depende de uma tecla humana.**
+ * Com "Connect Hardware Keyboard" ligado, o teclado não sobe -- só a barra de
+ * acessório. Escrever a preferência (global ou por aparelho, em
+ * `com.apple.iphonesimulator`) NÃO resolve no Xcode 26: virou estado de
+ * janela. É **⇧⌘K** com a janela do Simulator em foco. Mandar o atalho por
+ * `osascript` exige permissão de Acessibilidade, que não está concedida.
+ *
+ * ## A diferença de motor que este roteiro existe para pegar
+ *
+ * Medido na mesma tela de entrada, com teclado real:
+ *
+ * - **iOS**: o layout ENCOLHE junto (549 → 460) e o `visualViewport` vai a 274
+ * - **Android**: o layout NÃO encolhe (536 fixo) e só o `visualViewport` cai,
+ *   para 172
+ *
+ * É por isso que o piso de 180px do `useAreaVisivel` desligava a correção no
+ * Android e não no iOS -- e por isso os dois precisam ser medidos.
+ *
+ * ➡️ O Android é mais barato e não precisa de Appium: `adb reverse tcp:5174
+ * tcp:5174`, abrir o Chrome, `adb forward tcp:9222
+ * localabstract:chrome_devtools_remote` e `chromium.connectOverCDP`. Dá DOM,
+ * toque e teclado reais com o Playwright de sempre.
+ */
+import { abrirSafari } from "./appiumIos.mjs";
+import { execSync } from "node:child_process";
+
+const APARELHOS = [
+  { nome: "iPhone SE", udid: "AE011249-7F69-4A97-92E8-417AAEF34BE1", modelo: "iPhone SE (3rd generation)" },
+  { nome: "iPad mini", udid: "A45F8030-6D75-44D4-A8E8-0BDE5248DE5C", modelo: "iPad mini (A17 Pro)" },
+];
+const ROTAS = ["/", "/processos", "/clientes", "/agenda", "/financeiro", "/grupo", "/documentos"];
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+for (const ap of APARELHOS) {
+  execSync(`xcrun simctl bootstatus ${ap.udid} -b`, { stdio: "ignore" });
+  execSync(`xcrun simctl terminate ${ap.udid} com.apple.mobilesafari || true`, { stdio: "ignore", shell: "/bin/bash" });
+  await espera(2000);
+  const s = await abrirSafari({ udid: ap.udid, aparelho: ap.modelo });
+
+  for (const orientacao of ["PORTRAIT", "LANDSCAPE"]) {
+    await s.orientar(orientacao).catch(() => {});
+    await espera(2500);
+
+    /* 1) o teclado, na tela de entrada */
+    await s.ir("http://localhost:5174/login");
+    await espera(5000);
+    const ler = () => s.js(`return {
+      visivel: window.visualViewport ? Math.round(visualViewport.height) : null,
+      layout: innerHeight, largura: innerWidth,
+      focado: (document.activeElement && (document.activeElement.id||document.activeElement.type))||'(nada)',
+      fim: (function(){var e=document.querySelector('#senha');return e?Math.round(e.getBoundingClientRect().bottom):null;})() }`);
+    const antes = await ler();
+    await s.tocarNativo("type == 'XCUIElementTypeSecureTextField'").catch(() => {});
+    await espera(4000);
+    const dep = await ler();
+    /* 🔴 **O teclado precisa ter SUBIDO para o resultado valer.** Nas duas
+       paisagens o toque não pegou: o foco ficou no e-mail e a área visível
+       não mudou -- e o teste imprimia "À VISTA", porque o campo cabia numa
+       tela sem teclado. Isso não é aprovação, é teste que não rodou. */
+    const subiu = dep.focado === "senha" && dep.visivel < antes.visivel;
+    const ok = subiu && dep.fim != null && dep.fim <= dep.visivel + 1;
+    console.log(`\n  ${ap.nome} · ${orientacao === "PORTRAIT" ? "retrato" : "paisagem"} · ${antes.largura}x${antes.layout}`);
+    console.log(`    teclado: visível ${antes.visivel} → ${dep.visivel} · foco "${dep.focado}" · senha termina em ${dep.fim} → ${!subiu ? "NÃO SUBIU (teste não rodou)" : ok ? "À VISTA" : "ESCONDIDO"}`);
+
+    /* 2) o layout, nas rotas logadas */
+    const campos = await s.js("return document.querySelectorAll('input').length");
+    if (campos === 2) {
+      await s.tocarNativo("name == 'E-mail'").catch(() => {});
+      await espera(1500); await s.digitarNativo("chefe@local.test"); await espera(1000);
+      await s.tocarNativo("name == 'Senha'").catch(() => {});
+      await espera(1500); await s.digitarNativo("Senha!Local1"); await espera(1000);
+      await s.tocarNativo("name == 'Entrar' AND type == 'XCUIElementTypeButton'").catch(() => {});
+      await espera(6000);
+    }
+    let falhas = 0;
+    let vazias = 0;
+    for (const rota of ROTAS) {
+      await s.ir(`http://localhost:5174${rota}`);
+      await espera(2500);
+      const m = await s.js(`var raiz = document.documentElement; var pior = null;
+        var els = document.querySelectorAll('body *');
+        for (var i = 0; i < els.length; i++) { var el = els[i];
+          if (el.closest('svg')) continue;
+          var r = el.getBoundingClientRect(); if (!r.width) continue;
+          var passa = Math.round(r.right - raiz.clientWidth);
+          if (passa > 1 && (!pior || passa > pior.passa)) pior = { passa: passa, texto: (el.textContent||'').trim().slice(0,26) }; }
+        return { pagina: raiz.scrollWidth, largura: raiz.clientWidth, pior: pior,
+                 vazia: (document.querySelector('main')||{innerText:''}).innerText.length < 40 };`).catch(() => null);
+      if (!m) continue;
+      if (m.vazia) { vazias += 1; console.log(`    ?  ${rota.padEnd(13)} não renderizou`); continue; }
+      if (m.pagina - m.largura > 1) { falhas += 1; console.log(`    ✗  ${rota.padEnd(13)} página ${m.pagina} de ${m.largura}${m.pior ? ` · +${m.pior.passa}px "${m.pior.texto}"` : ""}`); }
+    }
+    /* 🔴 **Tela que não renderizou NÃO é tela que coube.** A primeira versão
+       imprimia "todas as 7 rotas couberam" logo abaixo de sete linhas de
+       "não renderizou" -- o login por teclado nativo tinha falhado, tudo
+       caiu de volta no /login, e o resumo deu verde. Verde falso é pior que
+       vermelho: some do radar. */
+    if (vazias) console.log(`    ⚠️  ${vazias} de ${ROTAS.length} rotas NÃO RENDERIZARAM -- login não completou, nada foi medido aqui`);
+    else if (!falhas) console.log(`    todas as ${ROTAS.length} rotas couberam`);
+  }
+  await s.fechar().catch(() => {});
+}
