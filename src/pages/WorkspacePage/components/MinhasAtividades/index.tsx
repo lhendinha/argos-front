@@ -38,12 +38,33 @@ export default function MinhasAtividades({
         <Esqueleto linhas={2} />
       ) : (
         <>
-          <Flex gap="10px">
+          {/* 🔴 **Os três quadros não encolhem: os rótulos não quebram.**
+              "CONCLUÍDAS" é uma palavra só, e ocupa 80px nesta fonte -- com
+              14px de recuo dos dois lados o quadro pede 108, e os três mais
+              os intervalos pedem 320. Num Android de 360px o cartão oferece
+              290, e eles vazavam pela borda. A régua do mobile não pegava
+              porque o vazamento fica DENTRO do cartão e não cresce o
+              documento.
+
+              ⚠️ **Os três termos são fluidos, e nenhum é um degrau numa
+              largura.** `cqi` é 1% da área de conteúdo, então recuo,
+              intervalo e rótulo acompanham o container em vez de saltar num
+              ponto. Os TETOS são os valores de hoje (14, 10 e 11,5px) e
+              todos já estão atingidos bem antes de qualquer desktop -- por
+              isso o diff de pixel em 1440 dá zero.
+
+              ⚠️ **Os pisos vêm de uma varredura de 4 em 4px, de 320 a 1600,
+              e não de chute.** Ela foi quem achou que recuo fluido sozinho
+              não bastava: em 320px o cartão oferece 250, e as três palavras
+              sozinhas já somam 216 -- não sobram 34 para seis recuos e dois
+              intervalos, por menores que sejam. Ou o rótulo encolhe junto,
+              ou os quadros vazam. */}
+          <Flex gap="clamp(6px, 2.2cqi, 10px)">
             {barras.map((b) => (
               <Box
                 key={b.rotulo}
                 flex="1"
-                p="14px"
+                p="clamp(6px, 1.9cqi, 14px)"
                 textAlign="center"
                 borderWidth="1px"
                 borderColor="border.subtle"
@@ -53,7 +74,7 @@ export default function MinhasAtividades({
                   {b.valor}
                 </Text>
                 <Text
-                  fontSize="11.5px"
+                  fontSize="clamp(10px, 3.1cqi, 11.5px)"
                   fontWeight="700"
                   textTransform="uppercase"
                   letterSpacing="0.03em"

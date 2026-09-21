@@ -144,3 +144,31 @@ export const CONTAINER_PARA_EMPILHAR_O_DOCUMENTO = "(max-width: 420px)";
  * régua lê o mesmo.
  */
 export const CONTAINER_DE_CELULAR = "(max-width: 480px)";
+
+/** A partir desta largura de CONTAINER, a Área de trabalho abre em duas
+ * colunas.
+ *
+ * 🔴 **Era `lg` do Chakra (992px de JANELA), e a janela mente aqui.** Num
+ * iPad mini deitado a janela tem 1024 e responde "duas colunas", mas quem
+ * reparte é a área de conteúdo, que tem 812 por causa do menu fixo. A
+ * coluna estreita saía com 291px, e "Minhas atividades" empurrava a página
+ * para 1040 numa tela de 1024 -- nos DOIS motores, Chromium e WebKit.
+ *
+ * ⚠️ **980 é conta, não gosto.** Medi o mínimo de cada coluna com o banco
+ * local cheio: a estreita pede 358px (os três quadros de "Minhas
+ * atividades" -- a palavra "CONCLUÍDAS" sozinha ocupa 80px e não quebra) e
+ * a larga 355 ("Vence esta semana"). Com `1.5fr / 1fr` e 20 de intervalo, a
+ * estreita recebe `(G - 20) / 2.5`, então o GRID precisa de 915.
+ *
+ * 🔴 **E o grid não é o container: o `main` come 64px de recuo.** Foi o erro
+ * que eu mesmo cometi antes de medir -- com o limiar em 920 uma janela de
+ * 1152 dava container 940, grid 876, coluna estreita 304, e a fileira de
+ * 320 continuava estourando. O documento NÃO crescia, porque o estouro fica
+ * dentro do cartão: por isso a régua do mobile passava. 915 + 64 = 979,
+ * arredondado para 980.
+ *
+ * ⚠️ **O desktop não sente.** Numa janela de 1440 o container tem 1181 e
+ * numa de 1280, 1050 -- as duas seguem em duas colunas, e o diff de pixel
+ * em 1440 deu zero. Quem muda é a faixa que estava quebrada.
+ */
+export const CONTAINER_DE_DUAS_COLUNAS_DO_PAINEL = "(min-width: 980px)";

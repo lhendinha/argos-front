@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Avatar, BarraDeSelecao, CabecalhoDePagina, ConfirmacoesDoLote,
 } from "../../components";
+import { CONTAINER_DE_DUAS_COLUNAS_DO_PAINEL } from "../../constants";
 import { useToast } from "../../contexts/ToastContext";
 import { getApelido, getEmail, resumoDaAreaDeTrabalho } from "../../services";
 import { toastErroMutation, useToastOnQueryError } from "../../services/queryClient";
@@ -183,8 +184,17 @@ export default function WorkspacePage() {
           328 e empurrava a página para 864 -- a pior tela do sistema com
           dado real. É o mesmo idioma que `VisaoPorMes` e `VisaoPorSemana` já
           usam (`repeat(7, minmax(0, 1fr))`), e pelo mesmo motivo. */}
+      {/* 🔴 Do CONTAINER, e não da janela -- ver
+          `CONTAINER_DE_DUAS_COLUNAS_DO_PAINEL`, que traz a conta. O `lg` do
+          Chakra prometia duas colunas num iPad mini deitado e entregava uma
+          coluna de 291px para um cartão que pede 358. */}
       <Grid
-        templateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 1.5fr) minmax(0, 1fr)" }}
+        templateColumns="minmax(0, 1fr)"
+        css={{
+          [`@container ${CONTAINER_DE_DUAS_COLUNAS_DO_PAINEL}`]: {
+            gridTemplateColumns: "minmax(0, 1.5fr) minmax(0, 1fr)",
+          },
+        }}
         gap="20px"
         alignItems="start"
       >
