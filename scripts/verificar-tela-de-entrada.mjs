@@ -28,22 +28,37 @@
 import { chromium } from "playwright";
 
 const BASE = process.env.BASE ?? "http://localhost:5174";
-const FAIXA = 172;
+/* 🔴 **Os três cenários são MEDIDOS, e o do meio existe por um erro meu.**
+   Eu tinha só dois -- layout inteiro e layout encolhendo muito -- e passei a
+   exigir 120px de encolhimento para chamar de teclado. No iOS o layout
+   encolhe 89 (549 -> 460), abaixo disso: a tela voltou para a moldura fixa e
+   o salto voltou com ela, no aparelho do usuário. A guarda aprovava, porque
+   nenhum cenário dela tinha esse formato. */
+/* ⚠️ `semTeclado` é a altura da JANELA antes do teclado, e ela precisa ser a
+   do aparelho: o hook guarda o maior layout que viu, e é contra ele que mede
+   o encolhimento. Com uma janela de 874px a conta do iOS dava 414 em vez de
+   89, e a guarda aprovava o código quebrado -- medido, o controle negativo
+   não mordeu até isto entrar. */
+const CENARIOS = [
+  { nome: "Android sem a meta ", semTeclado: 640, layout: null, visual: 172, esperaPreso: true },
+  { nome: "iOS (Safari)       ", semTeclado: 549, layout: 460, visual: 274, esperaPreso: false },
+  { nome: "Android com a meta ", semTeclado: 536, layout: 213, visual: 213, esperaPreso: false },
+];
 
 const navegador = await chromium.launch();
-const contexto = await navegador.newContext({ viewport: { width: 402, height: 874 } });
 
-async function medir(encolheOLayout) {
+async function medir(cenario) {
+  const contexto = await navegador.newContext({ viewport: { width: 402, height: cenario.semTeclado } });
   const pagina = await contexto.newPage();
   await pagina.goto(`${BASE}/login`, { waitUntil: "networkidle" });
   await pagina.waitForTimeout(1200);
   await pagina.focus("#senha");
-  await pagina.evaluate(({ alt, enc }) => {
-    if (enc) Object.defineProperty(window, "innerHeight", { configurable: true, get: () => alt + 40 });
-    Object.defineProperty(window.visualViewport, "height", { configurable: true, get: () => alt });
+  await pagina.evaluate((c) => {
+    if (c.layout != null) Object.defineProperty(window, "innerHeight", { configurable: true, get: () => c.layout });
+    Object.defineProperty(window.visualViewport, "height", { configurable: true, get: () => c.visual });
     Object.defineProperty(window.visualViewport, "offsetTop", { configurable: true, get: () => 0 });
     window.visualViewport.dispatchEvent(new Event("resize"));
-  }, { alt: FAIXA, enc: encolheOLayout });
+  }, cenario);
   await pagina.waitForTimeout(600);
   const r = await pagina.evaluate((faixa) => {
     let no = document.querySelector("#senha");
@@ -51,34 +66,26 @@ async function medir(encolheOLayout) {
     let comRecuo = null;
     while (no && no !== document.body) {
       const e = getComputedStyle(no);
-      if (e.position === "fixed") preso = { altura: e.height, transform: e.transform };
+      if (e.position === "fixed") preso = { altura: e.height };
       if (e.paddingBottom === faixa + "px") comRecuo = e.paddingBottom;
       no = no.parentElement;
     }
-    return { preso, comRecuo };
-  }, FAIXA);
-  await pagina.close();
+    return { preso: !!preso, comRecuo };
+  }, cenario.visual);
+  await contexto.close();
   return r;
 }
 
-const naoEncolhe = await medir(false);
-const encolhe = await medir(true);
-await navegador.close();
-
 let falhou = false;
-console.log(`  layout NÃO encolhe (Android): ${naoEncolhe.preso ? `preso, altura ${naoEncolhe.preso.altura}` : "nada preso"}`);
-if (!naoEncolhe.preso) {
-  console.error("  ✗  sem moldura presa à faixa, o campo fica atrás do teclado no Android");
-  falhou = true;
+for (const c of CENARIOS) {
+  const r = await medir(c);
+  const ok = r.preso === c.esperaPreso && (c.esperaPreso || !!r.comRecuo);
+  console.log(`  ${c.nome} layout ${c.layout ?? "inteiro"} · faixa ${c.visual} -> ${r.preso ? "preso ao viewport" : `recuo ${r.comRecuo ?? "(nenhum)"}`} ${ok ? "ok" : "✗"}`);
+  if (!ok) falhou = true;
 }
-console.log(`  layout encolhe (iOS):         ${encolhe.preso ? "preso" : "nada preso"} · recuo ${encolhe.comRecuo ?? "(nenhum)"}`);
-if (encolhe.preso) {
-  console.error("  ✗  preso ao viewport onde o layout encolhe -- volta o salto a cada troca de campo");
-  falhou = true;
+await navegador.close();
+if (falhou) {
+  console.error("\n  ✗  algum cenário tomou o caminho errado -- ver o cabeçalho deste arquivo\n");
+  process.exit(1);
 }
-if (!encolhe.comRecuo) {
-  console.error(`  ✗  sem recuo de ${FAIXA}px embaixo -- o campo em foco não tem para onde rolar`);
-  falhou = true;
-}
-if (falhou) process.exit(1);
 console.log("\n  ok  cada caminho no seu cenário\n");
