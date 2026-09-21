@@ -90,6 +90,31 @@ export async function abrirSafari({ udid, aparelho, versao = "26.1" }) {
       });
       await web();
     },
+    /** Diagnóstico: o que a árvore NATIVA oferece de campo e botão, com a
+     * caixa de cada um -- é assim que se vê se o toque vai cair no teclado. */
+    campos: async () => {
+      await chamar("POST", `/session/${id}/context`, { name: "NATIVE_APP" });
+      const achar = async (predicado) => {
+        const els = await chamar("POST", `/session/${id}/elements`, { using: "-ios predicate string", value: predicado }).catch(() => []);
+        const saida = [];
+        for (const el of els) {
+          const ref = Object.values(el)[0];
+          const r = await chamar("GET", `/session/${id}/element/${ref}/rect`).catch(() => null);
+          const nome = await chamar("GET", `/session/${id}/element/${ref}/attribute/name`).catch(() => null);
+          saida.push({ nome, caixa: r && `${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)}` });
+        }
+        return saida;
+      };
+      const janela = await chamar("GET", `/session/${id}/window/rect`).catch(() => null);
+      const saida = {
+        janela: janela && `${Math.round(janela.width)}x${Math.round(janela.height)}`,
+        seguros: await achar("type == 'XCUIElementTypeSecureTextField'"),
+        textos: await achar("type == 'XCUIElementTypeTextField'"),
+        teclado: await achar("type == 'XCUIElementTypeKeyboard'"),
+      };
+      await web();
+      return saida;
+    },
     fechar: () => chamar("DELETE", `/session/${id}`),
   };
 }

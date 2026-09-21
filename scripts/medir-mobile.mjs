@@ -248,6 +248,55 @@ function medir() {
     });
   }
 
+  /* 🔴 **O estouro que NÃO cresce a página.** Tudo acima pergunta "a página
+     ficou maior que a tela?". Um conteúdo que vaza por dentro de um cartão
+     responde não -- e mesmo assim aparece cortado na borda. Foi assim que
+     dois defeitos sobreviveram a 172 combinações: os três quadros de
+     "Minhas atividades" atravessavam a borda num Android de 360, e a caixa
+     de novo registro do atendimento vazava 6px por um `min-width` de 260
+     numa linha de 254. Quem achou os dois foi esta varredura, não os olhos.
+
+     ⚠️ `scrollWidth - clientWidth` no próprio elemento, e não a caixa dele
+     contra a viewport: o vazamento é do CONTEÚDO para fora do pai, e o pai
+     continua do tamanho certo.
+
+     ⚠️ **Margem negativa não é vazamento, é sangria.** Lista dentro de
+     cartão cancela o recuo do cartão com `m` negativo para as divisórias
+     atravessarem -- ver `Movimentacoes`. Os itens ficam mais largos que o
+     pai de propósito, e sem esta exceção a régua acusava quatro vezes a
+     mesma decisão de desenho. */
+  const vazamentos = [];
+  for (const elemento of document.querySelectorAll("main *")) {
+    if (elemento.closest("svg")) continue;
+    const estilo = getComputedStyle(elemento);
+    if (estilo.display === "none" || estilo.visibility === "hidden") continue;
+    /* Quem rola, ou recorta, faz isso de propósito -- e o que passa dentro
+       dele já é cobrado por `tabelasQueRolam`. */
+    if (estilo.overflowX !== "visible") continue;
+    const excesso = Math.round(elemento.scrollWidth - elemento.clientWidth);
+    if (excesso <= 1 || !elemento.clientWidth) continue;
+    if (parseFloat(estilo.marginLeft) < 0 || parseFloat(estilo.marginRight) < 0) continue;
+    if ([...elemento.children].some((f) => parseFloat(getComputedStyle(f).marginRight) < 0)) continue;
+    let acima = elemento.parentElement;
+    let recortado = false;
+    while (acima && acima !== document.body) {
+      if (getComputedStyle(acima).overflowX !== "visible") { recortado = true; break; }
+      acima = acima.parentElement;
+    }
+    if (recortado) continue;
+    if (vazamentos.some(({ el }) => el.contains(elemento))) continue;
+    vazamentos.push({
+      el: elemento,
+      info: {
+        excesso,
+        tag: elemento.tagName.toLowerCase(),
+        pede: elemento.scrollWidth,
+        tem: elemento.clientWidth,
+        texto: (elemento.textContent || "").trim().replace(/\s+/g, " ").slice(0, 40),
+      },
+    });
+  }
+
   /* ⚠️ A cortina do modal é filha do `body`, fora do `main`: medir só o
      `main` aprovaria uma folha transbordando. O `scrollWidth` já é do
      documento; o que muda aqui é só de onde sai o "renderizou". */
@@ -260,6 +309,7 @@ function medir() {
     texto: principal ? (principal.textContent || "").length : 0,
     culpados: culpados.map(({ info }) => info).slice(0, 3),
     tabelasQueRolam,
+    vazamentos: vazamentos.map(({ info }) => info).slice(0, 3),
   };
 }
 
@@ -362,6 +412,7 @@ for (const formato of FORMATOS) {
     const coube =
       medida.pagina <= medida.viewport + 1 &&
       medida.tabelasQueRolam.length === 0 &&
+      medida.vazamentos.length === 0 &&
       menusFora.length === 0;
     resultados.push(coube);
     console.log(
@@ -375,6 +426,11 @@ for (const formato of FORMATOS) {
     for (const t of medida.tabelasQueRolam) {
       console.log(
         `          tabela rola ${t.passa}px dentro de si (${t.largura} em ${t.visivel}) — ${t.colunas}`,
+      );
+    }
+    for (const v of medida.vazamentos) {
+      console.log(
+        `          ${v.tag} vaza ${v.excesso}px do pai (${v.pede} em ${v.tem}) — ${JSON.stringify(v.texto)}`,
       );
     }
     for (const m of menusFora) {
@@ -411,7 +467,10 @@ for (const formato of FORMATOS) {
       continue;
     }
     const medida = await pagina.evaluate(medir);
-    const coube = medida.pagina <= medida.viewport + 1 && medida.tabelasQueRolam.length === 0;
+    const coube =
+      medida.pagina <= medida.viewport + 1 &&
+      medida.tabelasQueRolam.length === 0 &&
+      medida.vazamentos.length === 0;
     resultados.push(coube);
     console.log(
       `    ${coube ? "ok " : "✗  "} ${estado.nome.padEnd(42)} ${String(medida.pagina).padStart(5)}px de ${medida.viewport}`,
@@ -424,6 +483,11 @@ for (const formato of FORMATOS) {
     for (const t of medida.tabelasQueRolam) {
       console.log(
         `          tabela rola ${t.passa}px dentro de si (${t.largura} em ${t.visivel}) — ${t.colunas}`,
+      );
+    }
+    for (const v of medida.vazamentos) {
+      console.log(
+        `          ${v.tag} vaza ${v.excesso}px do pai (${v.pede} em ${v.tem}) — ${JSON.stringify(v.texto)}`,
       );
     }
   }

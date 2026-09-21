@@ -8,7 +8,7 @@ import { atualizarCliente } from "../../../../services";
 import { toastErroMutation } from "../../../../services/queryClient";
 import { apenasDigitos, emailValido, formatarDataDeInstante, mascararCep, mascararCpfCnpj, mascararTelefone } from "../../../../utils";
 import type { EnderecoDoCliente } from "../../../../types";
-import { TAMANHO_MAXIMO_DO_NOME_DE_CLIENTE } from "../../../../constants";
+import { CONTAINER_DE_CELULAR, TAMANHO_MAXIMO_DO_NOME_DE_CLIENTE } from "../../../../constants";
 import { CORES_DO_CLIENTE_ARQUIVADO } from "../../../../theme/cliente";
 import type { FormularioClienteProps } from "./types";
 
@@ -94,7 +94,24 @@ export default function FormularioCliente({
 
   return (
     <form onSubmit={handleSubmit}>
-      <Flex align="flex-start" justify="space-between" gap="16px" mb="18px">
+      {/* 🔴 **Quebra SÓ no container de celular.** Medido em 360px com o
+          nome mais longo do banco: o título não encolhe abaixo da palavra
+          mais comprida (160px), as ações não encolhiam nada, e "Salvar"
+          terminava 16px FORA do cartão. A página não crescia junto, então
+          nenhuma régua acusava -- foi este defeito que fez a régua ganhar o
+          olho de vazamento.
+
+          ⚠️ `wrap` solto muda o DESKTOP, e eu medi isso errado antes: com a
+          quebra sempre ligada, um nome longo enche a primeira linha e as
+          ações caem para baixo, encostadas à esquerda. Diferença de 42.406
+          pixels em 1440. Preso ao container, o desktop não sente. */}
+      <Flex
+        align="flex-start"
+        justify="space-between"
+        gap="16px"
+        mb="18px"
+        css={{ [`@container ${CONTAINER_DE_CELULAR}`]: { flexWrap: "wrap" } }}
+      >
         <Box>
           <Heading as="h1" fontSize="23px" fontWeight="800" letterSpacing="-0.01em">
             {cliente.nome}
@@ -110,7 +127,25 @@ export default function FormularioCliente({
             </Flex>
           )}
         </Box>
-        <Flex gap="8px" flexShrink={0}>
+        {/* No celular as ações ocupam a linha e dividem entre si, como em
+            toda tela -- ver `ACOES_DO_CABECALHO`.
+
+            ⚠️ **A constante inteira NÃO serve aqui, e eu tentei.** Ela não
+            carrega `flexShrink: 0`, e sem isso o grupo encolhe num título
+            longo: em 1440 "Arquivar" e "Salvar" empilhavam um sobre o
+            outro, 40.855 pixels de diferença. Lá o título tem outro
+            tamanho; aqui ele é um `h1` de 23px que toma a linha. Então só a
+            metade de celular dela vem, e o desktop fica idêntico. */}
+        <Flex
+          gap="8px"
+          flexShrink={0}
+          css={{
+            [`@container ${CONTAINER_DE_CELULAR}`]: {
+              width: "100%",
+              "& > *": { flex: "1 1 auto" },
+            },
+          }}
+        >
           {podeArquivar &&
             (arquivado ? (
               <Botao variante="ghost" disabled={reativando} onClick={onReativar}>

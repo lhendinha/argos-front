@@ -11,3 +11,6 @@ dist/
 .vercel
 *.tsbuildinfo
 .sessao-de-producao.json
+
+# Grafo de codigo gerado pelo graphify -- artefato, nao fonte.
+graphify-out/

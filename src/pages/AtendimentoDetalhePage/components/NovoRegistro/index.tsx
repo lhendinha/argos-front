@@ -31,9 +31,14 @@ export default function NovoRegistro({ enviando, onEnviar }: NovoRegistroProps) 
       <Avatar nome={getApelido() || getEmail() || ""} tamanho="pequeno" />
       <Textarea
         /* O piso é o que empurra o botão para baixo: abaixo de 260px de
-           campo a fileira não fecha, e ele desce. */
+           campo a fileira não fecha, e ele desce.
+           ⚠️ **`min(260px, 100%)` e não `260px` seco.** Num Android de 360 a
+           linha tem 254, e um piso de 260 fazia o campo vazar 6px pela
+           borda do cartão -- estouro que não cresce a página, então nenhuma
+           régua acusava. O `min()` mantém o gatilho onde ele serve e deixa o
+           campo encolher onde a linha inteira é menor que o piso. */
         flex="1 1 260px"
-        minW="260px"
+        minW="min(260px, 100%)"
         minH="64px"
         resize="vertical"
         /* O recipe do Chakra dá 9px 12px e raio `sm` ao campo; o artifact

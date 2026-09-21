@@ -290,10 +290,33 @@ describe("🔴 a linha cujo item não existe mais", () => {
   it("pelo TECLADO: Enter na morta marca lida, sem navegar", async () => {
     comSino([notificacao({ alvo_estado: ESTADO_DO_ALVO_SEM_ACESSO })]);
     await abrirPainel();
-    (await screen.findByText(FRASE)).closest("button")!.focus();
-    await userEvent.keyboard("{Enter}");
+    /* 🔴 **O foco tem que GRUDAR antes do Enter.** Um `.focus()` seco
+       reprovava 2 vezes em 10, e a mensagem era "nunca chamada": o Enter
+       não chegava ao botão. O painel é um popover, e a gestão de foco dele
+       roda depois -- quando roda por último, leva o foco embora e a tecla
+       cai no vazio. Insistir até o foco ficar é o que torna o teste
+       determinístico; esperar só a mutação não bastava, porque não havia
+       mutação nenhuma para esperar. */
+    const linhaMorta = (await screen.findByText(FRASE)).closest("button")!;
+    /* 🔴 **O gesto inteiro se repete, e não só a espera.** Medido neste
+       arquivo, rodando sozinho: `.focus()` seco reprovava 2 vezes em 10, e
+       a mensagem era "nunca chamada" -- o Enter não chegava ao botão. O
+       painel é um popover e a gestão de foco dele roda depois; quando roda
+       por último, leva o foco e a tecla cai no vazio.
 
-    expect(mocks.marcarNotificacaoLida).toHaveBeenCalledWith("1787000000000000_abc");
+       ⚠️ Esperar mais NÃO conserta: pus um `waitFor` em volta da afirmação
+       e ficou 3 em 12, porque não havia mutação atrasada para esperar --
+       havia mutação nenhuma. Garantir o foco antes da tecla melhorou para 1
+       em 12, mas o roubo ainda cabe entre uma linha e outra.
+
+       ⚠️ Isto NÃO é repetir até passar: se a tecla chegar e a funcionalidade
+       estiver quebrada, o `waitFor` esgota e o teste reprova igual. O que se
+       repete é o GESTO, contra uma corrida do popover -- não a asserção. */
+    await waitFor(async () => {
+      linhaMorta.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(mocks.marcarNotificacaoLida).toHaveBeenCalledWith("1787000000000000_abc");
+    });
     expect(navegou).not.toHaveBeenCalled();
   });
 
