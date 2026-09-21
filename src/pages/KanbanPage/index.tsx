@@ -69,7 +69,7 @@ export default function KanbanPage({ tarefaDoLink }: KanbanPageProps = {}) {
    *
    * ⚠️ O lembrado é usado mesmo fora da primeira página: é por isso que o
    * NOME é guardado junto (`useUltimoSubgrupo`).
-   * ➡️ `CONTEXT.md`, "Histórias que saíram dos comentários", sobre o 3. */
+   * ➡️ `NARRATIVA.md`, "Histórias que saíram dos comentários", sobre o 3. */
   /* ⚠️ `primeiraPagina`, NUNCA `opcoes`: `opcoes` é o que a pílula mostra, e
      encolhe conforme a pessoa digita. Lendo dali, o quadro trocava sozinho no
      meio da busca -- e uma busca fechada sem escolher deixava a lista

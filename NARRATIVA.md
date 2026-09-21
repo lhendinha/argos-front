@@ -1,0 +1,3509 @@
+# Argos (Frontend) — a história datada
+
+> As REGRAS que estas histórias produziram estão no `CLAUDE.md`, que é o
+> arquivo carregado em toda sessão. O estado e as decisões estão no
+> `CONTEXT.md`. Aqui fica só como cada uma foi descoberta -- na ordem em que
+> estava no `CONTEXT.md`, sem nada reescrito.
+
+## 0) Toda mudança de código nasce numa branch, a partir da `main` (04/09/2026)
+
+🔴 **Regra, escrita em 04/09/2026 porque até então só existia de costume.**
+Nenhuma edição de código é feita direto na `main`. O fluxo, sem exceção:
+
+1. `git checkout main && git pull`, e daí `git checkout -b nome-da-mudanca`.
+   O nome diz o que a branch faz, nunca quem a fez ou quando.
+2. Todo o trabalho -- código, teste, prosa que acompanha -- acontece dentro
+   dela, em commits verdes (lint e suíte passando a cada commit).
+3. A conferência visual é feita **da branch**, em Chrome real, na porta 5174
+   do `yarn dev`; o merge na `main` só acontece com a tela conferida.
+4. Depois do merge o Vercel publica sozinho, e a conferência em produção vem
+   **depois**, com `scripts/verificar-deploy-em-producao.mjs` -- é a exceção
+   documentada no `README.md`, seção *"Produção sai da main"*. A ordem de
+   deploy é invertida; a regra da branch, não.
+5. Uma mudança grande em fases é **uma branch por fase**, cada uma nascendo
+   da `main` já com a fase anterior mesclada. Nunca uma branch em cima da
+   outra.
+6. 🔴 **Todo plano (`PLANO_*.md`) nasce com três coisas** (05/09/2026, dito
+   pelo usuário ao revisar o `PLANO_PAGINACAO.md` da API): a **régua de
+   arquivos menores** (nenhum arquivo novo ou tocado passa de 250 linhas de
+   código -- `scripts/medirArquivos.mjs` confere -- e tipo, hook e helper
+   nascem onde a seção 3 manda), a **prosa no padrão da seção 0b** em todo
+   código que o plano escreve, e uma **fase final de documentação** com
+   commit próprio (`CONTEXT.md`, `README.md`, o próprio plano com status e
+   o que a execução achou). Um plano sem essas três partes está incompleto
+   antes de começar.
+7. 🔴 **Todo plano termina com uma conferência PONTA A PONTA em produção,
+   num GRUPO DE TESTE** (08/09/2026, dito pelo usuário ao fechar o
+   `PLANO_FINANCEIRO.md`). Não é a conferência de deploy
+   (`verificar-deploy-em-producao.mjs`), que abre as telas e lê rótulos.
+   Esta **usa o sistema**: cria o dado pela tela, percorre o fluxo inteiro,
+   confere o resultado onde ele aparece, e **apaga tudo**.
+
+   ⚠️ **Num grupo de teste, nunca no escritório real.** A conta de produção é
+   `super_admin` de um escritório com dado de verdade. O grupo se funda pela
+   API (rota administrativa) e se apaga por
+   `scripts/apagar_grupo_de_conferencia.py`, no repositório da API.
+
+   🔴 **Por que ela existe:** a conferência de deploy não pega nada quando a
+   base está VAZIA. No Financeiro, todas as telas de produção passaram
+   verdes mostrando o estado vazio -- e a primeira vez que alguém lançar
+   dinheiro lá será a primeira vez que aquelas telas verão dado.
+
+8. 🔴 **O merge termina com `git push origin main` -- e AQUI o push É o
+   deploy** (09/09/2026, dito pelo usuário ao perguntar por que 19 commits da
+   API não tinham subido).
+
+   ⚠️ **A ordem importa mais aqui que na API.** Lá o push é só sincronização,
+   e esquecê-lo deixa o repositório atrás da produção. Aqui ele PUBLICA: o
+   Vercel constrói tudo o que chega na `main`. Um merge sem push é uma
+   entrega que ninguém recebeu; um push é uma entrega que já foi.
+
+   ⚠️ **Por isso a regra 4 vem antes desta:** a conferência em produção só
+   pode acontecer DEPOIS do push, porque é ele que põe o código no ar. Na API
+   é o inverso -- lá se confere antes de mesclar.
+
+   ⚠️ **O que decide é o BUNDLE, não o caminho do arquivo.** Um commit que
+   toca só `scripts/` publica um bundle idêntico -- e `src/test/` também
+   fica fora dele (medido em 09/09/2026: mexer em `src/test/setup.ts` deixou
+   o mesmo `index-nOq8uunm.js`). O `git diff --name-only origin/main..HEAD |
+   grep ^src/` é o primeiro filtro, não a resposta; quando ele acusa,
+   comparar o nome do arquivo gerado pelo `yarn build` antes e depois é o que
+   diz se alguém vai ver diferença.
+
+9. 🔴 **A lista pede só o que mostra; o detalhe do item carrega ao abrir**
+   (14/09/2026, decidido pelo usuário; desenho e medições no
+   `PLANO_LER_SO_O_NECESSARIO.md` da API, regra 8 do `CONTEXT.md` de lá). É o
+   padrão de toda tela nova; as que já existem entram pelo plano.
+
+   - A linha usa só os campos que desenha. O que só aparece ao abrir -- o
+     texto da movimentação, os registros do atendimento -- vem da rota do
+     item, com o estado de carregando dentro do modal ou da página.
+   - ⚠️ **O item da lista não preenche detalhe nem formulário de edição:** a
+     lista não traz tudo. Quem abre o item pede o item.
+   - ⚠️ **O peso se resolve na leitura, não no cache:** o React Query fica como
+     está (`staleTime: 0`, recarga ao voltar para a janela). Com a lista só com
+     o que a tela mostra, reler é barato, e guardar por minutos atrasaria o dado
+     novo (decidido pelo usuário em 14/09/2026).
+   - ⚠️ **Ordem ao tirar um campo da lista:** a API ganha a rota do item, o
+     front passa a usá-la, e só então a API tira o campo. Na ordem inversa a
+     tela lê `undefined`.
+
+⚠️ **O que a `main` recebe direto**: só documento (`CONTEXT.md`, `README.md`)
+que não altera código nem teste.
+
+➡️ Por que está escrito: uma mudança a meio caminho na `main` vai para
+produção no próximo push, porque o Vercel publica tudo o que chega nela.
+Branch é o que torna cada entrega desfazível sozinha com um `git revert`.
+
+## 0b) O padrão de prosa (05/09/2026)
+
+É a seção 0b do `api/CONTEXT.md` traduzida para as formas do TypeScript.
+Vale para todo código novo, e a Fase 3 do `PLANO_ARQUIVOS_MENORES.md` aplica
+ao existente, grupo a grupo. Medido em 05/09/2026, antes dela: 2.048 blocos
+de prosa em `src/`, 20 com mais de um 🔴, 821 🔴 e 800 ⚠️ contra 4 ➡️, e 52
+arquivos com data solta. `prosaSemDiario.test.ts` cobra a parte mecânica
+(data só na mesma frase que "medi").
+
+### As formas, e o que cada uma é
+
+| forma | onde | é o quê |
+|---|---|---|
+| `/** ... */` colado no `export default function` ou no primeiro export | todo arquivo | o **docstring de módulo**: a primeira linha diz o que o arquivo é |
+| `/** ... */` colado numa função, hook, tipo ou constante exportada | quando ela pede | docstring da definição |
+| `/* ... */` antes de uma instrução, ou `//` na linha | dentro do corpo | comentário de decisão local |
+| `{/* ... */}` no JSX | entre elementos | idem, na árvore |
+
+### Forma: três partes, nesta ordem, e nada mais
+
+1. **A primeira linha diz o que é.** Uma frase, sem "Este componente...".
+2. **A regra e o custo.** 🔴 para a decisão que quebra algo se for desfeita,
+   ⚠️ para a armadilha que não derruba teste. Número medido entra aqui, com
+   a data ao lado -- número envelhece, e a data diz quando remedir.
+3. **O ponteiro** ➡️: o teste que cobre, ou a seção deste arquivo com a
+   história. Uma linha.
+
+### Marcadores com significado fixo
+
+| marcador | significa | limite |
+|---|---|---|
+| 🔴 | **invariante**: quebrar isso é defeito em produção | no máximo UM por bloco; se há dois, um deles é ⚠️ |
+| ⚠️ | **armadilha**: o jeito óbvio de fazer que está errado, e por quê | quantas forem armadilhas de verdade |
+| ➡️ | **ponteiro**: o teste, a seção ou a função onde o assunto mora | uma linha |
+| ✅ | **sai**. Status é histórico, e histórico não fica no código | -- |
+
+### O que sai do código e vem para este arquivo
+
+- Data solta, "a primeira versão fazia X", "antes era assim", "corrigido em",
+  nome de função que não existe mais. **A única data que fica é a que
+  acompanha um número medido.**
+- A narrativa de como o defeito foi encontrado. No código fica a regra que o
+  defeito ensinou; o caminho até ela é diário.
+- A mesma explicação repetida em quem chama. A regra mora em quem a
+  implementa, e o chamador aponta com ➡️ em uma linha.
+
+⚠️ **Nada se perde.** Este arquivo já é o diário do projeto. Onde o código
+tiver história que ele não tem, ela entra aqui, sob *"Histórias que saíram
+dos comentários"*, ANTES de sair do código.
+
+### Tamanho como sinal, não como lei
+
+Docstring de módulo acima de vinte linhas, ou de definição acima de dez,
+quase sempre carrega diário ou repetição. Não vira guarda mecânico -- vira
+pergunta na revisão: *"o que aqui é regra, e o que é história?"*.
+
+## 0c) Constante nunca vira string solta (07/09/2026)
+
+🔴 **Regra.** Palavra que o SERVIDOR entende -- status, tipo, natureza,
+papel -- nunca aparece escrita à mão duas vezes. Ela nasce uma vez em
+`src/constants/`, e todo o resto importa de lá.
+
+⚠️ **Por que é grave aqui, e diferente do backend.** Lá o defeito é uma
+comparação que vira sempre falsa. Aqui ele some numa TELA: o card conta 7 e
+a lista abre vazia, e ninguém liga uma coisa à outra. O usuário achou o
+irmão disso no Financeiro (`lancamento.natureza == "saida"`), e a varredura
+do front em 07/09/2026 saiu daí.
+
+### O que o TypeScript já resolve -- e o que não
+
+| resolve | não resolve |
+|---|---|
+| `minimo: Papel` -- errar a palavra é erro de compilação | chave de `Record<string, ...>` (era o `CORES_DO_STATUS`) |
+| `tipo_envio?: "movimentacao" \| "lembrete"` no tipo da resposta | `state` de navegação (`navegar("/historico", { state: { tipoEnvio: ... } })`) |
+| campo tipado com union derivada da constante | `id`/`valor` de opção de menu, que são `string` |
+
+🔴 **Union type não aceita variável**, exatamente como o `Literal` do
+Pydantic. Quando as duas listas precisam existir, elas andam lado a lado e
+a isenção do guarda diz isso.
+
+### Onde a constante mora
+
+- **Vocabulário do servidor** vai em `src/constants/<assunto>.ts` e é
+  exportado pelo `index.ts` -- é de lá que página, tema e serviço leem.
+  `constants/atendimento.ts` e `constants/historico.ts` são os moldes.
+- **Filtro que só existe numa tela** fica na pasta da página. `STATUS_TODOS`
+  ("todos") é opção de MENU, não status: fica em
+  `pages/AtendimentosPage/constants.ts`, e é a linha divisória inteira.
+- **Rótulo é livre.** `{ id: STATUS_FECHADO, rotulo: "Fechados" }` -- o `id`
+  é contrato, o texto é escolha. Ficam lado a lado de propósito.
+
+### O guarda
+
+`src/constanteNuncaViraStringSolta.test.ts`: importa cada constante, pega o
+valor DELA (repetir a palavra no teste seria mais uma cópia solta) e varre
+`src/`. Isenção tem motivo escrito, e um teste apaga a que deixou de valer.
+
+🔴 **Só palavra DISTINTIVA entra.** "todos", "eu", "nome" são comuns demais
+para varrer por valor: o guarda viraria ruído, e ruído vira teste
+silenciado. Foi a mesma conclusão do backend, onde `RENOMEAR_OK = "ok"`
+precisou sair da lista porque `"ok"` é chave do placar de envios.
+
+### O que a varredura de 07/09/2026 achou
+
+Quatro coisas, todas em atendimento e histórico:
+
+1. `STATUS_EM_ANDAMENTO` declarado em `AtendimentosPage/constants.ts`
+   enquanto `constants/atendimento.ts` já era dono da mesma frase -- dois
+   lugares, nada cobrando que concordassem. E, duas linhas abaixo,
+   `{ id: "Fechado" }` literal ao lado do irmão que usava a constante.
+2. `theme/atendimento.ts` chaveava `CORES_DO_STATUS` pelas palavras, num
+   `Record<string, ...>`: errar a chave não dá erro, cai no
+   `COR_DE_STATUS_PADRAO` e a etiqueta perde a cor calada.
+3. `TIPOS_DE_ENVIO` e `TIPO_DE_ENVIO_PADRAO` com os valores à mão, e o
+   `ResumoRapido` mandando `tipoEnvio: "movimentacao"` no `state` da
+   navegação -- exatamente o card que abre a lista.
+4. Os dois `item.tipo_envio === "lembrete"` do Histórico.
+
+✅ **A quinta, que tinha ficado aberta, foi FECHADA em 07/09/2026** -- e a
+saída não foi nenhuma das três que eu tinha listado. Ver a seção
+*"O status do atendimento travava a edição"*, logo abaixo.
+
+➡️ O mesmo padrão do outro lado: `api/CONTEXT.md`, seção 0c.
+
+## Um symlink parou a publicação, e o site não mostrou nada (07/09/2026)
+
+🔴 **A build do Vercel falhou por três deploys e ninguém viu na tela.** O
+erro era `EEXIST: file already exists, mkdir '/vercel/path0/node_modules'`:
+um `node_modules` tinha ido para um commit como **symlink**, e o `yarn
+install` morre ao tentar criar o diretório em cima dele.
+
+⚠️ **Por que passou despercebido:** quando a build falha, o Vercel mantém o
+deploy anterior. O site seguiu no ar, respondendo 200, sem erro nenhum de
+console -- e a conferência de produção passou, porque estava conferindo o
+build VELHO. O sintoma não é "quebrou": é "parou de publicar", e o único
+sinal visível é o hash do bundle que não muda.
+
+➡️ Daí a régua: **depois de todo deploy do front, conferir que o hash do
+bundle MUDOU**, não só que a tela abre.
+
+⚠️ **E a ressalva, achada na hora de aplicar a régua:** commit que toca só
+arquivo de TESTE não muda o bundle -- teste não é importado pela entrada, o
+`vite build` não o inclui, e o hash sai idêntico de propósito. **Comentário
+em arquivo de `src/` também não muda**: a minificação os remove antes do
+hash (medido em 07/09/2026 -- dois `yarn build` seguidos, só comentários
+entre eles, `index-BoEI0hbt.js` nos dois). Nesses casos o hash não distingue
+"build passou" de "build falhou", e a resposta está no painel do Vercel. A
+régua vale para o que entra no pacote.
+
+### Como o symlink nasceu, e por que o `.gitignore` não pegou
+
+⚠️ **`node_modules/`, com barra, casa só com DIRETÓRIO.** Um symlink com
+esse nome é arquivo, passa pela regra e vai para o índice. Agora as duas
+formas estão no `.gitignore`, com o porquê ao lado.
+
+⚠️ **A worktree temporária foi a origem.** Apontar o `node_modules` dela
+para o da árvore principal com `ln -s` parece inofensivo e não é: o link
+acaba dentro da árvore errada, e um `git worktree remove --force` chega a
+seguir o link e apagar o `node_modules` de verdade (aconteceu duas vezes na
+mesma tarde). **Worktree do front não compartilha `node_modules` por
+symlink** -- ou se instala nela, ou não se usa worktree.
+
+🔴 **E o erro humano que deixou passar:** o `git status` foi lido com
+`grep -v node_modules` antes de um `git add -A`. Filtrar o que se está
+prestes a commitar é exatamente como uma coisa dessas entra.
+
+➡️ `src/nadaDeSymlinkNoRepo.test.ts` cobra o índice inteiro, não só um nome:
+symlink rastreado é `mode 120000`, e é isso que ele procura.
+
+## O Financeiro na tela: o que a Fase 4 aprendeu (07/09/2026)
+
+A aba Configurações do Financeiro entrou junto com a casca da tela (menu,
+ícone, rota, quatro abas pela URL). O que segue é o que a execução mudou de
+ideia — e a lição é uma só, repetida cinco vezes.
+
+### 🔴 Dentro do sistema, a régua é a dos VIZINHOS
+
+O artefato manda no que é NOVO. Onde o projeto já resolveu o caso, o molde é
+o do vizinho — e "vizinho" é a tela ao lado, não uma parecida em outro
+canto. Cinco correções nasceram de eu ter copiado o artefato onde havia
+molde, e o usuário apontou as cinco:
+
+1. **A linha da lista** saiu com o `.linha-lista` do artefato (14px de recuo,
+   nome em 14px) ao lado das Fases, que usam `LinhaDeLista` (4px, 13,5px).
+2. **O criar do centro de custo** saiu com o `.nova` do artefato (10px de
+   gap, sem divisória) ao lado do `FormularioNovaOpcao`.
+3. **O cartão de Configurações do grupo** virou estreito como o do Perfil,
+   enquanto as abas irmãs (Convidar, Inscrições, Fases) usam largura cheia.
+   Do Perfil vale o INTERIOR — divisória recuada pelo padding, botões na
+   direita do conteúdo —, não a largura.
+4. **As três listas eram listas**, e Clientes, Processos e Membros são
+   tabelas com cabeçalho e LINHA CLICÁVEL. Viraram tabela.
+5. **O centro de custo era o único sem modal**, e ficava com dois gestos
+   diferentes dos irmãos na mesma tela.
+
+### As tabelas do catálogo
+
+⚠️ **O olho de desativar CONTINUA na linha**, e não é inconsistência:
+`Membros` faz igual — linha clicável e um botão que sobra. O clique da linha
+carrega UMA ação, e estas linhas têm duas.
+
+⚠️ **Tudo à esquerda, inclusive o saldo.** Tentei alinhá-lo à direita (os
+dígitos comparam melhor) e, para separá-lo do olho, empurrei a coluna de
+ações — duas mudanças brigando, e o cabeçalho boiando no meio da coluna. A
+coluna vazia das ações já dá a separação. O `mono` no valor é o que restou
+da ideia boa.
+
+🔴 **`IconeOlho` e `IconeOlhoCortado` não trazem tamanho próprio.** Quem
+dava os 16px era o `LinhaDeLista`; ao virar tabela, viraram 32px e a linha
+inchou. `IconeLixeira` traz — por isso a linha de inscrição nunca precisou
+da regra.
+
+🔴 **O `onKeyDown` da linha clicável só responde à própria linha**
+(`e.target !== e.currentTarget`). Sem isso ele engolia o Enter de quem
+digitava num campo DENTRO dela.
+
+### Editar é mais que renomear
+
+O `PATCH` do catálogo aceitava só `nome`, e o modal era uma caixa de
+renomear. A régua nova, em uma frase: **muda o que NÃO reescreve história.**
+
+- categoria: nome, **cor** e **agrupador**;
+- conta: nome e os **dados bancários**.
+
+🔴 Continuam recusados, por `extra="forbid"` no schema — 422 antes de chegar
+ao serviço: a **natureza** da categoria (inverteria o LADO do caixa de tudo
+lançado nela) e o **tipo**, o **início** e o **saldo inicial** da conta (o
+tipo muda quais campos são obrigatórios num item que já existe; os outros
+dois são write-once porque o saldo ATUAL é mantido a partir deles).
+
+⚠️ E o que a API recusa, a tela **não mostra**: campo cinza convida a tentar.
+
+### Duas armadilhas de tipagem que só a medição pega
+
+⚠️ `atualizarConta` aceitava `Partial<DadosDaConta>` enquanto a API só
+aceitava `nome` — o tipo largo convidava exatamente o 422 que ele deveria
+impedir. Hoje `CamposDaConta` e `CamposDaCategoria` dizem o que o `PATCH`
+aceita, e nada mais.
+
+⚠️ `natureza` estava como string solta (`=== "entrada"`) na lista de
+categorias — o defeito da seção 0c, no lugar onde ele custa dinheiro somado
+do lado errado. Virou `constants/financeiro.ts`.
+
+## O status do atendimento travava a edição (07/09/2026)
+
+🔴 **O formulário da aba Detalhes mandava sempre os três campos**
+(`assunto`, `status`, `responsaveis`), e a API recusa qualquer status fora
+do vocabulário com 400 *"Status inválido"*
+(`atendimentos_service`). Junte os dois: um atendimento com um status que
+este front não conhecesse ficaria **impossível de editar** -- quem tentasse
+corrigir só o assunto levaria um erro apontando um campo que não tocou, e
+perderia o que digitou.
+
+⚠️ **A leitura tolerante não cobria isso, e parecia cobrir.**
+`theme/atendimento.ts` pinta status desconhecido em vez de escondê-lo, com
+a razão escrita: *"um valor novo no servidor apareceria em branco e
+ilegível"*. Mas isso vale para MOSTRAR. Na hora de salvar, o valor tolerado
+voltava para um servidor que o recusa.
+
+### A saída não foi decidir o que salvar
+
+A pergunta parecia ser *"o que gravar quando o status lido não está no
+vocabulário?"*, e as três respostas eram ruins: normalizar reescreve dado
+alheio calado; bloquear o salvar prende a edição do assunto; deixar como
+estava é o defeito.
+
+🔴 **A resposta é não mandar o campo.** `camposAlteradosDoAtendimento`
+monta o corpo só com o que mudou, e o status desconhecido fica onde está --
+porque ninguém o tocou.
+
+⚠️ **E isso não é padrão novo: é o outlier sendo corrigido.**
+`FormularioProcesso` já fazia exatamente isso desde antes, com
+`camposAlterados` em `utils/processos.ts`, e o docstring de lá lista três
+motivos que valem igual para atendimento:
+
+1. **corrida** -- A abre a tela, B muda o status, A salva o assunto e
+   devolve o status velho por cima, sem ter tocado nele;
+2. **permissão** -- reenviar a lista de responsáveis inalterada faz o
+   servidor rodar a régua de "tirar OUTRA pessoa" à toa;
+3. **a convenção do servidor é PATCH parcial** -- campo ausente é "não
+   toque", e o front tem de honrar isso.
+
+⚠️ O `status` só entra no corpo se passar por `ehStatusDeAtendimento`. Pela
+tela não há como escolher um valor de fora -- o `Select` só oferece os dois
+--, mas quem monta o corpo é a função, e é nela que a garantia mora. Com
+isso `CamposDoAtendimento.status` é `StatusDeAtendimento` e não `string`: o
+compilador passou a cobrar onde o front ESCREVE, enquanto a LEITURA segue
+`string` e tolerante.
+
+⚠️ **O que a medição desfez, no caminho:** eu tinha previsto que um `PATCH`
+de corpo vazio daria 500. Dá **200** -- `atualizar` tem `if not alteracoes:
+return`. E o servidor já não notificava à toa: ele compara
+`alteracoes["status"] != atendimento.status` antes de avisar, e
+`avisar_mudanca_de_responsaveis` calcula entradas e saídas, que são vazias
+quando nada mudou. Mandar menos campos não mudou nenhuma notificação.
+
+➡️ `utils/atendimentos.test.ts` e `pages/AtendimentoDetalhePage/index.test.tsx`.
+
+## O lido do Histórico na tela (13/09/2026)
+
+Fase 2 do `PLANO_LIDO_NO_HISTORICO.md`, que mora na API (o desenho das listas e
+do lido está no `CONTEXT.md` de lá). A API manda o lido de cada envio, as
+contagens da leitura e o contador; a tela mostra e marca. O que o código não
+conta:
+
+### 🔴 Marcar não recarrega a lista
+
+Abrir um envio marca como lido (`useAbrirEnvio`, `useMarcarLidoNoHistorico`): o
+item e as contagens mudam no cache (`comEnvioLido`, em
+`pages/HistoricoPage/leitura.ts`) e só o contador é recarregado. Recarregar a
+lista com "Só não lidos" tiraria da tela o envio que a pessoa acabou de abrir --
+e pelo mesmo motivo, com esse filtro, a lista não recarrega ao voltar o foco.
+
+- Marca pela linha, pelo link do e-mail e pela movimentação do detalhe do
+  processo, esta só com `tem_envio`: movimentação que não gerou e-mail não tem o
+  que marcar.
+- "Marcar todos como lidos" (`useMarcarTodosComoLidos`) marca tudo o que a pessoa
+  vê, ignorando os filtros, e o Desfazer vive no aviso. O servidor o aceita por um
+  minuto e responde 409 depois. Sem nada a marcar, o botão fica no lugar e diz
+  "Tudo lido".
+
+### O contador e os números
+
+- `useNaoLidosDoHistorico` recarrega ao voltar o foco, depois de marcar e quando
+  o canal traz aviso de lembrete (`assinarCanal`, só `TIPO_LEMBRETE`): outro aviso
+  não muda o Histórico.
+- 🔴 **Todo número é exato** (decisão 11): a pílula do `ItemMenu` e o resumo usam
+  `formatarQuantidade` ("1.234"), sem "99+", e a pílula cresce sem quebrar o menu.
+  O estado vai no nome acessível do link e de cada linha.
+- O filtro de leitura fica na URL e na chave do cache; a contagem de cada opção
+  vem das contagens da leitura, com os outros filtros aplicados.
+- ⚠️ Enquanto o total carrega, o resumo já foi visto dizendo "Mostrando 15 de 0
+  envios". Não foi mexido.
+
+### Ver e conferir
+
+- ⚠️ **Semear no g-alfa do `yarn offline` não serve:** o contador de sequência de
+  lá está atrás das listas, e o envio novo nasce lido.
+  `scripts/verificar-lido-do-historico.mjs` roda contra um grupo NOVO (1.234
+  envios semeados), em Chrome.
+- 🔴 **Em produção, nunca clique numa linha:** abrir marca como lido para a conta,
+  e a conta de teste é de um escritório real. A conferência só de leitura abre a
+  tela, o menu do filtro e a Área de trabalho, e acusa qualquer requisição que não
+  seja leitura.
+
+## Histórias que saíram dos comentários (Fase 3 do `PLANO_ARQUIVOS_MENORES.md`, grupo 1, 05/09/2026)
+
+O padrão de prosa (seção 0b) tira o diário do código. O que os comentários
+de `types/`, dos seis componentes da Fase 2 e dos hooks deles contavam, e
+que este arquivo ainda não tinha:
+
+- **O quadro padrão do Kanban era o ÚLTIMO da lista de subgrupos**, com o
+  comentário "o último da lista, que é o mais recente, que é o que costuma
+  estar em uso" -- e as três afirmações eram falsas: a listagem passou a
+  vir em ordem alfabética, "mais recente" nunca foi "mais usado", e quem
+  trabalha no mesmo subgrupo trocava a pílula a cada visita. Daí
+  `useUltimoSubgrupo`: o último USADO, lembrado entre visitas, com o nome.
+- **O link do e-mail no Histórico passou a resolver por `historicoDoProcesso`
+  (03/09/2026)**, quando o número do processo virou filtro de tela e
+  `listarHistorico` passou a paginar: o `find` que acha a comunicação do
+  link procura no conjunto inteiro, e com a paginada uma notificação a
+  partir do 11º item dava "não foi possível localizar". Os filtros de
+  subgrupo e de número entraram na URL nesse mesmo dia.
+- **A caixa de busca do Histórico** nasceu como um `Input` pequeno com 230px
+  e ficava visivelmente diferente da de Processos na mesma barra; virou
+  `CampoDeBusca` com o teto padrão de 340px. `verificar-filtros-do-historico`
+  mede a caixa contra a de Processos por isso.
+- **"Do subgrupo SELECIONADO", na prévia da importação (30/08/2026)**, veio
+  de um relato de uso: quem é membro de 6 dos 12 subgrupos lia "deste
+  subgrupo" e não sabia de qual a frase falava, porque o seletor fica na
+  etapa da busca e some na prévia. Frente registrada: a prévia exibir o
+  destino, junto com o destino múltiplo.
+- **`ErroDaBuscaPorOab` carrega o campo** porque a primeira versão da tela
+  decidia onde mostrar o erro por substring da mensagem ("contém OAB",
+  "contém UF") -- e "Selecione a UF da OAB" contém as duas.
+- **`Comunicacao.link` não é mostrado desde 26/08/2026**: havia um "Abrir o
+  documento no tribunal" no detalhe da movimentação, removido a pedido; em
+  7 dos 71 links medidos ele nem abria. `tem_envio` nasceu no mesmo dia
+  (9 de 73 movimentações tinham envio em produção); resposta anterior não
+  o traz.
+- **`Cliente.processos` é derivado desde 22/08/2026** e **o endereço existe
+  desde 27/08/2026**; cliente anterior vem sem os campos.
+- **`VinculosDeRegistro` chamava-se VinculosDaTarefa** enquanto só a tarefa
+  tinha o campo; o documento passou a usar o mesmo, e o nome de um
+  consumidor só era o convite pra segunda cópia do tipo.
+- **`falhouAoRecarregar`, em `EditarMembroForm`**, teve duas descrições
+  contraditórias no mesmo arquivo: uma dizia que cobria "não achou a
+  pessoa", e não cobria -- aquele caso é sucesso da rede. A decisão de
+  semear formulário por `useEffect` (o `eslint-disable` de
+  `react-hooks/set-state-in-effect`) é de 03/09/2026 e está no
+  `eslint.config.js`.
+- **O antigo `types/index.ts` tinha cinco seções** cujos títulos já não
+  descreviam o conteúdo, um banner "Tipos que estavam espalhados" (a
+  história de quando cada tipo morava no módulo que o usava primeiro, e o
+  `ToastItem` era importado de dentro de `components/Toast/`) e outro sobre
+  os parâmetros das chamadas ("eram 15 interfaces espalhadas por 12
+  arquivos"). Os dois saíram nas Fases 1 e 3; a regra que sobrou está no
+  docstring do índice.
+
+## Histórias que saíram dos comentários (Fase 3 do `PLANO_ARQUIVOS_MENORES.md`, grupo 2, 05/09/2026)
+
+O que os comentários das 21 páginas contavam, e que este arquivo ainda não
+tinha:
+
+- **O detalhe de atendimento não tinha abas até 26/08/2026** -- era a linha
+  do tempo direto, enquanto processo e cliente já se dividiam assim.
+  Documentos entrou como aba nas três, e "Detalhes" entrou em SEGUNDO de
+  propósito (abrir um atendimento é para ler a conversa). No mesmo dia o
+  `Select` de status saiu do cabeçalho, onde salvava sozinho ao lado do
+  botão de excluir, e virou campo da aba Detalhes; e desde 01/09/2026
+  apagar o assunto não conta como mudança, porque o servidor recusa assunto
+  vazio e a tela ia ao servidor só para ouvir um "não" que já sabia.
+- **Editar cliente era clicável para qualquer um**: o arquivo enunciava "não
+  mostrar botão que a API vai negar" e não aplicava a si mesmo -- `PATCH
+  /clientes` é `manager`, e o 403 só aparecia depois de a pessoa digitar
+  tudo.
+- **As linhas de "Processos do cliente" e de "Tarefas vinculadas" eram texto
+  morto até 26/08/2026**: vinte números mascarados sem link, três tarefas
+  que não se abriam. O filtro `processo_numero` de `GET /tarefas` nasceu em
+  22/08/2026 para a segunda lista.
+- **O cabeçalho de Clientes** avisava "Mostrando 10 de 120 clientes -- refine
+  a busca" na tela normal, sem busca; o aviso passou a valer só com busca e
+  só com a tabela já correspondendo ao termo.
+- **`FiltroDeMenu` nasceu de `FiltroDeTipo`**, generalizado em 26/08/2026
+  quando o Histórico ganhou os filtros de falha e período.
+- **`PATCH /grupos/membros/{email}` baixou de `super_admin` para `admin`
+  em 31/08/2026**, quando a inscrição da OAB entrou no modal de editar
+  membro. E a invalidação das notificações ao editar um membro trocou de
+  motivo em 25/08/2026: antes o sino traduzia e-mail em apelido com o cache
+  de membros; desde então o nome vem assado em `autor_nome`, e sem
+  invalidar o sino mostraria o nome antigo até o foco voltar.
+- **O perfil tem duas abas desde 30/08/2026**, divididas por assunto -- e o
+  seletor de destino da importação só aparece com mais de um subgrupo, por
+  escolha do usuário no mesmo dia. Salvar OAB e interruptor num "Salvar"
+  só foi conferido em produção em 31/08/2026. O texto de apoio da inscrição
+  deixou de explicar que a mesma numeração existe nas 27 seccionais (o
+  público é de advogados) e ganhou a frase sobre o interruptor quando ele
+  passou a existir; "Um apelido não bate." saiu do apoio do nome em
+  31/08/2026, por soar como reprimenda.
+- **O detalhe da movimentação teve um "Abrir o documento no tribunal"**,
+  removido a pedido em 26/08/2026 -- mesma história de `Comunicacao.link`,
+  no grupo 1.
+- **O subgrupo na linha de Processos virou etiqueta em 02/09/2026**: era o
+  único lugar que já mostrava o subgrupo, de um jeito próprio, enquanto
+  Membros e Inscrições usavam `EtiquetasDeSubgrupo`. Em Documentos a coluna
+  entrou logo depois de "Vínculo" no mesmo dia.
+- **A etiqueta "removido" da prévia é vermelha desde 30/08/2026**, e a
+  objeção contra o vermelho (sugerir impedimento num estado marcável) caiu
+  na mesma conversa em que ficou decidido que os removidos não vêm
+  pré-marcados. A coluna Responsável da listagem foi ACRESCENTADA em
+  26/08/2026 sem tirar "Última movimentação", que a demonstração tinha
+  substituído para caber.
+- **O número de atrasadas da Área de trabalho passou um tempo sem link**,
+  porque toda visão da Agenda era limitada por janela; a Agenda ganhou o
+  modo "Atrasadas" em 26/08/2026, e o servidor passou a contar "os meus"
+  nos dois números de prazo no mesmo dia.
+
+## Histórias que saíram dos comentários (Fase 3 do `PLANO_ARQUIVOS_MENORES.md`, grupo 3, 05/09/2026)
+
+O que os comentários das 68 pastas de `components/` contavam, e que este
+arquivo ainda não tinha:
+
+- **`BotaoNu` nasceu na terceira vez** que um `Box as="button"` sem
+  `type="button"` submeteu um formulário por engano, em componentes
+  diferentes; o "i" de `DicaDeCampo` seria a quarta.
+- **`DicaDeCampo` abriu por hover durante um dia (30/08/2026)**: a ideia era
+  boa no papel -- quem tem mouse não deveria clicar para ler uma linha de
+  ajuda -- e na tela ficou ruim, porque o posicionador do balão intercepta o
+  ponteiro e o segundo clique acertava o balão, não o botão. Voltou a ser só
+  por clique.
+- **`CampoDeLeitura` nasceu dentro de `HistoricoPage`** e subiu para
+  `components/` em 26/08/2026, quando o modal de movimentação passou a
+  precisar do mesmo par rótulo/valor. `aria-controls` entrou nas `Abas` no
+  mesmo dia, junto com `PainelDaAba`.
+- **O bloco de endereço dizia "Endereço (opcional)" até 01/09/2026**, por
+  comparação com os campos de contato do cliente, que diziam "(opcional)" um
+  por um; os dois saíram no mesmo commit.
+- **`Esqueleto` tratava `prefers-reduced-motion` à mão** e usava o creme da
+  paleta pré-Argos (`--paper-dim`), que destoava de tudo; passou ao
+  `Skeleton` do Chakra.
+- **O comentário da pilha de modais afirmava que "nenhum chamador dispara
+  isso porque o Compiler memoiza"** -- suposição apresentada como fato; o
+  efeito passou a rodar uma vez, com `onFechar` num ref, para a pergunta
+  sobre o Compiler deixar de importar.
+- **`NomeEditavel` teve um laço**: a primeira versão guardava `rascunho` nas
+  dependências, cada tecla regravava o texto recusado, e depois de um único
+  409 Enter e clique fora descartavam o rename em silêncio; a correção do
+  laço aplicou a guarda também ao Enter, e um blip de rede deixava o nome
+  inalcançável -- daí a guarda valer só para o blur.
+- **O docstring de `Pagination` afirmou o esquema errado até 02/09/2026**
+  ("Query por intervalo de sequência, não cursor sequencial"): aquele esquema
+  foi abandonado quando buracos por exclusão deixaram itens fora de toda
+  página. Ver `api/PLANO_PAGINACAO.md`.
+- **O painel do `Select` esvaziava a lista** durante a espera (piscava a cada
+  tecla) e na falha (levava junto as opções locais, e "Sem responsável"
+  sumia porque a lista de gente falhou); a busca dentro do painel ficou
+  ligada por padrão em 28/08/2026, e foi aí que apareceu o caso do select
+  travado sem `combobox`. `useBuscaDoPainel` zerava a busca ao fechar sem
+  avisar o pai, e na Agenda isso desabilitava "Nova tarefa".
+
+## Histórias que saíram dos comentários (Fase 3 do `PLANO_ARQUIVOS_MENORES.md`, grupo 4, 05/09/2026)
+
+O que os comentários de `hooks/`, `utils/`, `services/`, `constants/`,
+`contexts/`, `routes/` e `theme/` contavam, e que este arquivo ainda não
+tinha:
+
+- **A lista de UFs dizia estar em ordem alfabética e não estava**: doze das
+  27 posições vinham na ordem do IBGE (`AP` antes de `AM`, `PR` antes de
+  `PE`, `SP` antes de `SE`). Corrigida em 01/09/2026, com o guarda que afirma
+  a ordem.
+- **`vinculoDeRegistro.ts` chamava-se vinculoDaTarefa**, e o nome ficou
+  estreito quando o mesmo campo passou a servir documento e o campo de
+  processo do atendimento -- a mesma história do tipo, no grupo 1.
+- **A coluna de clientes da listagem de processos procurava id por id no
+  catálogo inteiro**, e mostrava o id cru até ele chegar: 3,8 segundos com
+  5.000 clientes, medido em Chrome. `cliente_nomes` passou a vir dentro do
+  processo, e os dois seletores de cliente da tela viraram busca.
+- **`useNomeDeSubgrupo` nasceu em 02/09/2026 de uma linha que já existia em
+  `useCatalogosDeProcesso`**, quando sete telas passaram a precisar dela.
+- **`useTodosOsMembros` desembrulhava a resposta dentro do `queryFn`**,
+  deixando o cache com uma forma diferente da dos outros consumidores da
+  mesma chave; ninguém usava o hook ainda, e o primeiro que usasse
+  reintroduziria o defeito. Passou a `select`.
+- **O número do processo ia sozinho para o servidor no Histórico até
+  03/09/2026**, num ramo próprio sem paginação que ignorava os outros
+  filtros; o ramo virou a rota `historicoDoProcesso`.
+- **O produto chama-se Argos desde 25/08/2026**, e o prefixo `pje-monitor-`
+  das chaves de `localStorage` ficou de propósito: renomear deslogaria todo
+  mundo no primeiro carregamento.
+- **O 401 de um `/refresh` que devolveu 502 durante um deploy** passou a
+  cair no toast genérico depois que `ehSessaoExpirada` passou a exigir
+  "tokens sumiram"; virou o terceiro caso, `ehFalhaTransitoriaDeRenovacao`, em vez
+  de "Autenticação inválida" para dez segundos de instabilidade.
+- **As cores de status do atendimento estavam invertidas até 26/08/2026**:
+  o mapa pintava "Em andamento" de azul e "Fechado" de cinza, com o
+  docstring dizendo o contrário do que o mapa fazia. Âmbar para o aberto,
+  azul da marca para o fechado, e o texto reescrito junto.
+- **A regra "trocar uma cor obriga a alinhar o e-mail" é de 30/08/2026**,
+  mesmo dia em que ficou decidido que os processos removidos não vêm
+  pré-marcados na prévia da importação.
+- **A notificação de atribuição em massa ficou sem destino até 28/08/2026**:
+  esta função devolve uma string de rota, e os filtros de Processos
+  viajavam por `state` de navegação; quando o estado das listagens foi para a
+  URL, `?responsavel=…` virou endereço.
+- **O corpo do PATCH de processo zerava campo ausente até 28/08/2026**
+  (`campos.clienteIds || []` para os nove campos): a edição passou a mandar
+  `responsaveis: []` em todo salvamento porque o formulário nunca semeava o
+  campo, e o servidor recusava com 400 -- barulhento por sorte; com
+  `cliente_ids` teria apagado calado.
+
+## Responsáveis, e o que a tela decidiu (26/08/2026)
+
+### O status virou campo, e por isso a aba Detalhes existe
+
+O `Select` de status do atendimento era um controle que **salvava sozinho**,
+sem "Salvar", plantado no cabeçalho ao lado do botão de excluir -- enquanto o
+assunto não tinha onde ser editado. Status é campo, e campo se edita em
+formulário: a aba é o que tornou isso possível.
+
+A ETIQUETA de status continua no cabeçalho, porque ela informa e é o que se
+quer ver de relance ao abrir. Só o CONTROLE mudou de lugar.
+
+⚠️ **Um PATCH só para os três campos.** Um por campo faria o servidor comparar
+e notificar três vezes o que é uma edição só. E "Salvar" fica desabilitado
+enquanto nada mudou -- senão salvar um formulário intocado reenvia a mesma
+lista de responsáveis.
+
+### 🔴 "Detalhes" é a SEGUNDA aba do atendimento
+
+`abaValida` devolve `abas[0].id`, então a ordem da lista É a aba padrão. Pondo
+Detalhes em primeiro -- como em processo e cliente --, **abrir um atendimento
+passaria a mostrar o formulário em vez da conversa**.
+
+A consistência com as telas irmãs é de _ter_ abas, não de qual vem primeiro; e
+lá a primeira também é a que responde "o que é isto", que aqui é a conversa.
+
+A prova é negativa e vale registrar: os testes existentes continuaram verdes
+sem uma linha alterada, e a mutação (Detalhes em primeiro) derruba **quatro**
+deles.
+
+### Os painéis vão MONTADOS -- e isso muda como se testa
+
+O de Registros obriga: `NovoRegistro` tem estado local, e desmontá-lo ao
+trocar de aba jogaria fora a anotação que a pessoa acabou de escrever -- num
+campo cujo conteúdo, depois de salvo, não se edita nem se apaga.
+
+⚠️ **Consequência para os testes**: o conteúdo das três abas EXISTE no DOM o
+tempo todo. `toBeInTheDocument` passa com a tela completamente quebrada; a
+régua é **`toBeVisible`**. Escrevi a asserção errada na primeira versão do
+teste do status, e ela passou.
+
+### Quem já é responsável mas SAIU do subgrupo continua na lista
+
+`GET /subgrupos/{id}/membros` não devolve quem saiu -- então, sem a união
+explícita, abrir o item mostraria a lista sem essa pessoa e **salvar apagaria
+a atribuição em silêncio**. É a mesma guarda que `ModalDeTarefa` e
+`FormularioDocumento` já tinham.
+
+E com o NOME, não o e-mail cru: `responsaveis_nomes` vem pareado por índice
+com `responsaveis`, e o servidor resolve a lista INTEIRA (`apelidos_de` filtra
+por grupo, não por subgrupo). É o caso em que a pessoa mais precisa
+reconhecer de quem se trata.
+
+⚠️ **O campo não passa `permitirLimpar`.** O X do `MultiSelect` esvazia sem
+abrir o painel, e num campo de mínimo 1 isso leva direto a um 422 -- a pessoa
+usaria um controle que o próprio formulário oferece para chegar num erro do
+servidor.
+
+### Trocar de subgrupo ZERA os responsáveis -- e não os clientes
+
+O defeito que `ModalDeTarefa` já documenta: alguém do subgrupo antigo seguiria
+escolhido e o salvamento falharia na validação do servidor, num campo que a
+pessoa nem lembra de ter mexido.
+
+⚠️ **Cliente NÃO é zerado junto**, e a diferença é o escopo: cliente é do
+GRUPO (a validação dele não olha subgrupo), responsável é do SUBGRUPO.
+
+⚠️ E o default **não** é reposto na tela. Quem cria vira responsável no
+SERVIDOR, e só se for membro do subgrupo escolhido -- repor aqui exigiria
+replicar essa régua no front, e ela já é a resposta que
+`GET /subgrupos/{id}/membros` dá.
+
+### "Sem responsável" é achável de propósito
+
+Se o único responsável sai do subgrupo, o item fica órfão: o aviso passa a ir
+para os gestores do subgrupo (ou para o subgrupo inteiro, sem gestor -- régua
+em três degraus da API desde 05/09/2026), e **ninguém entende por quê**. A
+resposta não é mais um canal de aviso -- é a listagem deixar isso achável.
+Custa uma opção na pílula e uma marca na linha, no lugar do traço que as
+outras colunas vazias usam.
+
+🔴 **Ele é um parâmetro PRÓPRIO (`sem_responsavel`), não `responsavel_id=""`.**
+`montarQuery` descarta valor vazio, e no servidor `""` já significa "não
+filtrar": pedido como string vazia, o filtro nem sairia do navegador e a tela
+mostraria a lista inteira parecendo filtrada. Falha silenciosa, do tipo que
+ninguém nota até contar as linhas.
+
+⚠️ "Eu" é resolvido no FRONT (vira `getEmail()`), dentro de
+`useFiltrosProcessos`. O servidor não precisa saber o que "eu" significa, e
+traduzir em cada tela duplicaria a regra.
+
+### Não oferecer o que a API vai negar
+
+Duas funções puras nasceram disso, no molde de `podeDestruirDocumento`:
+
+- **`podeListarPessoas()`** -- `GET /grupos/membros` tem piso `manager`, e é a
+  ÚNICA rota de catálogo acima de `user`. A lista de pessoas some do filtro de
+  quem é `user` **nas três telas** (Processos, Kanban e Agenda); as opções que
+  não dependem dela ficam. Nas duas últimas o 403 já acontecia em produção.
+- **`podeRemoverResponsavel(email)`** -- acrescentar e sair da própria lista
+  são de qualquer membro; **tirar OUTRA pessoa é `manager`+**.
+
+⚠️ **Esconder não é a proteção** -- quem manda é a rota. É para não oferecer o
+que ela vai negar: um controle que existe e falha em 403 é pior que um
+ausente, porque a pessoa tenta, espera, e recebe uma recusa que parece
+defeito.
+
+⚠️ E não cabe um helper comum para as três `podeXxx`: elas têm a mesma FORMA
+("`manager`+ ou é seu") e regras diferentes -- uma compara `criado_por`, outra
+exige `admin` como atalho, a terceira compara a sessão. Um helper precisaria
+de um parâmetro por diferença e esconderia justamente o que cada tela decide.
+
+### 🔴 `processos_importados`: o aviso que vai só para `manager`+ (30/08/2026)
+
+A importação automática cria processos sem ninguém pedir. O aviso disso é o
+**único do sistema que não segue a régua de `destinatarios`** — ele vai para
+`manager`+ do subgrupo, não para o subgrupo inteiro.
+
+A razão é a **ação disponível**: esses processos entram *sem responsável*, e
+distribuí-los é trabalho de gestão. Um `user` que recebesse o aviso não teria
+o que fazer com ele.
+
+⚠️ **As movimentações desses mesmos processos continuam avisando todo mundo.**
+`destinatarios(responsaveis, membros)` devolve *"os válidos; e, se não houver
+nenhum, o subgrupo inteiro"* — então processo sem dono não fica sem vigilância.
+São duas perguntas diferentes: *quem precisa AGIR sobre a chegada* e *quem
+precisa SABER da movimentação*.
+
+#### Por que tipo próprio, e não `processos_atribuidos`
+
+Ali o processo **já existia** e alguém colocou a pessoa como responsável; aqui
+o sistema **criou** o processo. Reusar o outro faria o aviso dizer que alguém
+agiu quando ninguém agiu — e por isso a frase nunca leva autor, com teste que
+passa o autor PREENCHIDO para pegar uma regressão.
+
+#### O texto, e o que cada parte responde
+
+```
+● 12 processos novos, sem responsável     ← título, pronto do servidor
+  OAB 206876/MG · Cível                   ← detalhe, pronto do servidor
+```
+
+- **"novos"** diz que o acervo cresceu sozinho — é o que separa este aviso do
+  "atribuídos a você";
+- **"sem responsável"** é a parte acionável, e o motivo de o aviso ir para
+  `manager`+. Sem ela, um gestor pode supor que estão cuidados;
+- **a inscrição** precisa aparecer porque são até 50 no escritório e elas **não
+  são de quem recebe o aviso** — sem ela, ele não sabe de quem é o acervo.
+
+⚠️ O detalhe usa `n.detalhe`, não `n.titulo`: o `default` de
+`detalheSecundario` devolve o título, e a mesma frase apareceria duas vezes na
+linha — o defeito que `sessao_alterada` já registra.
+
+⚠️ **Medido em Chrome**: no painel de 360px a frase cabe em uma linha e o
+detalhe não trunca (ele corta com reticências, então isso era risco real).
+
+#### O destino: o SUBGRUPO, não o responsável
+
+`processos_atribuidos` abre `/processos?responsavel=…`. Aqui não dá: os
+processos entram **sem responsável**, e esse filtro devolveria lista vazia —
+o oposto do que o aviso promete. Vai para `/processos?subgrupo=…`.
+
+⚠️ Mostra o subgrupo inteiro, não só os que acabaram de chegar. Um filtro de
+"entraram agora" seria campo novo, e a decisão foi não inventá-lo por causa
+deste aviso.
+
+### Os seis avisos novos no sino, e o alvo `documento`
+
+As frases dizem que a pessoa passou a **RESPONDER**, não que recebeu uma
+tarefa: o que muda é de quem é a responsabilidade, e é ela que decide quem
+recebe os avisos daquele item daqui pra frente.
+
+No aviso de SAÍDA a frase diz o que a pessoa **perde** ("tirou você dos
+responsáveis"), não o que foi feito -- "removeu você da lista" soaria
+administrativo e esconderia a consequência.
+
+`documento_vinculado` fala no **singular** mesmo quando foram doze: o servidor
+suprime os repetidos por janela em vez de agrupar. A contagem exata está na
+aba para onde o aviso leva.
+
+🔴 **Tipo e alvo desconhecidos degradam sem quebrar** -- `frasePrincipal` cai
+no título cru e `destinoDaNotificacao` devolve `null` (a linha não vira link).
+É isso que permite a API subir antes do front, e tem teste próprio.
+
+⚠️ **A lista de tipos é espelhada à MÃO** entre `constants/notificacoes.ts` e
+`NOTIFICACAO_*` da API, e **nenhum teste atravessa os dois runtimes**. Lacuna
+conhecida, escrita aqui de propósito: a rede é a degradação graciosa acima.
+
+## Abas nos dois detalhes, e o teor da movimentação com endereço (26/08/2026)
+
+**O que mudou.** Detalhe do processo virou três abas (Detalhes / Tarefas /
+Movimentações); detalhe do cliente, duas (Detalhes / Processos vinculados).
+As listas das duas telas deixaram de ser texto morto: linha de tarefa abre o
+`ModalDeTarefa`, linha de movimentação abre o teor, linha de processo do
+cliente abre um resumo com "Abrir processo".
+
+**Três decisões que valem mais que o layout:**
+
+1. **A aba mora na URL** (`?aba=tarefas`), ao contrário de `GrupoPage` e
+   `PerfilPage`, que guardam em estado local. A diferença é real: telas de
+   detalhe são alcançadas por LINK -- do e-mail, do Kanban, da Agenda --, e
+   um F5 que devolve pra primeira aba ali incomoda de verdade. `replace` na
+   navegação: trocar de aba não é passo do histórico.
+
+2. **Os painéis vão MONTADOS, só escondidos** (`display: none`). A aba de
+   Detalhes das duas telas é um formulário com estado local; desmontar ao
+   trocar de aba jogaria fora o que a pessoa acabou de digitar. Quem decide
+   isso é **quem chama** -- `GrupoPage` continua montando condicional,
+   porque lá cada aba é uma página com consultas próprias.
+
+   ⚠️ `display: none`, nunca `opacity`/`visibility`: só o `display` tira o
+   conteúdo do fluxo de foco. Verificado em Chrome com 40 `Tab` seguidos: o
+   cursor só passeia dentro do painel ativo.
+
+3. **A movimentação ganhou endereço** (`?comunicacao=900001`), a pedido do
+   usuário -- "abrir a movimentação dentro do sistema e não fora dele".
+
+   ⚠️ Houve, entre uma coisa e outra, um "Abrir o documento no tribunal"
+   lendo o campo `link`. **Eu o adicionei sem que ninguém pedisse** -- notei
+   que a API mandava o campo e nenhuma tela usava -- e o defendi como "único
+   caminho pro documento oficial". Removido a pedido no mesmo dia: é porta
+   pra FORA do sistema, e a justificativa tinha furo. Dos 71 links medidos,
+   64 abriam, **6 devolviam 403** (pje.tst.jus.br) e **1 apontava pra
+   `sessao-integracao-backend.prd.rede.tst`** -- host da rede interna do
+   tribunal, vazado no dado do PJe, que nunca abriria de fora. Nesses 7 o
+   botão prometia e falhava depois do clique.
+
+   O campo `link` continua chegando da API e guardado no tipo. Os testes que
+   asseguram sua AUSÊNCIA (em jsdom e em Chrome) existem pra que voltar a
+   exibi-lo seja uma decisão, não um descuido.
+
+   O resumo do processo no detalhe do cliente **não** ganhou URL, e é
+   deliberado: a coisa que ele resume já tem uma, que é a tela do processo.
+
+### O modal do teor virou tela de detalhe, e ganhou o caminho pro envio
+
+O modal mostrava etiquetas soltas no topo (data · órgão) e o texto. Virou
+rótulo e valor -- Tipo de comunicação, Disponibilizada em, Órgão, Teor --,
+porque "TJMG" sozinho não diz se é o órgão, o tribunal ou o autor. Mesmo par
+de leitura do detalhe do envio (`CampoDeLeitura`, que subiu pra
+`components/` justamente por isso).
+
+**"Ver o e-mail enviado" aparece só quando houve e-mail**, lendo `tem_envio`
+da resposta de detalhes (campo novo da API, 26/08/2026). Leva ao Histórico
+já naquele envio, pelo `state.deepLink` -- o mesmo caminho que `RotaRaiz`
+usa pro link do e-mail, sem o desvio pela raiz.
+
+🔴 **A maioria das movimentações NÃO tem e-mail, e isso não é falha.** O robô
+grava o acervo inteiro do processo na primeira checagem e só notifica o que
+está dentro da janela de 30 dias: publicação anterior ao cadastro nunca
+gerou aviso. Medido sobre dado de produção: **9 de 73**. Oferecer o botão
+sempre levaria, em 64 casos, a um Histórico que responde "não foi possível
+localizar a notificação" -- que soa como falha do sistema.
+
+⚠️ `tem_envio` ausente (resposta de API anterior a 26/08/2026) também não
+oferece o botão: não saber não é motivo pra prometer. É o que torna o deploy
+do front seguro mesmo sem a API -- mas a ORDEM continua sendo API primeiro,
+senão o botão simplesmente não existe pra ninguém.
+
+⚠️ **Sem "Fechar" no rodapé dos dois modais novos.** O X do cabeçalho já é
+esse controle, e dois botões com o mesmo nome acessível no mesmo diálogo
+fazem o leitor de tela anunciar a escolha duas vezes -- e quebram qualquer
+busca por nome (foi exatamente assim que um teste começou a falhar:
+"Found multiple elements with the role button and name Fechar").
+
+⚠️ **`BotaoDeLink` não serve pra `href`** -- ele é `<button>` de propósito,
+a própria docstring diz. Ficou registrado porque a lição sobrevive ao link
+que a motivou: quando precisar de um endereço de verdade nesta base, é `<a>`,
+com `rel="noopener noreferrer"` se abrir em outra aba.
+
+⚠️ **O rodapé do modal só existe quando há ação.** Sem envio (e sem o link do
+tribunal), `RodapeDeAcoes` vazio desenhava uma faixa cinza no pé do diálogo
+sem nada dentro -- que lê como controle que sumiu, não como "não há ação
+aqui". A checagem em Chrome CONTA botões em vez de procurar a classe:
+`RodapeDeAcoes` é emotion, com nome embaralhado, e um seletor por classe
+passaria sempre sem verificar nada.
+
+**A lista de movimentações parou de despejar o teor.** Cada item trazia a
+publicação inteira num bloco rolável de 200px -- cinco itens viravam cinco
+áreas de rolagem dentro da rolagem da página. O teor foi pro modal, que tem
+espaço pra ele.
+
+**Compartilhados que subiram de lugar** (alcance mudou, destino muda):
+`abaValida` e `PARAM_DA_ABA` foram pra `utils/abas.ts`, junto de `idDaAba`/
+`idDoPainel`; `CampoDeLeitura` saiu de `HistoricoPage/components` pra
+`components/`.
+
+🔴 **Os testes que já existiam nestas duas telas passariam com as abas
+completamente quebradas.** Com os painéis montados, o conteúdo das três abas
+está no documento o tempo todo, e `findByText` acha texto escondido. A régua
+virou `toBeVisible`, e o helper de painel chega nele pelo `aria-controls` da
+aba -- painel escondido tem nome acessível VAZIO, então
+`getByRole("tabpanel", { name })` nunca acha os inativos.
+
+Cinco mutações confirmaram que cada teste novo consegue falhar: painel que
+nunca esconde, `?comunicacao=` que não manda na aba, `abaValida` sem
+fallback, painel de Detalhes desmontado, e "Verificado em" de volta pra
+dentro da aba.
+
+⚠️ **Um comentário meu foi desmentido por mutação.** Eu havia escrito que o
+painel de processos do cliente não podia desmontar "porque a contagem dele é
+o que trava a exclusão" -- é falso: a página tem o próprio
+`processosQuery`. O comentário foi corrigido e o teste que afirmava isso,
+removido.
+
+🔴 **O Chrome achou um defeito que o jsdom não achava.** Chegando por
+`?comunicacao=` sem `?aba=` e fechando o teor, a pessoa caía na aba
+Detalhes -- fechar uma publicação expulsava quem estava lendo a lista. O
+teste em jsdom conferia só a URL e dava "ok". Corrigido (fechar crava
+`aba=movimentacoes`), e as duas verificações passaram a olhar a lista atrás
+do modal.
+
+**Onde os tipos das abas moram.** `AbaDoProcesso` e `AbaDoCliente` ficam em
+`pages/<Pagina>/types.ts`, não em `constants.ts` -- a convenção do projeto
+(`KanbanPage/types.ts`, `HistoricoPage/types.ts`). Os dois são DERIVADOS da
+lista de abas (`(typeof ABAS_DO_PROCESSO)[number]["id"]`), e não uniões
+escritas à mão: acrescentar uma aba passa a ser erro de compilação em todo
+lugar que não a trata.
+
+**Verificação:** `scripts/verificar-abas.mjs` (Chrome com janela, 35
+checagens) contra `yarn offline` + `scripts/offline/semear_abas.py` na API.
+O cenário semeia PARES de propósito -- movimentação com teor e sem, uma com
+e-mail enviado e outra sem, tarefa em coluna que conclui e em coluna que
+não, dois processos no mesmo cliente --, porque aba vazia passa por qualquer
+defeito e um botão que aparece sempre passa em qualquer lista onde tudo é
+igual.
+
+⚠️ O `.env` do front aponta pra PRODUÇÃO. Subir `yarn dev` sem
+`VITE_API_URL=http://localhost:8099` deixa a verificação "local" batendo na
+API de verdade.
+
+## Documentos: o arquivo não passa pela API (26/08/2026)
+
+Telas novas: `/documentos` (listagem) e
+`/documentos/:subgrupoId/:documentoId` (a tela do documento), mais a aba
+**Documentos** nas três telas de detalhe.
+
+### 🔴 O envio é de três passos, e o registro é o último
+
+```
+1. POST /subgrupos/{sg}/documentos/upload  → chave + formulário assinado
+2. o NAVEGADOR posta o arquivo direto no armazenamento
+3. POST /subgrupos/{sg}/documentos         → agora existe documento
+```
+
+O payload síncrono de um Lambda é 6 MB; o teto de um documento é 20. Pela
+API, todo arquivo acima de 6 MB falharia com um erro de gateway que não
+menciona tamanho.
+
+⚠️ **`enviarArquivo` usa `fetch` cru, sem `Content-Type` nosso e sem
+`Authorization`.** O `FormData` precisa que o NAVEGADOR escreva o
+`multipart/form-data` com o `boundary` que ele mesmo gerou -- escrever o
+cabeçalho à mão apaga o boundary e o armazenamento não separa os campos. E o
+token do Argos não tem o que fazer num pedido que não é pra nós: quem
+autoriza é a assinatura que já vai dentro de `campos`.
+
+⚠️ **`campos` vai ANTES do arquivo no formulário.** Numa política de POST o
+arquivo tem que ser o último campo: o armazenamento para de ler quando o
+encontra, e qualquer campo depois dele é ignorado -- inclusive a assinatura.
+
+⚠️ **O modal NÃO fecha em falha, e não limpa nada.** Um envio de 20 MB que
+falha no fim custaria tudo de novo, inclusive a descrição digitada. É por
+isso que o envio acontece com o modal aberto: a pessoa está ali, e tentar de
+novo é um clique. Testado.
+
+### 🔴 O CSP mudou, e o download NÃO precisou
+
+`connect-src` de `front/vercel.json` ganhou
+`https://argos-monitor-documentos-prod.s3.sa-east-1.amazonaws.com` -- o host
+foi **medido**, não suposto (ver `api/CONTEXT.md`: o padrão do boto3 emite o
+host global, e o `virtual` que a API fixa emite o regional).
+
+- **O envio** é `fetch` pro armazenamento → bloqueado sem o host. O erro
+  aparece como falha de CORS, que engana.
+- **O download** é `window.location.assign` numa URL que já vem com
+  `Content-Disposition: attachment` → **navegação de topo**, que não passa
+  por `connect-src`. Buscar o blob por XHR pra forçar o nome exigiria o host
+  aqui também, e não traria nada.
+
+🔴 **`vercel.json` só vale em produção.** Isto passa 100% no `yarn offline` e
+quebraria no deploy -- mesma categoria do IAM.
+
+### 🔴 Quem pode DESTRUIR não é quem pode mexer
+
+`podeDestruirDocumento` espelha `documentos_service.garantir_pode_destruir`:
+`manager`+ destrói qualquer um, abaixo disso só quem adicionou.
+
+A régua é mais apertada que a de tarefa e atendimento **porque o que se perde
+é diferente**: lá some uma linha, aqui some o **arquivo**, e o bucket não tem
+versionamento. Com o piso `user` seco que a feature nasceu, qualquer colega de
+subgrupo destruía o arquivo de qualquer outro.
+
+⚠️ **Vale pros DOIS botões, e o segundo é a porta irmã.** "Substituir" apaga o
+objeto antigo do mesmo jeito -- e, ao contrário de "Excluir", **não passa por
+diálogo de confirmação**. Esconder só um deixaria o caminho mais silencioso
+aberto. Uma mutação que ignora a régua no `CartaoDoArquivo` mata o teste.
+
+⚠️ **O que NÃO some**: "Baixar" e "Salvar". A trava é sobre destruir, não
+sobre usar nem sobre mexer -- baixar é leitura, e corrigir um título é
+reversível. Estender a trava a esses dois seria burocracia sem nada protegido
+em troca.
+
+⚠️ **`criado_por` vazio cai pro lado restritivo.** Sem o teste de vazio, um
+`getEmail()` nulo comparado a `""` passaria -- mesma armadilha já escrita em
+`podeExcluirSubgrupo`, e ela **sobreviveu à suíte da API inteira** até ganhar
+teste próprio dos dois lados.
+
+🔴 **Esconder o botão não é a proteção** -- quem manda é a rota, e ela recusa
+com 403. É pra não oferecer o que a API vai negar: um botão que existe,
+confirma num diálogo que promete apagar e volta 403 parece defeito do
+sistema. A mensagem do servidor nomeia a ação que a pessoa tentou e dá duas
+saídas, a mais rápida primeiro ("peça a essa pessoa ou a um gerente do
+subgrupo").
+
+### O modal só CRIA
+
+Editar e excluir vivem na tela do documento, como em Processos e Clientes: a
+linha da tabela é clicável (com `tabIndex` + Enter/Espaço, porque não há
+outro caminho sem mouse) e leva pro detalhe. A listagem não tem lixeira nem
+lápis.
+
+⚠️ **`FormularioDocumento` recebe o documento JÁ CARREGADO**, e por isso é um
+componente separado da página. Os campos nascem do `useState` inicializado
+com o que veio -- técnica que exige o dado presente no primeiro render. Na
+página, esse render acontece com a consulta pendente: o estado nasceria
+vazio, nada o preencheria depois, e **salvar apagaria o documento inteiro**.
+
+A alternativa era um `useEffect` copiando a resposta pro estado. Funciona, e
+é exatamente o que o `react-hooks/set-state-in-effect` aponta -- render em
+cascata a cada resposta. Montar só depois do dado chegar resolve os dois de
+uma vez, e é o que `FormularioCliente` já fazia.
+
+### 🔴 O 404 depois de excluir, que só o Chrome pegou
+
+`qk.documento` é `["documentos", "detalhe", sg, id]` -- **começa com
+`["documentos"]`**. Invalidar o prefixo cru ao excluir derrubava também a
+consulta da própria tela, que ainda está montada naquele instante: ela
+rebuscava o documento recém-apagado e tomava 404.
+
+⚠️ **`removeQueries` não resolve, e piora** -- medido: tirar do cache uma
+consulta com observador ativo faz o observador buscar de novo NA HORA, então
+em vez de uma revalidação vinham duas. O que resolve é o `predicate`
+deixando a entrada do detalhe intacta.
+
+Invisível na suíte, porque lá nada revalida sozinho. Foi
+`scripts/verificar-documentos.mjs` que acusou, pelo ouvinte de `response` que
+coleta tudo acima de 400.
+
+### `VinculoDaTarefa` virou `components/VinculoDeRegistro`
+
+Subiu junto com `EtiquetaDeVinculo`, que estava pendurada dentro de
+`ModalDeTarefa/` sendo um componente de alcance geral. As constantes saíram
+de `constants/vinculoDaTarefa.ts` pra `vinculoDeRegistro.ts`, e o tipo
+`VinculosDaTarefa` virou `VinculosDeRegistro`.
+
+🔴 **E ele NÃO ganhou o slot de cliente que o plano previa.** Dois fatos
+derrubaram a ideia na implementação:
+
+1. **`CampoDeClientes` já resolve isso**, com busca própria, escolha múltipla
+   e etiquetas -- e já serve Atendimentos e Processos. Um terceiro caminho
+   pro mesmo dado seria a terceira resposta pra mesma pergunta, que é o
+   estrago que `constants/limites.ts` documenta.
+2. **A cardinalidade não bate.** Processo e atendimento são UM cada (escolher
+   troca); cliente é LISTA (escolher empilha). Numa caixa só, a mesma ação
+   teria dois comportamentos dependendo do tipo da linha clicada -- e nada na
+   tela diria qual.
+
+O padrão do sistema já era dois campos lado a lado: `NovoAtendimentoForm` põe
+`CampoDeProcesso` e `CampoDeClientes` separados. Um teste em
+`ModalDeTarefa/index.test.tsx` trava que a tela de tarefa não mudou.
+
+⚠️ **Duas pendências que a conferência ponta a ponta em produção achou**
+(08/09/2026, honorário criado pela tela) e que só aparecem usando o sistema:
+
+1. **Escolher um ATENDIMENTO como vínculo não sugere o cliente**, embora a
+   dica do campo prometa *"Sugere o cliente e o departamento"*. Só `processo`
+   carrega `clienteIds` em `VinculoDeRegistro`. Ou o atendimento passa a
+   carregar o cliente, ou a dica para de prometer.
+2. **O modal de honorário EXIGE processo ou atendimento; a API não.**
+   `POST /lancamentos` aceita o honorário sem vínculo nenhum. Decidir de que
+   lado fica a regra -- e o outro lado segue.
+
+As duas estão na tabela de pendências do `CONTEXT.md` da API, seção
+"O Financeiro, de ponta a ponta".
+
+### O formulário tem seletor de Subgrupo, que a referência não tem
+
+Naquele sistema não existe subgrupo. Aqui ele é o **escopo de acesso**:
+obrigatório, escolhido só na criação (faz parte da chave primária, e o
+DynamoDB não altera chave), exatamente como em `ModalDeTarefa`. A dica diz o
+que o campo DECIDE -- sem ela, ele parece classificação.
+
+### `AtendimentoDetalhePage` ganhou abas
+
+Era a linha do tempo direto, sem `Abas`, enquanto processo e cliente já se
+dividiam assim. Documentos entrou como aba nas três, e uma tela sem abas ao
+lado de duas com abas faria o mesmo conteúdo ser procurado em dois lugares
+diferentes conforme a tela.
+
+🔴 **Os painéis vão MONTADOS.** `NovoRegistro` tem estado local, e desmontá-lo
+ao trocar de aba jogaria fora a anotação que a pessoa acabou de escrever --
+num campo cujo conteúdo, depois de salvo, **não se edita nem se apaga**. Sem
+teste isso seria invisível em revisão: a aba volta, o campo está vazio, e
+parece que a pessoa não digitou. Coberto em jsdom e em Chrome.
+
+### `CampoDeArquivo`: a recusa daqui é conveniência
+
+Quem recusa de verdade é o armazenamento, pela política assinada -- é lá que
+o teto não depende de nada que roda na máquina de quem envia. Esta serve pra
+não fazer a pessoa esperar minutos de upload por uma negativa que já dava pra
+dar na hora. Por isso ela **não chama `onMudar`**: se chamasse, o modal
+montaria o envio de um arquivo que ele mesmo acabou de recusar.
+
+⚠️ **Zero byte também é recusado.** A política do envio começa em 1 byte
+justamente porque, com 0, nasceria um documento que baixa em branco -- sem
+erro em lugar nenhum.
+
+🔴 **O `<input type="file">` fica VISUALMENTE escondido, não `display: none`.**
+É ele que carrega o rótulo, o foco de teclado e o diálogo nativo. Escondê-lo
+de verdade tiraria o campo do Tab, e não há outro caminho pra escolher
+arquivo sem mouse. Vale nos dois estados: com arquivo escolhido, clicar no
+rótulo "Arquivo" troca o arquivo direto.
+
+⚠️ **A remoção zera o `input.value`.** O navegador compara com o valor
+anterior e não dispara `change` quando são iguais -- sem isso, o campo ficava
+mudo justamente na correção mais provável (remover por engano e recolocar), e
+parecia defeito do arquivo.
+
+### `titulo` e `nome_arquivo` são coisas diferentes
+
+`titulo` é como o documento aparece na lista; `nome_arquivo` é o nome com que
+ele **baixa**, e não entra no `PATCH`. A dica do campo diz isso ANTES de a
+diferença surpreender -- quem renomeia o título esperando renomear o arquivo
+baixado só descobriria meses depois. O cartão do arquivo mostra o nome de
+download por essa mesma razão.
+
+### Verificação
+
+`scripts/verificar-documentos.mjs` (Chrome com janela, 19 checagens) contra
+`yarn offline` + `semear_abas.py` + `semear_documentos.py`.
+
+O que só Chrome responde: o arquivo sai mesmo da máquina (em jsdom o `fetch`
+é um dublê), o input escondido continua alcançável, o painel de aba escondido
+sai do **foco**, e o download dispara sem trocar a página de baixo.
+
+🔴 **As fixtures são GERADAS, não versionadas** -- inclusive a de 20 MB + 1
+byte. `setInputFiles` aponta pra um caminho em disco, então sem arquivo o
+roteiro não roda em máquina limpa; versionar poria binário no histórico pra
+sempre.
+
+🔴 **O caso negativo da permissão usa `colega@local.test`, não `chefe`.**
+`escopo_subgrupo.subgrupos_visiveis` dá o grupo inteiro a `admin` pra cima, e
+`chefe` é `super_admin` -- com ela, o documento do subgrupo alheio aparece de
+propósito. O roteiro afirmava o contrário e ficava **verde**, porque
+perguntava antes de a lista carregar. Corrigido o timing, ele acusou -- e o
+defeito era do teste.
+
+⚠️ **A lição**: um teste negativo que não espera o estado chegar não é um
+teste fraco, é um teste que mente. Ele passa quando o sistema está quebrado e
+quando está certo, indistinguivelmente. Todas as afirmações de ausência do
+roteiro agora esperam uma linha conhecida aparecer primeiro.
+
+## As cores de status, e o defeito que só a cor computada revelou (26/08/2026)
+
+**"Em andamento" passou a ser âmbar e "Fechado", o azul da marca.** O
+raciocínio inverte o que `theme/atendimento.ts` dizia -- *"o que está aberto
+pede atenção, o fechado só precisa ser reconhecível"*: o âmbar vira o "pede
+atenção" (atendimento aberto é trabalho em curso, que ainda vai voltar) e o
+azul marca o resolvido. **O docstring foi reescrito junto** -- trocar o mapa e
+deixar a explicação velha faria o arquivo explicar o oposto do que faz.
+
+### 🔴 O problema não era só do amarelo
+
+O plano dizia para consertar o `warn`. Medido, os **três** tons do semáforo
+reprovam em AA para texto pequeno, em **todos** os fundos do sistema:
+
+| | sobre o tint | sobre o cartão | sobre o canvas |
+|---|---|---|---|
+| `good` | 3,12 | 3,49 | 3,25 |
+| `warn` | 3,00 | 3,35 | 3,12 |
+| `bad` | 3,72 | 4,04 | 3,77 |
+
+Todos passam em **3:1**, que é a régua de *elemento gráfico* — e é por isso
+que a tarja de prioridade, o ponto do cartão e os ícones seguem usando a cor
+cheia, e fazem certo. O que não pode é **texto**.
+
+`badDark` nasceu sozinho quando a etiqueta de falha precisou. `warnDark`
+(#995d00) e `goodDark` (#167953) vieram agora, ao descobrir que `Faixa`
+pintava os **dois** tons em 13,5px/700 e ninguém tinha medido o verde. Os três
+guardam o matiz e a saturação da cor cheia, só baixando a luminosidade — é o
+que faz "âmbar escuro" continuar sendo âmbar.
+
+Cada tom tem três papéis: `DEFAULT` (gráfico), `bg` (o tint) e `text` (a única
+que passa em 4,5:1).
+
+**Quem trocou para `.text`** — os quatro que pintam texto pequeno: `Faixa`
+(os dois tons), `EtiquetaDePrazo` (o "hoje" — a linha do atrasado já usava
+`bad.text`, **porta irmã aberta no mesmo ternário**), `LinhaDeColuna` do
+Kanban, e `LinhaDoResumo` (mesmo caso: as duas metades do ternário discordavam
+sobre a mesma régua).
+
+**Quem NÃO trocou, e faz certo**: `ColunaDoQuadro` e `Toast/Aviso` (ícones),
+`CORES_DA_PRIORIDADE` (tarja e ponto), e `MinhasAtividades` — cujo número é
+**24px/800**, ou seja *texto grande* pelo WCAG, onde 3:1 basta.
+
+### 🔴 Contraste certo com a cor errada — o defeito que passou em tudo
+
+`status.warn.text` apontava para `{colors.warn.dark}`, que **não existia** na
+camada de tokens crus: só o `bad` tinha `dark`. A referência não resolveu, a
+cor caiu para o herdado, e a etiqueta "Em andamento" saiu com texto em `ink`
+sobre o âmbar.
+
+**Passava em contraste** — 14,81:1 — e parecia plausível na tela. O token
+estava certo. O componente estava certo. A ligação entre os dois é que estava
+rompida, e nenhum teste de unidade alcança isso.
+
+Daí os dois guardas, que cobrem coisas diferentes:
+
+- **`theme/contraste.test.ts`** afirma a matemática: cada `*Dark` passa em
+  4,5:1, cada cor cheia fica **entre 3:1 e 4,5:1** (o par negativo, sem o qual
+  alguém "simplificaria" o tema apagando os `*Dark`), e cada `*Dark` guarda o
+  **matiz** da cor cheia — senão qualquer cinza escuro passaria e apagaria o
+  significado da cor.
+- **`scripts/verificar-cores.mjs`** afirma a cor **computada pelo Chrome**, por
+  igualdade. "Escureceu um pouco" não serve: herdar o `ink` também escurece, e
+  foi assim que o defeito passou.
+
+⚠️ **O roteiro FALHA quando não tem o que medir**, em vez de imprimir "nada a
+medir" e seguir verde. `semear_abas.py` ganhou uma tarefa com prazo **hoje** só
+para a `EtiquetaDePrazo` sair do estado neutro — antes as duas nasciam com
+`dia(5)` e a checagem se pulava sozinha, em silêncio.
+
+## Quadro sem coluna nenhuma não pode ser tela em branco (26/08/2026)
+
+`subgrupos_service.criar` semeia o quadro padrão junto, então o caminho normal
+nunca chega lá. Mas é um estado **alcançável**: subgrupo gravado fora do
+serviço, criação que falhou no meio, ou alguém que apagou as colunas uma a uma.
+
+Foi o que aconteceu no ambiente local — `banco.py` gravava o subgrupo com
+`put_item` direto e pulava o `semear_padrao`. Como a listagem é alfabética
+("Civel g-alfa" antes de "Resumo"), era justamente ele que o Kanban abria por
+padrão: **quadro em branco, sem colunas, sem mensagem, sem erro**, no primeiro
+clique de quem subia o ambiente.
+
+⚠️ **A mensagem muda com quem está olhando, porque a saída é outra.** Criar
+coluna é `admin` no servidor:
+
+- **`admin`+**: *"Este subgrupo ainda não tem quadro. Crie as colunas para
+  começar a usar o kanban."* — com o botão **Editar quadro**.
+- **abaixo disso**: *"O quadro deste subgrupo ainda não foi montado. Peça a um
+  admin para criar as colunas."* — sem botão, que a API negaria.
+
+Uma frase só ou mandaria o admin procurar outra pessoa, ou mandaria o `user`
+para um botão que ele não tem.
+
+⚠️ **"Nova tarefa" também some.** Sem coluna não há onde a tarefa cair: o modal
+abriria, `colunaEscolhida` ficaria vazia e "Salvar" nasceria travado — um
+formulário inteiro que não conclui.
+
+## Endereço do cliente, e o botão de tarefa nos detalhes (27/08/2026)
+
+Duas entregas independentes, e um defeito de permissão que estava no caminho.
+
+### O passo 0: o formulário de cliente era editável para quem não pode salvar
+
+`ClienteDetalhePage` renderizava `FormularioCliente` **sem guarda de papel
+nenhuma**. `PATCH /clientes` é `manager` -- um `user` abria a ficha, via os
+campos editáveis e o "Salvar" habilitado, digitava tudo e tomava **403** no
+clique.
+
+🔴 E o próprio arquivo enunciava a regra que quebrava: o docstring de
+`FormularioCliente` explica que Excluir só aparece para `admin` porque
+*"mostrar um botão que a API vai negar é pior que não mostrar"* -- três linhas
+acima do Salvar que fazia exatamente isso.
+
+**A forma escolhida foi `readOnly`, não `disabled` nem esconder**, e a razão é
+medida: `GET /clientes` é `user`, então quem não pode gravar ainda tem direito
+a **ver** o cadastro -- e a copiar dali o telefone ou o e-mail. Em Chrome, o
+`opacity: 0.5` que o Chakra aplica no `disabled` deixa o valor em **3,26:1** de
+contraste sobre o branco, abaixo dos 4,5:1 de texto normal. Travar a edição não
+pode custar a leitura, que é a única coisa que sobra para quem está vendo.
+
+🔴 **E `handleSubmit` confere também.** Campo `disabled` não participa do
+formulário; `readOnly` participa -- esconder o botão virou aviso, não guarda.
+
+⚠️ A régua tem **dois papéis diferentes** (editar é `manager`, excluir é
+`admin`), e isso segue o backend. Só `/clientes` e `/subgrupos` divergem assim;
+os outros sete recursos usam o mesmo papel para os dois verbos.
+
+### `useCep` não tem debounce, e a razão é aritmética
+
+A guarda é o **tamanho**: só consulta com 8 dígitos. Quem digita "30130010"
+passa por sete valores incompletos, e os sete têm menos de 8 dígitos -- a
+guarda os elimina sozinha, sem timer. **Um debounce não evitaria consulta
+nenhuma**; só atrasaria em 300ms a única que importa.
+
+⚠️ E `ESPERA_DA_BUSCA_MS` diz de si mesma que é dos **campos de busca**
+(Clientes, Processos, vínculo de tarefa), compartilhada para que a mesma ação
+não pareça mais lenta numa tela que na outra. CEP não é busca por texto: é
+campo de tamanho fixo, que se sabe completo.
+
+🔴 **A memória do último CEP é esquecida quando a consulta FALHA.** Sem isso a
+mensagem "tente de novo" era mentira: com a memória intacta, redigitar o mesmo
+CEP não disparava nada e não havia como tentar. E ela **não** é limpa quando o
+campo fica incompleto -- limpar ali fazia apagar um dígito e redigitar o mesmo
+consultar de novo, sobrescrevendo o que a pessoa tivesse corrigido à mão.
+
+### A consulta passa pela nossa API porque o CSP obriga
+
+O `connect-src` do `vercel.json` lista `'self'`, a Lambda URL, o WebSocket e o
+bucket. **`viacep.com.br` não está lá** -- chamar o provedor direto do
+navegador é bloqueado. Não é preferência de arquitetura: quem tentar
+"simplificar" por ali bate num erro de CSP em produção.
+
+⚠️ O roteiro em Chrome vigia isso, e a checagem é dos **provedores de CEP**,
+não de "qualquer host externo": as fontes do Google saem em toda página e o CSP
+as permite -- uma asserção de "nenhum host externo" acusa aquilo e não prova
+nada sobre o CEP.
+
+### O `Select` não é clearable, e a UF precisa da opção vazia
+
+`CamposProcesso` já escreve isso, e por isso Fase e Situação montam
+`[{value: "", label: "Nenhuma"}, ...]` à mão. Sem a opção explícita, **quem
+escolhesse uma UF nunca voltaria ao vazio** -- um estado que a API aceita e a
+tela não alcançaria.
+
+⚠️ As 27 siglas em `constants/endereco.ts` são **espelhadas à mão** de
+`api/src/shared/validacao.py`: não há canal para buscá-las
+(`GET /configuracoes` é `admin` e é config do grupo, não catálogo). Mesmo
+arranjo de `PRIMEIRA_PAGINA_DE_OPCOES`, com comentário cruzado nos dois lados.
+
+### `CamposDeEndereco` mora em `components/`, e não dentro de uma página
+
+Quem o usa são **duas** páginas. `CamposProcesso` -- de quem ele copia a forma
+(objeto de valores + `mudarCampo` tipado) -- vive em `ProcessosPage` e é
+importado por `ProcessoDetalhePage`, o que já é uma exceção à regra de
+estrutura e não vale repetir.
+
+⚠️ **Sem prefixo de `id`.** Uma auditoria chegou a exigir um, alegando colisão;
+conferido, o argumento não se sustenta: `/clientes` e `/clientes/:id` são rotas
+distintas e as duas telas nunca coexistem no documento -- e `CamposProcesso` já
+é compartilhado com `id` fixo.
+
+### O botão de tarefa vai no CABEÇALHO, e num grupo com o X
+
+`ModalDeMovimentacao` já tem `RodapeDeAcoes` e seria o lugar óbvio -- mas o
+rodapé dele é condicional de propósito (*"só quando há para onde ir;
+`RodapeDeAcoes` vazio desenharia uma faixa cinza no pé do modal sem nada
+dentro"*), e o botão lá o tornaria incondicional para todo mundo. Pior: sumiria
+justamente na maioria das movimentações, que nunca geraram e-mail.
+
+🔴 **A ação e o X vão num `Flex` próprio, não como irmãos do título.** Aquele
+`Flex` é `justify="space-between"` com **dois** filhos (título e X), e um
+terceiro faria a ação flutuar no MEIO do cabeçalho, longe do botão de fechar --
+o oposto do que foi pedido. O X continua sendo o último: é o alvo que se
+procura no canto.
+
+### `subgrupos_notificados` tem TRÊS estados, não dois
+
+O campo é `string[] | undefined`, e o próprio `types/processo.ts` documenta o
+gêmeo com a medição junto: *"26/08/2026 sobre dado de produção: 9 de 73.
+Ausente em resposta de API anterior; quem lê trata `undefined` como 'não sei,
+não oferece'"*.
+
+Um `[0]` cru estouraria no ausente e escolheria errado no plural. Por isso o
+botão só aparece com **exatamente um** subgrupo -- `ModalDeTarefa` exige
+`subgrupoAtual` e semeia o seletor com ele, então não existe estado "nenhum
+subgrupo" para oferecer.
+
+### O que a verificação em Chrome pegou e os testes não
+
+- **Só o CEP dizia "(opcional)"** e os outros seis não diziam nada, do lado de
+  campos de contato que dizem um por um -- lia como se apenas o CEP fosse
+  dispensável. O "(opcional)" subiu para o `RotuloDeSecao` do bloco.
+
+  ⚠️ **E saiu de vez em 01/09/2026**, junto com os outros sete: o app passou a
+  dizer só o asterisco vermelho no obrigatório, e nada no opcional (ver *"Um
+  vocabulário só para 'este campo é obrigatório'"*). Este parágrafo descreve
+  uma etapa do caminho, não o estado de hoje -- `CamposDeEndereco` não tem
+  "(opcional)" em lugar nenhum, e um guarda mecânico cobra isso.
+- **Clicar em `#uf-cliente` não abre o painel**: o react-select põe esse id num
+  input escondido de **1px** de altura. Quem abre é o controle visível.
+- **Uma asserção que esperava para sempre**: das duas ocorrências do número
+  mascarado com o modal aberto, a primeira em ordem de DOM é o `<h1>` da página
+  atrás, **invisível sob o overlay**. `.first().waitFor({visible})` nunca
+  resolve; a busca tem que ser dentro do `[role=dialog]` certo.
+
+**A lição, repetida três vezes nesta entrega**: asserção logo depois de uma
+ação assíncrona mede o relógio, não o código. `not.toHaveBeenCalled()` sem
+espera é sempre verdadeiro, e um teste que nunca falhou não provou nada.
+
+## Importar processos por OAB (27/08/2026)
+
+Uma tela nova em Processos: buscar pela inscrição, conferir a lista, importar.
+
+### Por que é TELA, e não modal
+
+Três etapas, lista de até mil linhas e espera de dezenas de segundos. Um modal
+viraria uma caixa com rolagem própria dentro da página — e fechar por engano
+(Escape, clique fora) perderia uma busca que custou 25 segundos.
+
+O botão fica ao lado de "+ Novo processo", e são **dois botões, não um menu**:
+"Novo processo" é uso diário e "Importar por OAB" se procura com intenção;
+esconder a segunda atrás de um clique a mais não ajudaria nenhuma das duas.
+
+⚠️ **Só para `manager`+**, a mesma régua do servidor. É o princípio que
+`FormularioCliente` já documenta: *mostrar um botão que a API vai negar é pior
+que não mostrar*.
+
+### 🔴 A guarda do responsável não-membro
+
+Três regras que convivem sem atrito fora daqui:
+
+1. `manager`+ **age** em qualquer subgrupo do grupo, sem participar dele;
+2. `admin`+ **enxerga** subgrupo alheio no seletor;
+3. o servidor só aceita como responsável quem for **membro**.
+
+A tela tem seletor de subgrupo e pré-selecionaria quem importa. Junte as três
+e o resultado é uma importação que falha com *"Responsável não é membro do
+subgrupo"* — **depois** de a pessoa esperar a busca inteira.
+
+Por isso a tela consulta os membros do subgrupo **escolhido** e, não sendo
+membro, não pré-seleciona ninguém e diz por quê. Trocar de subgrupo revalida:
+a consulta tem o subgrupo na chave.
+
+### O período fica escondido
+
+Quem tem uma inscrição de tamanho normal nunca precisa dele, e um campo a mais
+é um campo a mais para ler antes de entender a tela. Aparece por um link — e
+sozinho quando a busca esbarra no limite, porque aí a saída passa a ser
+justamente ele.
+
+⚠️ **Sem o período, o teto seria uma parede**: buscar de novo traria as mesmas
+páginas, e os processos além delas ficariam inalcançáveis.
+
+### Três estados que a tela não pode confundir
+
+| | é o quê |
+|---|---|
+| **vazio** | o PJe respondeu e não achou nada — sucesso |
+| **erro** | o serviço não respondeu, ou recusou por excesso |
+| **acima do teto** | achou demais, trouxe o que coube — também sucesso |
+
+🔴 Misturar "vazio" com "erro" mandaria a pessoa corrigir um número que está
+certo, ou tentar de novo o que nunca vai funcionar.
+
+⚠️ E o texto do vazio **não pode dizer "OAB não encontrada"**: o PJe devolve
+zero e nada mais, e isso cobre três situações que não sabemos separar — OAB
+inexistente, OAB sem processos, e OAB com processos mas sem comunicação
+publicada.
+
+### 🔴 A mensagem de interrupção não afirma que nada foi gravado
+
+Um timeout no meio deixa os processos já criados no banco. Dizer "a importação
+falhou" mandaria a pessoa procurar o que já está lá.
+
+A frase admite a dúvida: *"parte dos processos pode ter sido cadastrada.
+Buscar de novo cadastra só o que falta."* — e repetir é seguro, porque o
+servidor pula o que já existe.
+
+### O canal virou multi-assinante
+
+`useCanalDeNotificacoes` nasceu com um consumidor só: `aoChegar: () => void`,
+sem argumento, e descartando tudo que não é `tipo: "notificacao"`. A barra de
+progresso precisa de `{feitos, total}`, que é **payload**, não gatilho.
+
+Sem `utils/canalDeTempoReal`, a saída seria a tela abrir uma **segunda
+conexão** — e o hook foi desenhado para uma (`useEffect(…, [])` abre um socket
+por montagem).
+
+🔴 **E a trava do sino vale MAIS agora.** O `if (corpo.tipo !== "notificacao")
+return` continua onde estava: é o que impede uma barra que anda dezenas de
+vezes de virar dezenas de linhas no sino. **Publicar é uma coisa, alimentar o
+sino é outra** — quem alargar o canal de novo tem que passar por lá.
+
+⚠️ Não existe assinante genérico, de propósito: um ouvinte "de tudo" desfaria
+essa trava por fora.
+
+### ⚠️ O hook ouve o canal desde a montagem, não ao clicar em "Importar"
+
+A primeira mensagem de progresso (`feitos: 0`) sai antes de o `await` devolver
+o controle. Assinar no clique perderia justamente ela — a barra começaria do
+segundo pulso, ou de lugar nenhum numa importação curta.
+
+E o progresso nasce em zero no próprio hook, para a barra existir mesmo com o
+WebSocket fechado (aí ela fica indeterminada, em vez de ausente).
+
+### ⚠️ A guarda de corrida da busca
+
+Buscar, corrigir a OAB e buscar de novo pode fazer a primeira resposta chegar
+depois — e a tela mostraria a lista da inscrição errada, sem nada indicando
+isso. O hook descarta resposta de busca que não é a mais recente.
+
+### O que o Chrome real pegou, e a suíte não
+
+A barra ficava parada: a lambda `api` não tinha `WEBSOCKET_ENDPOINT`, então
+`publicar` não sabia para onde mandar. Como publicar progresso é best-effort,
+nada quebrava — a importação gravava tudo e respondia 201.
+
+⚠️ **E quase escapou do Chrome também.** A barra some rápido demais no
+ambiente local (45 processos gravam em menos de 1,5s), então olhar a tela não
+bastava: foi preciso capturar os **quadros do WebSocket** com
+`pg.on("websocket", …)`.
+
+É o tipo de coisa que jsdom nunca veria, e que "abrir e olhar" também não.
+
+## A prévia da importação, conferida contra o desenho (27/08/2026)
+
+A tela subiu de manhã e o usuário achou o defeito na primeira busca real: três
+processos que já existiam **em outros subgrupos** apareceram como novos. A
+correção trouxe os quatro estados — e conferir a tela pronta contra o desenho,
+no Chrome, trouxe o resto. Fica escrito o que só se vê olhando.
+
+➡️ Em 30/08/2026 entrou o **quinto** estado (`REMOVIDO ANTES`), com a decisão
+de não pré-selecioná-lo. Ver a seção própria mais abaixo.
+
+### Célula de tabela crua desalinha a coluna INTEIRA
+
+`Tabela` põe `p="0 14px 10px"` no cabeçalho. Uma `Table.Cell` sem os
+`13px 14px` de `.tbl td` fica com o padding padrão do Chakra, e o valor **não
+nasce embaixo do próprio título** — sem `borderBottom`, a divisória também some
+naquela coluna.
+
+🔴 **É a SEGUNDA vez.** `LinhaProcesso` já registrava a primeira, na coluna de
+prazo. Defeito que reaparece vira guarda:
+`components/CelulaComSub/celulaDeTabela.test.ts` cobra a medida de toda
+`Table.Cell` do repositório.
+
+⚠️ **Guarda de FORMA, e o motivo importa**: o efeito é de CSS e o jsdom não
+calcula estilo — `getComputedStyle` devolve vazio e o teste passaria com a
+tabela torta. Quem VÊ é o Chrome; o guarda impede a regressão chegar lá.
+
+### `Checkbox.Root` é um `<label>` — e sem `onCheckedChange` a caixa é inerte
+
+O clique na caixa mexia só no estado interno do Chakra e **nunca chegava no
+`alternar`**. O alvo mais óbvio da tela não fazia nada; só o resto da linha
+respondia.
+
+⚠️ **O jsdom não distingue esse caso**: ele clica no input escondido, e o mouse
+acerta o quadrado visível (`data-part="control"`), que é filho do label. A prova
+é do Chrome — 22 → 21 clicando na caixa, 21 → 20 clicando na linha.
+
+⚠️ Com o handler, aparece o risco oposto: o clique no label sobe para a linha e
+alterna de novo, anulando-se. Daí a guarda `closest("label")` no `onClick` da
+linha.
+
+### Célula vazia numa coluna "Situação" se lê como dado que faltou
+
+🔴 **Reverti a decisão de não etiquetar o "novo".** O plano dizia que a ausência
+bastava e que uma etiqueta em toda linha seria ruído. Na tela, a coluna em
+branco parece falha de carregamento — a pessoa precisa ver que o sistema
+**olhou** para aquela linha. São quatro pílulas.
+
+### Os tokens de cor do Chakra NÃO são os nossos
+
+`bg.warning`, `border.warning`, `fg.warning` e `fg.success` **existem** — no
+tema padrão da lib, em laranja e verde da paleta dela. O semáforo do projeto é
+`status.*`, e `theme/index.ts` documenta que só as variantes `.text` passam em
+4,5:1.
+
+⚠️ **Por isso o erro é silencioso**: o token resolve, a cor aparece, e só lado a
+lado com o resto da tela se percebe que é de outra paleta. Ao pintar status,
+conferir se o token é nosso.
+
+### A paginação da prévia é só de EXIBIÇÃO
+
+A busca inteira já está em memória. Quem decide o que será gravado é `marcados`,
+que guarda **número de processo, não posição** — por isso "Marcar todos" alcança
+as outras páginas e a marca sobrevive à virada.
+
+🔴 É a armadilha clássica da lista paginada: o botão diz "todos" e marca só o
+que está renderizado. Tem teste com esse nome.
+
+### Um controle absoluto no canto disputa o clique com os rótulos
+
+O X que fecha o cartão de período, posicionado com `position: absolute`, caía
+por cima dos `<label>` de "De" e "Até" — `Campo` é `position: relative`, e são
+várias caixas sobrepostas, então `zIndex` não resolveu. Ele foi para uma **faixa
+própria** acima dos campos.
+
+⚠️ **E a primeira medição do alvo estava errada**: amostrei os cantos da caixa,
+que num botão `borderRadius: full` ficam **fora do círculo** — o hit-test
+respeita o arredondamento. Medir botão redondo se faz por dentro da forma.
+
+⚠️ Fechar **limpa as duas datas**, não só esconde a caixa: um período preenchido
+atrás de um cartão fechado filtraria a busca sem nada na tela dizendo isso.
+
+### `BotaoNu` herda a `line-height` do tema
+
+O link do desenho tem 17px de altura; na tela dava 18,125px — 12,5px × 1,45 do
+corpo, contra o `normal` que um `<button>` usa quando ninguém manda. `lineHeight:
+"normal"` fecha a diferença.
+
+⚠️ **E o desenho só se mede com o elemento VISÍVEL**: o botão vive numa tela
+escondida da demo e media zero, o que faria a comparação "passar" por igualdade
+com nada. A medida saiu de um clone posto no `body` da própria demo.
+
+### Onde cada coisa mora, nesta tela
+
+| o quê | onde |
+|---|---|
+| `EstadoDoAchado` | `types/processo.ts` — vocabulário de mais de um dono |
+| `estadoDoAchado`, `etiquetaDoAchado`, `selecionaveis`, `preSelecionados`, `concordar` | `utils/importacao.ts` |
+| `ESTILO_DE_LINK`, `TONS_DO_CARTAO_DE_RESUMO`, `CORES_DA_ETIQUETA_DE_SITUACAO`, `COLUNAS_DA_PREVIA` | `pages/ProcessosPage/constants.ts` |
+| `AvisoDaImportacao`, `CartaoDeResumo`, `EtiquetaDeSituacao` | pasta própria em `components/` da página |
+
+⚠️ **Ao mudar de casa, o NOME muda junto**: fora do arquivo de origem, `Aviso`,
+`Resumo`, `TONS` e `CORES` não dizem de que tela são.
+
+### 🔴 O quinto estado: "removido antes" (30/08/2026)
+
+A importação automática precisa saber o que o escritório apagou **de
+propósito** — senão ela recadastra no dia seguinte o que alguém removeu. O
+servidor passou a devolver `removido_antes` na prévia (ver `api/CONTEXT.md`
+para a marca em si); aqui ficam as decisões de tela.
+
+**Ele entra na precedência acima de `novo` e abaixo de todos os outros.** É o
+único estado que **não é excludente com "novo"**: o processo não está em
+subgrupo nenhum, que é exatamente a definição de novo, e é por isso que
+apareceria como novo sem a etiqueta. Mas estar em algum subgrupo hoje importa
+mais do que ter sido apagado antes.
+
+#### 🔴 Poder marcar ≠ vir marcado — e foi preciso separar as duas funções
+
+A decisão foi: **os removidos não vêm pré-selecionados**. Quem apagou tomou uma
+decisão, e o padrão da tela respeita — vindo marcado, bastaria não reparar na
+etiqueta para desfazer a própria exclusão, e numa lista de 500 ninguém repara
+em uma linha.
+
+⚠️ **Mas não podia virar uma função só.** `selecionaveis` alimentava TRÊS
+coisas: o estado inicial, o "Marcar todos" e o total do `N de M marcados`.
+Tirar os removidos dali faria o atalho deixar de alcançá-los — e a pessoa
+teria de caçá-los na lista para trazê-los de volta. Então são duas:
+
+| função | responde | serve a |
+|---|---|---|
+| `selecionaveis` | a caixa está habilitada? | `disabled`, "Marcar todos", o total do contador |
+| `preSelecionados` | já vem marcado? | **só** o estado inicial |
+
+➡️ Por isso o contador abre em algo como **"17 de 21 marcados"**: os quatro
+removidos contam no disponível e mesmo assim não vêm marcados. O par de testes
+fixa a diferença nas duas direções — um processo está FORA da pré-seleção e
+DENTRO dos selecionáveis.
+
+#### A cor vermelha, e a objeção que caiu com a decisão irmã
+
+`status.bad.bg` (#fbe9ea) com `status.bad.text` (#b93a44). Nenhuma das outras
+servia: o verde de "novo" apagaria o próprio aviso, o cinza é dos dois "está em
+outro subgrupo" (fato sobre ONDE, não uma decisão) e o âmbar é do único que
+trava.
+
+🔴 **Eu havia argumentado contra o vermelho** — sugere impedimento num estado
+que continua marcável. O argumento valia enquanto o processo vinha
+pré-marcado; com a decisão de não pré-selecionar, o vermelho passou a dizer
+exatamente o que a tela faz: o padrão é não trazer de volta. **As duas decisões
+se sustentam mutuamente** — mexer numa sem a outra devolve a incoerência.
+
+⚠️ **Contraste MEDIDO: 4,78:1** — passa AA (4,5) e é o mais apertado das cinco
+etiquetas. O tema avisa que só as variantes `.text` passam em 4,5:1, e escurecer
+o fundo ou clarear o texto reprova. Quem quiser mexer, mede antes.
+
+⚠️ **O texto é minúsculo no `switch`** (`"removido antes"`): a caixa alta vem do
+`text-transform` de `EtiquetaDeSituacao`. Escrevê-la nos dois lugares é a mesma
+regra duplicada, e a que diverge no primeiro ajuste.
+
+#### ⚠️ E o `yarn build` pegou o que o vitest não pega
+
+`ProcessoEncontrado` ganhou um campo obrigatório, e os helpers `achado()` dos
+testes montavam o objeto sem ele. `vitest` não faz type-check; `tsc -b` sim —
+é a razão de a régua do projeto ser conferir com `yarn build`.
+
+### O responsável é OPCIONAL na importação — e o desenho diverge
+
+⚠️ **O campo NÃO tem asterisco, e isso é deliberado.** O desenho põe um
+`<span class="obrigatorio">*</span>` ali; a tela está de acordo com o SERVIDOR,
+que nunca recusa lista vazia:
+
+- vazia vira `[quem importa]` — **mas só se essa pessoa for membro** do
+  subgrupo de destino;
+- não sendo, os processos nascem **sem responsável**, e é assim de propósito:
+  `manager`+ age em subgrupo que não participa, e um default incondicional
+  faria o servidor pôr alguém que o próprio validador recusaria
+  (`responsaveis_service.responsaveis_na_criacao` explica o fluxo que isso
+  quebraria).
+
+🔴 Então **não "corrigir" a tela para exigir o campo** só porque o desenho o
+marca: a tela promete o que a API cumpre. Exigir passaria a ser decisão de
+produto, e teria de valer nos DOIS lados.
+
+⚠️ A consequência de importar sem responsável já é visível na listagem: os
+avisos vão para o subgrupo inteiro pelo fallback, e a coluna mostra
+`Sem responsável` — que ali não é campo vazio, é marca de item órfão.
+
+### ➡️ Frente registrada: o nome acessível das setas de página
+
+`SetaPagina` põe "Página anterior" no `title`, mas o conteúdo do botão é o glifo
+"‹" — e é ELE que vira o nome acessível. Um leitor de tela anuncia "‹". Vale
+para todas as listas do sistema.
+
+## Salvar processo não pode reenviar o que ninguém tocou (28/08/2026)
+
+Um relato de produção -- *"ao atualizar, perdeu o vínculo"* -- levou a uma
+causa de fundo que valia para qualquer campo da tela.
+
+### O corpo do salvamento era completo, sempre
+
+`corpoDosCamposDeProcesso` montava os nove campos com `|| []` e `|| ""`. O
+"PATCH" era sobrescrita total: **campo que o formulário não carregasse era
+apagado ao salvar.**
+
+E havia um campo assim. `FormularioProcesso` semeava oito e esquecia
+`responsaveis`, então:
+
+- o campo abria **vazio** num processo que TEM responsável, escondendo quem
+  responde;
+- o salvamento mandava `responsaveis: []` -- que o servidor recusava com 400,
+  tornando **impossível salvar** qualquer edição sem mexer no campo;
+- quem escolhesse alguém só para passar do erro **substituía** quem estava lá.
+
+🔴 A correção tem duas camadas de propósito. `corpoDosCamposDeProcesso` agora
+**omite** o que é `undefined` -- rede de segurança que transforma "esqueci de
+carregar" em nada, em vez de em apagamento. E `camposAlterados` manda só o que
+mudou, que ataca a causa: sem ela, salvar o apelido devolvia por cima a
+situação que outra pessoa tinha mudado enquanto a tela estava aberta.
+
+⚠️ **`useRef` para o retrato do original**, não `useState`: ele não é para
+renderizar, e não pode se refazer quando o processo é rebuscado no meio da
+edição -- se refizesse, o "que mudou" passaria a comparar com o estado novo e
+a edição em curso sumiria.
+
+⚠️ Provado no Chrome, no cenário exato do relato: o corpo que sai agora é
+`{"apelido":"Inventário","responsaveis":[]}` -- só o que mudou -- e volta 200.
+
+### Renomear cliente rebusca processos e atendimentos
+
+O nome do cliente naquelas telas é campo **derivado**: não vem do cache de
+clientes, vem de `cliente_nomes`, resolvido pelo servidor DENTRO da resposta
+delas. Invalidar só `["clientes"]` deixava as duas mostrando o nome velho até
+o polling de 60s -- e em conexão lenta, mais.
+
+➡️ **A regra geral**: ao invalidar depois de escrever, perguntar *quais outras
+respostas carregam este dado derivado?*. Aqui são `["processos"]` e
+`["atendimentos"]`; `responsaveis_nomes` e `subgrupo_nomes` têm a mesma forma.
+
+## Digitar para filtrar virou o padrão dos seletores (28/08/2026)
+
+Requerimento do usuário: *"selects por padrão no sistema deve ser possível
+digitar para pesquisar"*. `permitirBusca` era opcional e treze dos vinte e seis
+usos ficavam sem. Agora o padrão é `true` nos dois componentes.
+
+🔴 **Ligar isso apagou um contrato de acessibilidade, e só o teste mostrou.**
+Com busca E desabilitado ao mesmo tempo, o `react-select` não renderiza input
+nenhum -- some o `role="combobox"` de que teclado e leitor de tela dependem
+para saber que existe um controle ali, esperando a lista. Daí
+`isSearchable={buscaNoControle && !travado}`.
+
+⚠️ Não se perde nada com isso: não há o que filtrar numa lista que ainda não
+chegou.
+
+⚠️ E o guarda que pegou já existia -- o teste "fica TRAVADO enquanto carrega",
+cujo comentário dizia exatamente por que a asserção é o `combobox` desabilitado
+e não "o menu não abre".
+
+## Filtro por subgrupo, e a mutação que passou (28/08/2026)
+
+⚠️ **"Escolha, não permissão" descreve o SERVIDOR, não a tela.** Pela interface
+os dois são indistinguíveis: a pílula lista o que `GET /subgrupos` devolve (já
+escopado) e os filtros daqui não vêm da URL -- então não existe caminho pela
+tela que peça um subgrupo alheio. A distinção vale porque a rota é uma
+superfície própria, alcançável por qualquer cliente autenticado, e lá o
+parâmetro se SOMA ao alcance em vez de defini-lo.
+
+A pílula some para quem tem UM subgrupo: ali ela não filtraria nada, e
+controle sem efeito é pior que controle nenhum.
+
+🔴 **O primeiro teste que escrevi para ele NÃO servia**, e a mutação provou:
+ele afirmava sobre o que `listarProcessos` RECEBE, então apagar
+`subgrupo_id: subgrupoId` do corpo da query passava batido. Quem prova que o
+filtro chega ao servidor é o nível de `services/api` -- daí
+`services/api/processos.test.ts`.
+
+➡️ **A régua**: teste de tela prova que a tela pediu; só o teste do cliente
+HTTP prova o que saiu no fio. Filtro novo precisa dos dois.
+
+## O mesmo filtro em Atendimentos e Documentos (28/08/2026)
+
+Mesma pílula, mesma régua: some para quem tem UM subgrupo, e a escolha vai
+para a URL (`?subgrupo=`), como todo estado de lista.
+
+🔴 **`primeiraPagina`, nunca `opcoes`.** As duas telas usam
+`useSubgruposBuscaveis(true)`, e o docstring de `OpcoesBuscaveis` registra três
+defeitos que vieram de a página ler `opcoes`: ela **encolhe conforme alguém
+digita** na pílula. Aqui isso faria o filtro **sumir da tela** enquanto o modal
+de criação estivesse sendo usado -- controle desaparecendo sozinho, sem erro.
+
+⚠️ **E o ganho é diferente entre as duas**, o que não se vê pela tela:
+`atendimentos_repository` faz **uma Query por subgrupo**, então escolher um
+troca N idas ao banco por uma. Documentos lê a partição do grupo e peneira --
+ali o filtro não economiza leitura. Está registrado no `CONTEXT.md` da API.
+
+### 🔴 Repeti o erro que a régua acima já descrevia
+
+A régua de *"Filtro por subgrupo, e a mutação que passou"* diz, com todas as
+letras: *"filtro novo precisa dos dois testes"*. Escrevi os dois filtros só com
+teste de tela, e a mutação que apaga `subgrupo_id: subgrupoId` do corpo da
+query **passou de novo** -- porque o teste dubla `listarDocumentos` inteiro.
+
+Daí nasceram `services/api/atendimentos.test.ts` e `documentos.test.ts`, irmãos
+do de processos.
+
+➡️ **O que isso ensina não é "prestar mais atenção".** A régra estava escrita e
+foi lida -- eu inclusive tinha aberto o arquivo. Regra escrita que falha duas
+vezes pede **guarda mecânico**: um teste que cobre que toda chave enviada no
+`query` de `services/api/*.ts` apareça numa asserção de `*.test.ts`. Fica
+registrado como frente, com o gatilho óbvio: a terceira vez.
+
+### A verificação em Chrome, e o falso ✅ que ela quase deu
+
+`scripts/verificar-filtro-de-subgrupo.mjs`. A primeira versão contava
+`tbody tr` -- e Atendimentos renderiza **cartões, não linhas de tabela**. O
+contador devolvia `0 -> 0`, e "a lista não cresceu" passava sem provar nada.
+
+⚠️ Agora ela lê **"Mostrando X de Y"**, a frase que a própria tela declara, e
+cobra as **duas pontas**: depois de filtrar por um subgrupo com conteúdo, o
+total precisa ser **maior que zero** (mostra os dele) **e menor que antes**
+(esconde os outros). Só uma das duas passaria com o filtro quebrado.
+
+## Cadastrar cliente sem sair do formulário (28/08/2026)
+
+Digitou um nome que não está no cadastro, aparece `+ Novo cliente “nome”` no
+fim da lista. Só o NOME -- documento, telefone e endereço ficam para a tela do
+cliente: pedi-los ali seria trocar um formulário por outro no meio do primeiro.
+
+⚠️ **"Novo cliente", e não "Cadastrar"**: o modal de processo tem o próprio
+botão "Cadastrar" (o que grava o processo), e dois controles com o mesmo nome
+na mesma tela é ambiguidade. Foi a verificação em Chrome que pegou -- o seletor
+do roteiro bateu em dois botões.
+
+⚠️ Só para `manager`+, que é o piso da rota: não oferecer o que a API vai
+negar, a mesma régua de `podeRemoverResponsavel`.
+
+⚠️ **O campo vive em `components/`**, então Atendimentos ganhou o atalho junto.
+É a mesma necessidade, e uma segunda cópia divergiria no primeiro ajuste.
+
+⚠️ Ele importa `papelAtende` de `services`, e isso quebrou TRÊS arquivos de
+teste que mockam esse módulo sem o export. Os mocks foram completados.
+
+### 🔴 Componente de `components/` PODE ler a sessão -- decidido em 28/08/2026
+
+A pergunta foi levantada e respondida com número: **33 arquivos de teste mockam
+`services`, e 18 já listam `papelAtende`**. O preço não nasceu aqui -- é o
+padrão da casa desde `podeRemoverResponsavel`, que lê `papelAtende` e
+`getEmail` dentro de `components/`.
+
+**A alternativa foi recusada.** Passar `podeCadastrar` por prop tiraria a
+dependência do componente, mas moveria a régua para CADA chamador -- hoje três
+(novo processo, editar processo, atendimentos), e cada tela nova repetiria. É a
+duplicação que o próprio `podeRemoverResponsavel` argumenta contra: *"um helper
+comum precisaria de parâmetro pra cada diferença e esconderia justamente o que
+cada tela decide"*. Trocaria incômodo de teste por regra espalhada em produção.
+
+⚠️ E o modo de falha é barulhento: o vitest diz o export que faltou, e uma
+linha resolve.
+
+➡️ **O gatilho para reabrir**: um QUARTO componente compartilhado lendo a
+sessão. Aí vale um `test/mockDeServices.ts` com os padrões -- e não a prop.
+
+⚠️ O que esse helper custaria, e por isso ele não vem antes do gatilho: hoje a
+lista de mocks de cada teste MOSTRA de quais serviços aquela tela depende, e
+isso já pegou defeito nesta sessão.
+
+## O estado da listagem foi para a URL (28/08/2026)
+
+Pedido: abrir um processo da página 2, com 30 por página, e VOLTAR caindo no
+mesmo lugar. O estado vivia em `useState` da tela, e entrar no detalhe a
+desmonta.
+
+🔴 **A primeira implementação foi memória em módulo, e foi descartada.** Ela
+atendia ao pedido em ~70 linhas. A pergunta *"o que o mercado usa?"* mudou a
+decisão: a URL é o padrão do ecossistema (`useSearchParams`, search params do
+TanStack Router, `searchParams` do Next), responde de graça a quatro perguntas
+em vez de uma -- voltar, recarregar, compartilhar, enxergar o estado -- e já era
+o idioma DESTE projeto, no detalhe do processo que guarda a aba aberta assim.
+
+⚠️ **E eu tinha esticado um argumento contra.** Disse que "o projeto decidiu não
+pôr filtros na URL"; relendo, o comentário justifica o ATALHO da Área de
+trabalho passar filtros por `state` (*"é um atalho interno: não é URL pra
+compartilhar"*), não a URL como lugar do estado de lista.
+
+### 🔴 A regra que organiza tudo: `setSearchParams` NAVEGA na hora
+
+Não é `useState`. Duas chamadas no mesmo manipulador partem da MESMA URL, e a
+segunda apaga a primeira. Três defeitos desta migração são o mesmo defeito:
+
+1. `setBusca(v); setPagina(1)` -- a busca sumia ao digitar;
+2. `setTamanhoPagina(t); setPagina(1)` -- **a troca de tamanho parou de
+   funcionar**, e a suíte estava VERDE: nenhum teste cobria isso numa tela real;
+3. escolher cliente grava o id E o nome do rótulo -- a pílula ficava acesa sem
+   filtrar nada.
+
+➡️ Por isso existem duas peças: `useParametrosDaUrl` escreve VÁRIAS chaves numa
+vez (é o mecanismo), e `useEstadoNaUrl` é a casca de um valor só. E por isso o
+reset de página é propriedade do FILTRO (`tambemApaga`), não da tela.
+
+### Quem decide o que some da URL é quem declarou o estado
+
+⚠️ Houve uma versão com uma opção `padroes` no escritor múltiplo, e ela foi
+**removida**: obrigava quem limpa os filtros a repetir os padrões já declarados,
+e falhou duas vezes (Histórico e Atendimentos abriam com o filtro de volta).
+
+Agora `useEstadoNaUrl` -- o único que conhece o padrão da sua chave -- escolhe
+entre escrever e APAGAR; o escritor múltiplo só escreve o que recebe.
+
+⚠️ Consequência aceita: "limpar filtros" escreve os valores neutros
+(`?tipo=&falha=0`) em vez de apagar as chaves. Apagar devolveria o padrão -- e
+nessas telas o padrão pode ser o filtro que veio da Área de trabalho.
+
+### Dois defeitos de codec que só o teste mostrou
+
+- **booleano só sabia escrever `true`.** Um filtro que ABRE ligado (o link "só
+  com falha") não desligava: `false` sumia da URL, e o que some volta como o
+  padrão -- que ali era `true`;
+- **omitir "quando é vazio"** quebrava o filtro cujo padrão não é vazio: em
+  Histórico a tela abre em "Movimentações", e escolher "Todos" voltava sozinho
+  para "Movimentações".
+
+### ⚠️ Chaves iguais em todas as telas, e a exceção
+
+`?pagina=2` em Processos e em Clientes nunca colidem: cada tela é um endereço.
+A tela de **Grupo** é a exceção -- suas sub-abas dividem UM endereço, então
+trocar de aba limpa `pagina`, `tamanho` e `busca`. Sem isso, ir para a página 3
+de Subgrupos e clicar em Membros abria Membros na página 3, vazia.
+
+### 🔴 Cinco telas NÃO têm endereço, e errar isso falha em silêncio
+
+Subgrupos, Membros, Convidar, Fases e Situações são **sub-abas de `/grupo`**
+(`ABAS_DO_GRUPO`), e a aba ativa é `useState` dentro de `GrupoPage` -- não
+está na URL. Não existe `/membros`, `/subgrupos` nem `/fases`.
+
+⚠️ **E o erro não aparece:** `routes/index.tsx` termina com
+`<Route path="*" element={<Navigate to="/" replace />} />`, então um endereço
+inventado não dá 404 nem erro de console -- redireciona para a Área de
+trabalho. Um roteiro do Playwright que faz `goto("/membros")` segue adiante,
+e só quebra dezenas de linhas depois, no `click` de um elemento que "sumiu".
+O rastro aponta para o seletor, e a causa está no `goto`. Custou tempo duas
+vezes; da segunda virou esta seção.
+
+O caminho é ir ao endereço e clicar na aba:
+
+```js
+await pagina.goto(`${APP}/grupo`, { waitUntil: "networkidle" });
+await pagina.getByRole("tab", { name: "Membros" }).click();
+```
+
+⚠️ Vale para `renderComRota` também: `renderComRota(<MembrosPage />, "/membros")`
+monta, mas a rota é ficção -- quem depende de `useSearchParams` ali está
+testando um endereço que o app não serve.
+
+Quando um `goto` levar à tela errada, o primeiro suspeito é este redirecionamento:
+`console.log(pagina.url())` logo depois do `goto` responde na hora.
+
+### ⚠️ Testes de tela agora precisam de `<Router>`
+
+Medido: o React Router 7 **estoura** com dois `<Router>` aninhados, e dezesseis
+arquivos já trazem o seu. Por isso não dá para pôr o roteador dentro de
+`renderComProviders` -- nasceu `renderComRota(ui, rota)`, que também aceita a
+rota inicial: `"/processos?pagina=2"` é como se testa que a URL manda na lista.
+
+### URL torta não derruba a tela (28/08/2026)
+
+A pergunta *"e se eu colocar números inválidos?"* achou quatro buracos. Medido
+ANTES, com a URL editada à mão:
+
+| URL | o que acontecia |
+|---|---|
+| `?pagina=abc` | ✅ caía na página 1 |
+| `?pagina=-3`, `?pagina=1.5` | 🔴 422, e a tela dizia "Não foi possível carregar os processos" |
+| `?tamanho=9999` | 🔴 422 (o servidor tem `le=100`) |
+| `?pagina=999` | ⚠️ tabela vazia com a contagem dizendo 45 |
+
+Um 422 lido como falha do sistema é pior que o parâmetro torto: a pessoa
+conclui que o Argos está fora do ar.
+
+🔴 **A faixa não mora no codec.** Tentei "inteiro >= 1" em
+`lerParametroDaUrl` e quebrei o filtro `dias` do Histórico, cujo valor neutro
+é 0. O codec garante que é INTEIRO; quem conhece o intervalo válido é quem
+declara o estado -- `usePaginacaoDaLista` valida página (>= 1) e tamanho
+(tem de estar entre as opções que o seletor oferece).
+
+🔴 **Página fora da faixa volta para a primeira, e isso mora no `Pagination`.**
+Não é só URL digitada: filtrar estando na página 3 encolhe o conjunto e produz
+o mesmo estado. O componente já recebe página, total e o setter, e é a única
+peça que as sete listagens dividem -- não precisou de hook nem de chamada por
+tela.
+
+⚠️ E as guardas `processos.length > 0 &&` saíram de volta do `<Pagination>`:
+ele já se esconde sozinho quando não há o que paginar, e a guarda escondia
+justamente o caso em que ele PRECISA aparecer -- lista vazia com total cheio,
+onde a pessoa ficava presa sem botão.
+
+⚠️ **Um teste meu passou por engano aqui.** `toHaveBeenLastCalledWith({pagina:
+1})` casava com a consulta do TOTAL, que sempre pede a página 1 -- a mutação
+que desligava a correção não o derrubava. O desempate é `tamanhoPagina` na
+asserção.
+
+## O sino ganhou um aviso, e a atribuição em massa virou clicável (28/08/2026)
+
+### `itens_reatribuidos`
+
+Quem herda o acervo de alguém que saiu do subgrupo recebe UMA linha, com a
+conta do que recebeu. Título e detalhe vêm PRONTOS do servidor -- só ele sabe
+o que foi transferido.
+
+⚠️ **Chega sem `alvo_id` E sem `alvo_tipo`**, então não é clicável. Não é
+esquecimento: são QUATRO listas (tarefas, atendimentos, processos,
+documentos), e nenhum endereço isolado cobre as quatro. Mesmo tratamento de
+`sessao_alterada`.
+
+### ✅ A pendência da atribuição em massa foi fechada
+
+`destinoDaNotificacao` tinha uma pendência escrita: *"201 processos atribuídos
+a você"* deveria abrir a listagem filtrada por responsável, e não abria porque
+esta função devolve uma STRING de rota e os filtros viajavam por `state` de
+navegação.
+
+🔴 **O obstáculo caiu quando o estado das listagens foi para a URL**, no mesmo
+dia: `?responsavel=…` virou endereço. Agora a linha leva a
+`/processos?responsavel=<quem recebeu>&subgrupo=<onde>`.
+
+⚠️ O subgrupo entra junto: sem ele a lista traria os processos da pessoa em
+TODOS os subgrupos -- mais do que o aviso prometeu.
+
+⚠️ **`usuario_id` é o destinatário**, e é por ele que se filtra. Ler a sessão
+dentro da função a tornaria dependente de estado global sem precisar.
+
+⚠️ Medido em Chrome, entrando como quem recebeu: o clique leva a
+`?responsavel=user%40local.test&subgrupo=sub-g-alfa` e a tabela mostra os 3
+processos, de 42 do grupo. E funciona para quem é `user`, embora a pílula de
+responsáveis não liste gente abaixo de `manager` -- o filtro vem da URL, não
+da pílula.
+
+➡️ **O teste que fixava a pendência caiu, e era para cair**: ele dizia "não é
+clicável ENQUANTO o destino filtrado não existir", com o aviso de que quem
+resolvesse o derrubaria. Foi assim que a pendência se anunciou fechada, em vez
+de sobreviver mentindo.
+
+---
+
+## A inscrição da OAB no perfil, e as duas abas (30/08/2026)
+
+A Fase 1 do plano de escala pôs a varredura por OAB no cron, e não havia tela
+para cadastrar a inscrição. Esta entrega é ela.
+
+### 🔴 O bloqueio que só apareceu ao começar: não havia como LER
+
+`PATCH /me` aceitava `numero_oab`/`uf_oab` desde a manhã do mesmo dia. O login
+devolve só e-mail e apelido, e a sessão não guarda mais nada -- então a tela
+conseguiria **gravar** uma inscrição e não conseguiria mostrar a que já estava
+lá. A pessoa abriria o perfil, veria os campos vazios, e cadastraria de novo.
+
+Nasceu `GET /me`. ⚠️ E **não** alargando `GET /grupos/membros`, que era o
+atalho: aquela rota é `manager`+ com projeção fixa, e publicar a inscrição ali
+a mostraria na tela de Membros, que não pediu por ela.
+
+### As duas abas, e o que a divisão GARANTE
+
+| aba | grava |
+|---|---|
+| Meus dados | só o nome |
+| Inscrição na OAB | só a inscrição |
+
+🔴 `PATCH /me` trata campo ausente como "não mexer". Com um formulário só, o
+front tinha de **escolher** o que mandar -- e mandar o nome numa troca de OAB o
+reescreveria (foi por essa razão que `apelido` virou opcional no schema do
+servidor). Separadas, uma aba não conhece os campos da outra: a garantia
+deixou de depender de lógica e passou a ser da FORMA.
+
+⚠️ **Só a aba da inscrição consulta `GET /me`.** Nome e e-mail já estão na
+sessão; ir à rede buscar o que está em mãos faria a tela piscar sem ganho. A
+OAB não está na sessão e não deveria estar -- seria uma cópia que envelhece.
+
+### O interruptor da importação (Fase 1b, 31/08/2026)
+
+🔴 **A investigação que trouxe esta peça**: a importação automática estava
+inteira na API, em produção, e **ninguém conseguia ligá-la pela tela**. Para
+testá-la foi preciso chamar a rota de configurações por script.
+
+🔴 **A aba passou a salvar DUAS coisas, e isso não fere a régua acima.** A
+separação existe para uma aba não sobrescrever campo da OUTRA; inscrição e
+interruptor são da MESMA aba, e o servidor aceita os dois no mesmo PATCH --
+conferido em produção. Cadastrar a OAB e ligar a importação é uma intenção só.
+
+⚠️ **O interruptor olha o CAMPO, não o gravado.** `temInscricao` sai do que
+está digitado, então quem preenche a OAB e liga no mesmo gesto não precisa
+salvar antes. Travar até a inscrição estar gravada pediria dois salvamentos
+para um pedido.
+
+⚠️ **O seletor só com MAIS DE UM subgrupo**, e o destino vai preenchido de
+qualquer jeito (`destinoEfetivo`): sem isso "ligar" iria ao servidor sem
+destino e voltaria recusado. Com um subgrupo, o seletor faria a pessoa procurar
+uma decisão que não existe.
+
+⚠️ **Um destino, embora o contrato seja lista.** O campo é `string[]` porque a
+lista de avulsas do grupo permite vários -- lá um `admin` cadastra inscrição de
+terceiro e pode espalhar. Aqui a pessoa escolhe onde os processos DELA nascem,
+e a pergunta tem uma resposta só.
+
+🔴 **O `Switch` do Chakra v3 é um CHECKBOX, e assim fica.** Pôr `role="switch"`
+parecia mais correto e é pior, medido: a ARIA exige `aria-checked` junto, o
+Chakra não o emite, e o estado passa a ser DESCONHECIDO -- `toBeChecked()`
+deixa de reconhecer o elemento marcado. Um checkbox que anuncia
+"marcado/desmarcado" é inteiramente usável. Se o Chakra passar a emitir
+`aria-checked`, isto se revê.
+
+⚠️ **O trilho ligado nasce PRETO** no Chakra v3, e destoava de tudo à volta.
+Pintado com `brand` -- e cor aqui é contrato: `theme/tokens.ts` registra que
+trocá-la obriga a alinhar o e-mail.
+
+### O modal de membro edita a inscrição (31/08/2026)
+
+🔴 **Nasceu de um beco.** A titularidade passou a ser conferida também quando
+o NOME muda, e nenhuma rota deixava limpar a OAB de outra pessoa: o admin
+travaria ao corrigir um nome, sem saída que não fosse pedir à própria pessoa.
+
+🔴 **A inscrição NÃO vem na listagem, e não pode vir.** `GET /grupos/membros`
+é `manager`+ e a projeção dela é fixa de propósito -- publicá-la ali a
+mostraria na tela de Membros, que não pediu por ela. Por isso nasceu
+`GET /grupos/membros/{email}`, `admin`+: **quem enxerga é quem pode editar**.
+
+⚠️ **O portão do botão passou de `ehSuperAdmin()` para `papelAtende("admin")`.**
+Com o piso antigo, "destravar o admin" seria falso -- `super_admin` é o
+operador da PLATAFORMA, e o admin do escritório continuaria dependente dele.
+
+⚠️ **Mas trocar de GRUPO e criar `super_admin` seguem só do operador**, e isso
+tem consequência de tela: o seletor de Grupo usa `GET /grupos`, que é
+`super_admin`-only. Para `admin` ela **nem é chamada** (403 numa tela que abriu
+certo seria pior que o campo travado), e o próprio grupo é oferecido como única
+opção -- um select vazio não diria onde a pessoa está.
+
+🔴 **O destino sai dos subgrupos MARCADOS AGORA**, não dos salvos. A mesma tela
+edita os dois, e o servidor valida contra este mesmo PATCH: assim não dá para
+escolher um destino que o salvamento invalidaria, em vez de deixar o cron
+desligar no ciclo seguinte.
+
+⚠️ **Tudo em terceira pessoa**: o "i" do nome, o apoio do interruptor, o motivo
+do travamento. O texto do perfil diz "sua inscrição… que ela é sua", e repeti-lo
+aqui poria o admin no lugar do titular -- a mesma correção que as cinco
+mensagens do servidor receberam.
+
+⚠️ **E o "i" importa MAIS aqui**: o admin não sabe, ao digitar, que o nome vai
+ser conferido contra o tribunal. Sem ele, a recusa chegaria sem aviso prévio.
+
+⚠️ **`compacto` no `InterruptorDaImportacao`**: a régua de separação fica nos
+dois casos, o que muda é o respiro. No perfil o componente cria o dele; no
+modal o `Stack` já dá `gap="16px"`, e somar `mt` em cima abriu um vão que
+destoava de todas as outras fronteiras. Espaçamento é do CONTEXTO, e por isso
+é prop própria -- não um `deTerceiro` fazendo dois trabalhos.
+
+⚠️ **A coluna da tabela virou "Nome completo" junto.** Ela dizia "Apelido"
+enquanto o modal que ela abre já dizia outra coisa -- mesma coisa com dois
+nomes na mesma tela é o defeito que a troca do perfil existia para evitar.
+
+### 🔴 A tela não afirma a OAB que ela não tem (02/09/2026)
+
+O modal desenhava os campos de OAB **vazios** enquanto `lerMembro` corria, e
+continuava vazio se ela falhasse. Vazio nas duas partes é o gesto de APAGAR a
+inscrição -- está escrito no tipo (`DadosDoMembro`: *"`undefined` = não mexer.
+Mandar `""` APAGA"*) e o servidor honra: `membros_service` faz
+`if not numero_oab and not uf_oab: campos["numero_oab"] = None`.
+
+Então abrir o modal só para corrigir um NOME e salvar antes da resposta chegar
+apagava a OAB de quem tem, e desligava a importação automática junto. Ninguém
+tocou nesses campos. Não é hipótese: com a leitura falhando, o PATCH observado
+saía com `numero_oab: ""`, `uf_oab: ""` e `importacao_automatica: false`. E
+digitar `206876` antes da resposta chegar deixava o campo em `""` -- a guarda
+de descarte então **fechava calada**, porque o retrato voltava a bater.
+
+⚠️ **O defeito é maior que "sobrescreve o que foi digitado"**, que é como ele
+estava registrado no plano da guarda de descarte. Sobrescrever incomoda;
+apagar a inscrição de terceiro perde dado que a tela nem mostrava.
+
+São **duas metades**, e uma sem a outra não resolve:
+
+- **enquanto não sei, não mostro** -- `Esqueleto` na carga, `EstadoDeErro` com
+  "tentar de novo" na falha. É o arranjo que `FormularioDaInscricao` já usava
+  no perfil desde o início; a versão de terceiro não o herdou. Sem campo na
+  tela não há texto digitado para a resposta engolir;
+- **enquanto não sei, não deixo salvar** -- esconder o campo tira a mentira da
+  TELA, mas `numeroOab` continua `""` no estado, e é o estado que monta o
+  PATCH. A condição é `!editavelQuery.data`, e não `isPending`: no erro a
+  carga TERMINA sem dado, e ali `isPending` já é `false`.
+
+⚠️ **A espera cobre o BLOCO, não o modal.** Nome, papel, grupo e subgrupos vêm
+da prop e já estão na mão -- fazer a tela inteira esperar cobraria por quatro
+campos o preço de um. O perfil pode devolver `<Esqueleto/>` no lugar do
+formulário todo porque lá o formulário **é** a inscrição.
+
+⚠️ Gêmeo declarado do `falhouAoRecarregar` e do `corpoDosCamposDeProcesso`
+(*"campo ausente é OMITIDO, não zerado"*, 28/08): três defesas contra a mesma
+armadilha -- mandar o que não se conferiu remove o que estava lá.
+
+🔴 **A trava se repete no `handleSubmit`, e não é redundância.** O Salvar é
+IRMÃO do `<form>` (ligado por `form={idFormulario}`), então o envio implícito
+-- Enter num campo de texto -- passa pelo botão padrão, e esse caminho **o
+jsdom não executa**: medido, com o Salvar HABILITADO o Enter não submetia nada
+lá. Um teste de teclado em jsdom passa verde com a trava ou sem ela. O teste
+que eu tinha escrito era exatamente esse, e a prova por mutação o pegou vazio.
+Virou `fireEvent.submit`, e o Enter de verdade foi para
+`scripts/verificar-oab-sem-dado.mjs`, em Chrome com janela.
+
+⚠️ **O estado de erro demora ~7s para aparecer**, e é correto: `queryClient`
+repete erro transitório 3 vezes (medido: 4 idas à rede, 7,4s). Até lá a tela
+mostra o esqueleto -- ainda não se sabe. Quem esperar pelo erro com timeout
+curto vai concluir que ele não existe.
+
+### As recusas de titularidade chegam do servidor, e a tela não as reescreve
+
+🔴 Desde 31/08/2026 a API confere se a inscrição é SUA, e **cada recusa tem um
+conselho diferente**: preencher o nome completo, conferir o número/UF, ou
+tentar de novo. Trocá-las por "Não foi possível salvar" apagaria justamente a
+parte que diz o que fazer. `toastErroMutation` já mostra o `detail` do
+servidor; o teste existe para que ninguém "melhore" isso para uma frase fixa.
+
+⚠️ **A primeira delas vai acontecer com todo mundo**: medido em produção, os
+cinco nomes cadastrados têm uma palavra só, e a régua exige o nome completo. É
+por isso que o "i" ao lado de "Nome completo" explica a comparação com o
+tribunal ANTES de a pessoa tentar.
+
+### A aba "Inscrições na OAB" do grupo (01/09/2026)
+
+A Etapa 4 do plano da carga histórica. Até ela, as inscrições avulsas tinham
+rota e interruptor e **nenhum lugar onde cadastrá-las** -- então a carga só
+alcançava quem ligasse a inscrição pelo PERFIL.
+
+🔴 **Aba própria, e não uma seção dentro de Configurações -- contra o
+artifact.** Ele desenha a lista dentro da aba de Configurações; a decisão foi
+outra, em 01/09. Aquela é um formulário de dois campos com um "Salvar" só, e
+esta é uma lista de até 50 linhas em que cada mexida grava sozinha. É a forma
+de Fases e Situações: catálogo do escritório é aba.
+
+🔴 **O interruptor da linha é ASSIMÉTRICO: desligar grava, ligar abre o
+modal.** O servidor ZERA `subgrupos_destino` ao desligar e RECUSA ligar sem
+destino, então uma inscrição desligada nunca tem destino guardado e "ligar"
+nunca é um gesto de um clique só. Um interruptor que às vezes liga e às vezes
+precisa de mais informação é pior que um que sempre abre onde a informação se
+dá -- e desligar não precisa de nada, então obrigar a abrir um modal para dizer
+"pare" seria atrito puro.
+
+🔴 **Toda gravação RELÊ a lista antes de montar o corpo** (`fetchQuery` com
+`staleTime: 0` explícito). O `PATCH` substitui a lista inteira: quem manda a
+lista sem uma inscrição a está removendo. Montando o corpo do cache, um `admin`
+que abrisse a tela, esperasse um colega cadastrar uma OAB e então mexesse em
+outra apagaria a do colega junto -- **sem erro, sem toast, sem nada na tela
+dizendo**. É perda silenciosa de dado, a pior classe.
+
+⚠️ **A releitura estreita a janela para milissegundos; não a fecha.** Fechar
+exigiria versão no recurso, que o servidor não tem, e o custo de uma escrita
+concorrente dentro desses milissegundos não paga esse desenho.
+
+⚠️ **A repetida é barrada na TELA.** O servidor a ignora em silêncio ("a
+primeira vence"), então mandá-la responderia 200 com a lista do mesmo tamanho e
+a pessoa concluiria que a tela engoliu o cadastro. A comparação é pela forma
+canônica (`normalizarInscricao`): `"263/mg"` e `"263/MG"` são a mesma.
+
+🔴 **A LIXEIRA de Subgrupos, e não o × redondo do artifact.** O sistema já tem
+um gesto de "tirar da lista", com forma e cor, usado por Subgrupos, Clientes e
+Membros. Um segundo desenho para a mesma ação faria a pessoa aprender duas
+vezes -- **o artifact é o desenho da TELA, não o do sistema.**
+
+⚠️ **Editando, número e UF viram `Input` desabilitado com cadeado** -- os dois
+como `Input`, e não o `Select` travado: ele ainda desenha a seta, e ela
+disputaria o canto com o cadeado. Escolher entre 27 opções é o gesto de
+cadastrar; aqui não há o que escolher.
+
+⚠️ **A coluna de destinos resume de TRÊS em diante**, reusando o limiar de
+`utils/select.rotuloResumo` que o `MultiSelect` do modal já aplica ao mesmo
+dado. Duas maneiras de resumir a mesma lista, na mesma tela, divergem no
+primeiro ajuste. O motivo é a altura da linha: com 20 subgrupos, vinte
+etiquetas quebram em quatro fileiras, a linha cresce, as vizinhas não, e a
+coluna do interruptor descola do que ela descreve.
+
+#### Três defeitos que só o teste e o Chrome acharam
+
+⚠️ **A linha mandava os destinos ao DESLIGAR.** Quem gravava certo era o pai,
+que zerava ao montar o corpo -- a gravação estava correta e o CONTRATO da linha
+mentia. Quem lesse aquela chamada concluiria que desligar preserva o destino.
+
+🔴 **`Switch.Label` faz o Chakra emitir `aria-labelledby`, que VENCE o
+`aria-label`.** O nome acessível que eu tinha posto era ignorado em silêncio, e
+as 50 linhas ficavam com interruptores todos chamados "Desligada". O rótulo
+aponta para DOIS ids -- a inscrição e o estado --, e o nome vira `"263/MG
+Ligada"`: identifica a linha e diz o estado, e clicar na palavra ainda alterna.
+
+🔴 **A 21ª inscrição caía numa página fora da tela.** O servidor acrescenta no
+FIM; quem estava na página 1 adicionava, o modal fechava, e nada mudava -- a
+ação parecia não ter acontecido. **Com poucas inscrições o defeito não aparece,
+e é isso que o faz escapar**: só foi visto com 20 semeadas em Chrome. Agora o
+sucesso do cadastro leva para a página onde a nova ficou, e **só quando a lista
+CRESCEU** -- mandar a pessoa para o fim depois de remover seria gratuito.
+
+#### `CampoComCadeado` nasceu de três cópias idênticas
+
+O e-mail do perfil (`DadosDaConta`), o e-mail do membro (`EditarMembroForm`) e
+agora a inscrição repetiam as MESMAS doze linhas de posicionamento absoluto --
+e a terceira foi escrita achando que era a segunda. Os três usos apontam para o
+componente.
+
+⚠️ **A prop `largura` não é conforto: é correção medida.** O cadeado é absoluto
+e ancora na borda direita do ENVELOPE, não na do campo. Sem ela, um `Input` de
+120px dentro de uma coluna larga ganhava o cadeado boiando no vazio à direita,
+longe do campo que ele tranca.
+
+⚠️ **E o cadeado não é enfeite**: ele é a diferença entre "não muda" e "ainda
+não dá para preencher". Cinza sozinho comunica o segundo.
+
+#### O guarda que nasceu junto
+
+`ABAS_DO_GRUPO` declara a aba num arquivo e `GrupoPage` monta o painel em
+outro. Esquecer o segundo dá uma aba que abre **para o nada**: sem erro, sem
+tela em branco reconhecível, só uma área vazia -- e nenhum teste de
+comportamento pega, porque aba sem painel não tem comportamento a testar. O
+guarda cobra painel E conteúdo para cada id declarado, e foi provado removendo
+o painel.
+
+### O caminho até este layout, porque ele mudou três vezes
+
+Vale registrado para ninguém refazer o percurso:
+
+1. **um cartão, três seções** (Informações pessoais / Inscrição / Conta) -- o
+   "Salvar" parecia governar o e-mail imutável e o link de senha;
+2. **dois cartões** -- resolvia a ambiguidade e pesava mais que ela;
+3. **duas abas** -- resolve a ambiguidade *e* prepara a Fase 1b, quando a aba
+   da inscrição ganha o interruptor de importação automática e o seletor de
+   subgrupos de destino. ⚠️ Hoje ela tem dois campos e parece magra; é o preço
+   de não refazer a tela duas vezes.
+
+⚠️ O e-mail chegou a virar `CampoDeLeitura` (texto puro) e **voltou** a ser
+`Input disabled` com cadeado. O argumento de que um input desabilitado pesa
+como editável valia quando tudo morava num cartão só; com as abas, o Salvar
+governa só o nome, e o campo travado volta a ser a forma que todo mundo
+reconhece para "existe, é seu, e não se mexe aqui".
+
+### `DicaDeCampo`: o "i", e três defeitos reais
+
+Não havia componente de dica (procurei `Tooltip` e `InfoTip`: zero). Nasceu
+sobre `Popover` -- decisão do plano de escala, porque **hover não existe em
+toque**.
+
+- 🔴 **`lazyMount` + `unmountOnExit`, e é o defeito que o `SeletorData` já
+  pagou.** Sem eles o posicionador continua montado depois de fechar, por cima
+  da tela, e **engole cliques**: clicar fora não chegava a contar como "clique
+  fora", e clicar no próprio "i" também não -- o balão parecia não fechar
+  nunca. O docstring do `SeletorData` descreve o mesmo sintoma no calendário;
+- ⚠️ **`positioning={{ placement: "bottom-start", gutter: 6 }}`.** O gatilho
+  tem 16px e o balão 300: centralizado, ele nascia ~142px para cada lado e saía
+  do cartão. Medido depois: balão em x=396..694, cartão em 268..928;
+- 🔴 **Hover foi TENTADO e removido.** Aberto por hover, o balão fica ancorado
+  logo abaixo do "i" e o posicionador **intercepta o ponteiro** -- o segundo
+  clique acertava o balão, não o botão (`positioner subtree intercepts pointer
+  events`, no log do Playwright). Hover que abre um elemento por cima do
+  próprio gatilho briga com o clique por definição;
+- ⚠️ O gatilho é `BotaoNu`, não `Box as="button"`: aquele não aceita `type` na
+  tipagem do Chakra, e botão sem `type="button"` dentro de `<form>` é submit --
+  clicar no "i" salvaria o perfil. O docstring de `BotaoNu` conta que isso foi
+  preciso três vezes antes de virar um lugar só; esta seria a quarta.
+
+### `utils/oab`: a régua, e as duas pontas da conversão
+
+`erroDaBusca` (importação por OAB) misturava a régua da inscrição com a
+comparação de datas do período. Só a primeira é comum, e ela saiu para
+`utils/oab` -- porque as duas telas discordam num ponto que uma cópia perderia:
+
+| tela | as duas partes vazias |
+|---|---|
+| importar por OAB | 🔴 erro -- não há o que buscar |
+| meu perfil | ✅ válido -- é assim que se LIMPA |
+
+Sem esse parâmetro, o perfil não teria como apagar uma OAB cadastrada por
+engano: o formulário recusaria o único estado que significa "não tenho".
+
+**Em 01/09/2026 o arquivo ganhou mais duas**, e elas existem porque o servidor
+é **assimétrico**: o `GET` devolve a inscrição JUNTA (`"263/MG"`) e o `PATCH`
+pede as duas partes SEPARADAS.
+
+| função | para quê |
+|---|---|
+| `normalizarInscricao(numero, uf)` | `("263","mg") -> "263/MG"`. Existe para **comparar**, não para mandar: é assim que a tela sabe se a inscrição digitada já está na lista |
+| `partesDaInscricao("263/MG")` | o caminho de volta, que toda gravação da lista percorre -- inclusive nas inscrições que ninguém tocou |
+
+🔴 **`partesDaInscricao` corta na PRIMEIRA barra**, e não em todas. Um
+`split("/")` cru transformaria `"263/M/G"` -- que só entra por escrita direta no
+banco -- em `uf: "M"`: uma inscrição DIFERENTE, gravada em silêncio. Com o
+corte único a sobra vai junto e o servidor recusa, que é o desfecho alto.
+
+⚠️ **`normalizarInscricao` NÃO valida.** Quem recusa `"abc"` é `erroDaInscricao`,
+antes dela. Duplicar a régua criaria a segunda que diverge no primeiro ajuste.
+
+⚠️ **E ela não mexe em zero à esquerda**: `"0263"` e `"263"` são inscrições
+diferentes para o servidor. "Canônica" aqui é só maiúscula e espaço aparado --
+achar que ela normaliza o número faria a tela recusar como repetida uma
+inscrição que o servidor aceita como outra.
+
+### O texto de apoio da inscrição
+
+> Com a inscrição cadastrada, o sistema acompanha as movimentações que o
+> tribunal publicar para ela.
+
+⚠️ A primeira versão explicava que a mesma numeração existe nas 27 seccionais
+-- para um público de **advogados**, que é justamente quem já sabe disso. Quem
+preencher só um campo recebe o erro no campo certo; o único espaço permanente
+de apoio é melhor gasto com o que não é óbvio.
+
+⚠️ **"Movimentações"** é o termo que o produto já usa com o usuário (a aba do
+processo, o cartão, o subtítulo do Histórico). "Publicações" ou "intimações"
+criariam um segundo nome para a mesma coisa.
+
+➡️ **Fica de fora, até a Fase 1b:** a outra frase do protótipo -- *"estar
+cadastrado já faz o sistema VIGIAR os processos desta inscrição; o interruptor
+abaixo é outra coisa"*. Ela aponta para o interruptor de importação automática,
+que ainda não existe. Frase que cita controle ausente é pior que frase nenhuma.
+
+### Verificação
+
+`scripts/verificar-oab-no-perfil.mjs`, 21 checagens em Chrome de verdade. O que
+só ele responde:
+
+- o painel do seletor de UF aparece, cabe na tela e a opção "Nenhuma" é
+  alcançável -- em jsdom ele "abre" sem layout nenhum;
+- o ciclo fecha contra a API real: gravar, **recarregar**, e a inscrição
+  continuar lá. É o defeito que o `GET /me` existe para evitar, e um mock de
+  `lerMeuPerfil` nunca o reproduz.
+
+⚠️ Duas armadilhas do próprio medidor, corrigidas e anotadas nele: seletor por
+TEXTO casa demais (o rótulo carrega o asterisco, e o `aria-label` do "i" contém
+o mesmo nome do campo -- vá de papel), e **os painéis das abas ficam montados**
+(`display:none`), então "não está nesta aba" se verifica por VISIBILIDADE, não
+por presença no DOM.
+
+
+### As UFs estavam quase-alfabéticas (01/09/2026)
+
+🔴 A constante dizia *"Em ordem ALFABÉTICA"* e **doze das 27 posições** vinham
+na ordem do IBGE, por região: `AP` antes de `AM`, `PR` antes de `PE`, `SP`
+antes de `SE`. A afirmação estava ali desde sempre; ninguém conferiu porque
+não havia como conferir sem contar à mão.
+
+⚠️ **Quase-alfabético é pior que qualquer das duas ordens.** Numa lista
+puramente regional o olho não espera alfabeto e procura de outro jeito; numa
+quase-alfabética ele segue o alfabeto e tropeça exatamente onde ela quebra --
+e o tropeço parece erro de quem lê, não da lista.
+
+⚠️ O gêmeo da API é `frozenset`, então lá a ordem não existe -- só o conjunto.
+Conferido antes de mexer: as duas têm as mesmas 27 siglas.
+
+`constants/endereco.test.ts` cobra as três coisas: que são 27 distintas (o par
+que impede o falso "passou" -- lista vazia passaria na asserção de ordem), que
+estão ordenadas, e **onde** quebrava. A terceira nomeia as trocas para quem
+reintroduzir a ordem do IBGE entender o que quebrou.
+
+### 🔴 O resto da ordenação é do SERVIDOR, e é decisão
+
+As quatro listagens grandes são ordenadas na API. O front **não** reordena, e
+não pode: elas são paginadas, então um `sort` aqui ordenaria só a página
+visível.
+
+⚠️ **A exceção é o Kanban**, que reordena as colunas por conta própria
+(`.sort((a,b) => a.ordem - b.ordem)`, em dois lugares). Ali a ordem da API é
+irrelevante -- e isso é o que protege as colunas de qualquer mudança no
+servidor.
+
+➡️ Por isso existe `scripts/verificar-ordenacao.mjs`: a suíte prova o que a
+rota devolve, e entre a rota e a tela há cache do React Query, `select` e
+componentes que reordenam. Um `sort` esquecido aqui desfaria a ordenação do
+servidor sem derrubar teste nenhum da API.
+
+⚠️ **Três tropeços do roteiro, registrados porque custam meia hora cada:**
+
+- esperar por `getByText("Ana")` antes de ler a tabela -- casa em qualquer
+  canto da página e libera antes de a lista renderizar;
+- 🔴 `\bÂ` **nunca casa** em JavaScript: `\b` usa `\w = [A-Za-z0-9_]`, e o
+  acento não é caractere de palavra. "Ângela" desaparecia da leitura, e a
+  falha parecia defeito de ordenação;
+- seletor por `tbody td` funciona em três telas e falha na quarta:
+  Atendimentos não usa `<table>`, as linhas dele são `Flex`.
+
+## Um vocabulário só para "este campo é obrigatório" (01/09/2026)
+
+O app dizia as duas coisas ao mesmo tempo: **oito** rótulos traziam
+"(opcional)" enquanto os outros **51** campos dispensáveis não traziam nada.
+Então a ausência do texto não significava nada -- e um campo calado ao lado de
+um "(opcional)" lia como obrigatório, que é o oposto da verdade.
+
+**A régua: asterisco vermelho no obrigatório, e NADA no opcional.** O asterisco
+do `Campo` já dizia o que precisava ser dito; o "(opcional)" era um segundo
+vocabulário para a mesma pergunta.
+
+⚠️ **O guarda cobre METADE, e a metade que falta é humana.**
+`padraoDosCamposOpcionais.test.ts` cobra a ausência do texto, que é
+automatizável. A outra metade -- todo campo que TRAVA o envio ter o asterisco
+-- depende de ler a lógica de cada formulário. A auditoria inversa foi feita
+na entrega; quem acrescentar campo obrigatório depois é quem tem de lembrar.
+
+⚠️ **Três telas ficam SEM asterisco de propósito**, mesmo tendo campo exigido:
+`LoginPage`, `EsqueciSenhaPage` e `ModalDoQuadro`. Ali não há campo dispensável
+ao lado, e marcar tudo não separa nada. A razão está escrita em cada uma.
+
+⚠️ E o título "Endereço (opcional)" saiu junto. Ele existia por comparação --
+os campos de contato ao lado diziam "(opcional)" um a um. Saindo eles, o
+título perdeu o motivo; mantê-lo teria deixado o único "(opcional)" do app
+exatamente onde ele menos informa.
+
+## "Apelido" virou "Nome completo" na TELA, e só na tela (01/09/2026)
+
+🔴 **A estrutura continua `apelido`** -- campo da API, chave do `localStorage`,
+nome de variável, parâmetro de função. O que mudou foi rótulo, `placeholder`,
+texto de ajuda e coluna de tabela.
+
+⚠️ **Isto vai parecer inconsistência para quem chegar depois**, e não é: a
+troca nasceu porque a régua de titularidade da OAB compara o nome cadastrado
+com o do tribunal, e "apelido" convidava a pessoa a escrever "Zé" num campo que
+precisa de "José Almeida Souza". Renomear o campo na API custaria migração de
+dados e uma janela em que os dois nomes coexistem, para ganhar nada que a
+pessoa veja.
+
+**Antes de "corrigir" a divergência, leia isto.** O par tela/estrutura é
+deliberado, e o teste `nomeDoProduto.test.ts` não cobre este caso -- ele guarda
+"Argos", outro renome com a mesma forma (ver *"Argos, não PJe Monitor"*).
+
+## Sair de um formulário sem perder o que foi digitado (01/09/2026)
+
+Todos os modais de cadastro e edição descartavam o trabalho **em silêncio**:
+Escape, clique no fundo, X e "Cancelar" chamavam `onFechar` direto, e como a
+visibilidade é montagem condicional no pai, o estado local morria junto. O caso
+mais caro era o `ModalDeDocumento` -- arquivo escolhido mais descrição digitada
+sumiam num clique fora da caixa.
+
+**A regra: quem mexeu em algum campo e tenta sair é perguntado; quem só abriu e
+desistiu continua saindo com um gesto.**
+
+### As decisões que não se deduzem do código
+
+🔴 **A guarda mora no `Modal` base, com prop OBRIGATÓRIA** (`descarte`), e não
+em cada chamador. O motivo não é "esquecer": **metade dos modais fecha sozinha
+depois de salvar** (`onSuccess: () => { onSalvo(); onFechar(); }`). Se a guarda
+embrulhasse o `onFechar` do chamador, interceptaria esse fechamento também --
+e o formulário ainda está sujo nesse instante. A pessoa salvaria e ouviria a
+pergunta. Ligada só aos GESTOS, dentro do base, isso não acontece.
+
+Prop obrigatória e não opcional: esquecer a guarda perde trabalho em silêncio;
+esquecer o opt-out (`"semFormulario"`) é erro de compilação.
+
+🔴 **O marco zero é o retrato da ABERTURA, contando os pré-populados.** Modal de
+criação que nasce com coluna/data/processo preenchidos **não** pergunta se
+ninguém mexeu. É o que `resemear` resolve: quem semeia avisa o retrato com os
+mesmos literais que acabou de gravar, no mesmo lugar -- sem depender de ordem
+de efeitos.
+
+🔴 **A regra da projeção: projete o valor que o ENVIO mandaria.** Não o valor
+cru do campo. É ela que resolve máscara (`apenasDigitos`, não o texto
+formatado), `.trim()` e vazio normalizado, de uma vez. Projetar o cru sujaria o
+formulário quando a pessoa re-escolhe no `Select` a opção que já aparecia
+marcada.
+
+🔴 **O diálogo é IRMÃO da cortina, não filho.** Dentro dela, o clique no fundo
+do diálogo borbulha até o `onClick` da cortina externa e fecha o formulário.
+⚠️ **Essa mutação SOBREVIVE em jsdom** -- o clique só reabriria um diálogo já
+aberto. É por isso que existe `scripts/verificar-guarda-de-descarte.mjs`.
+
+⚠️ **Três textos, porque um só mentiria**: edição diz "as alterações serão
+perdidas"; criação diz "este cadastro será perdido"; e os modais que salvam na
+hora (`ModalDoQuadro`, `MembrosDoSubgrupo`) dizem que o que já foi mudado está
+salvo. Um texto único afirmaria perda onde não há.
+
+### Quatro defeitos vizinhos que a guarda revelou
+
+Nenhum foi causado por ela; todos ficaram visíveis porque ela olhou para o
+gesto de fechar.
+
+- **Três comboboxes caseiros não paravam o Escape** (`CampoDeClientes`,
+  `VinculoDeRegistro`, `CampoDeProcesso`): com a lista aberta, Escape já
+  fechava o modal inteiro. Com a guarda, viraria "quer descartar?" para quem só
+  quis fechar a lista. Corrigido ANTES, como pré-requisito.
+- **`mascararTelefone` travava em `(11)`**: o parêntese fechava no segundo
+  dígito, e apagar o `)` fazia a máscara recolocá-lo. O campo não voltava a
+  vazio nem com backspace. A guarda tornou isso visível -- quem digitasse dois
+  dígitos sem querer era perguntado ao sair, sem conseguir desfazer.
+- **"Cancelar" durante um envio fechava a tela e a mutation seguia**
+  (`ModalDeDocumento`, `ModalDeTarefa`): o documento nascia mesmo assim.
+- **O modal remontava vazio a cada refetch** em `DocumentosVinculados`, que o
+  renderizava em quatro ramos de `return` com raízes diferentes -- trocar de
+  ramo remonta a árvore e o arquivo escolhido some. Passou a ter um `return`
+  só, com o ramo escolhido numa variável.
+
+### Fora de escopo, registrado
+
+- **Sair da PÁGINA** (`useBlocker` exige migrar de `<BrowserRouter>` para
+  `createBrowserRouter`) e **F5** (`beforeunload`).
+- **Overlays de filtro** com "Aplicar" -- não são cadastro/edição.
+- **Renome inline**: o rascunho vive em `NomeEditavel`, invisível para a
+  projeção do `ModalDoQuadro`.
+
+### Onde está o detalhe
+
+Este registro guarda as decisões. O como está nos docblocks, que são densos de
+propósito: `components/Modal/index.tsx` (as regras de revisão, incluindo *"o
+modal NUNCA mora dentro de um ramo condicional"*),
+`hooks/useGuardaDeDescarte.ts` (a projeção, `resemear`, o retrato),
+`utils/iguais.ts` (a régua de igualdade e por que `Object.is`),
+`contexts/DescarteContext.tsx`, `components/BotaoDeCancelar/` e
+`components/RodapeDeFormulario/`.
+
+## De qual subgrupo é isto? (02-03/09/2026)
+
+Requisito do cliente: quem participa de mais de um subgrupo não sabia, ao ler
+uma lista ou escolher um processo, de qual subgrupo cada item era. O relato
+citou "adicionar atendimento", processos, documentos e histórico -- este
+último como pior caso, "porque não temos os filtros necessários".
+
+🔴 **A verificação corrigiu o enunciado e ampliou o resto.** O seletor de
+responsáveis **não** tinha o problema (já vem escopado ao subgrupo escolhido
+logo acima); Processos **já** mostrava o subgrupo; e a varredura achou **sete
+listagens** sem ele, mais dois seletores e duas telas de detalhe -- não três
+telas.
+
+### Uma régua só, a de Membros
+
+`components/EtiquetasDeSubgrupo` já fazia o que o cliente pediu e virou o
+padrão das sete listagens: até **2** nomes, de três em diante a contagem, e a
+lista inteira no `title`. Vazio é **travessão nu** -- `Text` de 12,5px em
+`fg.subtle`, sem `Etiqueta` em volta, como Inscrições na OAB já mostrava.
+
+⚠️ **A altura da linha é a régua de aceitação**, e é por isso que o teto de
+dois nomes existe: uma etiqueta que quebre em duas fileiras estoura a altura
+uniforme. Medido em Chrome no Histórico: 9 linhas de 118px, com a linha de
+DUAS etiquetas medindo o mesmo que as de uma.
+
+🔴 **A POSIÇÃO segue cada tabela; só o NOME é padronizado** ("Subgrupo", no
+singular). Eu tinha proposto "sempre a última coluna, como em Membros" -- e
+estava errado nos dois pontos: `COLUNAS_PROCESSOS` está *na ordem do artifact*
+com Subgrupo em 3º, deliberada; e "última" não é padrão nenhum, é consequência
+de Membros ter 4 colunas. O subgrupo fica **junto do que ele qualifica**.
+
+### `useNomeDeSubgrupo` e `useNomesDeSubgruposVisiveis`, de propósito opostos
+
+O primeiro cai para o **id** quando o nome não resolve; o segundo **descarta**.
+Não é inconsistência -- "não resolveu" significa coisas diferentes:
+
+- **um item, um subgrupo** (processo, documento, tarefa, notificação): não
+  resolver quer dizer que o subgrupo foi APAGADO. O item é seu, e o id é o
+  resto honesto; a etiqueta sumir faria a coluna afirmar "sem subgrupo";
+- **um item, VÁRIOS subgrupos** (o histórico): o envio entra na lista por
+  **interseção** -- basta um dos `subgrupos_notificados` cruzar com os seus.
+  Os outros podem ser de gente que a pessoa nem enxerga, porque
+  `GET /subgrupos` é escopado. Mostrar o id ali não seria honestidade, seria
+  despejar identificador alheio ao lado dos nomes.
+
+⚠️ **O catálogo É a régua de visibilidade** -- ele já vem recortado pelo
+servidor. Por isso o filtro é "está no catálogo?", e não uma segunda checagem
+de permissão inventada no front.
+
+⚠️ Custa **uma** requisição no total, não uma por tela: `qk.todosOsSubgrupos()`
+é chave compartilhada e o React Query deduplica.
+
+### Os dois filtros do Histórico (03/09/2026)
+
+O pior caso do relato. A tela ganhou o **chip de subgrupo** e o **campo de
+número do processo**, ambos em `useEstadoNaUrl` como os três que já existiam.
+
+🔴 **O chip exigiu API**: `GET /historico` não aceitava o parâmetro. O filtro
+entrou no `email_historico_repository`, em memória, ao lado dos outros três --
+e a API subiu e foi conferida em produção **antes** do front.
+
+🔴 **O número do processo exigiu SEPARAR as rotas, e isso foi uma regressão
+minha.** `numero_processo` já existia na rota, mas só como resolvedor do link
+do e-mail: mandava sozinho e devolvia a lista inteira daquele processo, sem
+paginar. Ao transformá-lo em filtro de tela ele passou a paginar -- e o link
+do e-mail, que procura um envio específico, passou a responder "não encontrei"
+para o que estava na página seguinte. Silencioso.
+
+➡️ Duas rotas, cada uma com uma pergunta: `GET /historico` é a **listagem**
+(envelope paginado, todos os filtros valendo juntos) e `GET /historico/{numero}`
+é a **resolução do link** (lista crua, sem paginação). O front usa
+`historicoDoProcesso` só no deep link.
+
+⚠️ **O chip some com um subgrupo só** -- ali não filtra nada, e controle sem
+efeito é pior que controle nenhum. Mesma régua de Processos e Documentos.
+
+🔴 **O campo é `CampoDeBusca`, não um `Input`.** A primeira versão usava
+`Input size="sm"`: mesmo rótulo, mesmo comportamento, todos os testes
+passando -- e na barra ficava sem lupa, com fundo transparente e 36px de
+altura, ao lado de uma busca de Processos com lupa, fundo branco e 38px. O
+`aria-label` não guarda aparência; quem guarda é
+`scripts/verificar-filtros-do-historico.mjs`, que compara os estilos
+computados das DUAS telas -- a régua é a outra tela, não um valor escrito no
+roteiro.
+
+⚠️ **E veio com a espera entre teclas** (`useValorComEspera`), que o `Input`
+cru não tinha: um número de processo tem 20 dígitos, e sem ela eram vinte
+`queryKey` novas e vinte requisições.
+
+⚠️ **A largura é o padrão do componente (340px), não um valor avulso.** A
+primeira versão passava `larguraMaxima="230px"` -- e um número mascarado tem
+25 caracteres, então o campo ficava apertado justamente no dado que recebe.
+Processos usa 420px porque a busca dele cobre número, cliente e apelido.
+🔴 O roteiro guarda o TETO declarado, não a largura renderizada: o campo é
+`flex: 1` e encolhe conforme o que mais está na barra -- em Processos ele tem
+teto de 420px e renderiza 247px.
+
+### 🔴 O campo BUSCA por pedaço, e o rótulo tinha de dizer isso
+
+Segunda queixa da mesma tela, no mesmo dia: *"se eu digitar 3802, não deveria
+mostrar os processos que contêm 3802?"*. Deveria -- e não mostrava. Medido
+contra o offline antes de mexer:
+
+| o que se digita | antes | agora |
+|---|---|---|
+| `3802` (o fim do número) | 0 | 2 |
+| `5000123-45.2023.4.01.3802` (colado da tela) | **0** | 2 |
+| `50001234520234013802` (cru) | 2 | 2 |
+
+A segunda linha é a pior: colar o número **como a tela e o e-mail o mostram**
+não achava nada. A régua já existia -- `processos_repository.buscar_no_grupo`
+compara `apenas_digitos(termo) in item["numero_processo"]` --, e só o Histórico
+estava fora dela porque ali o número é chave de partição. A mudança é de API
+(ver o README da `api`); ao front coube **mandar o pedaço** e parar de prometer
+igualdade no rótulo.
+
+🔴 **"Buscar por número do processo" / "Número do processo ou parte"**, e não
+"Filtrar…" / "Número do processo". Texto que promete igualdade faz quem só tem
+o fim do número nem tentar -- e foi exatamente o que aconteceu. Os dois testes
+andam em par: um prova que o pedaço é MANDADO, o outro que a tela não promete
+o contrário.
+
+⚠️ **`limparFiltros` limpa os CINCO.** O comentário dele guarda o defeito de
+quando limpava só o tipo -- "o botão de saída não saía". Um filtro que
+sobrevive ao "Ver todos os envios" deixa a lista vazia e a pessoa sem caminho
+de volta.
+
+⚠️ **Este virou o quinto filtro do Histórico**, e `api/PLANO_PAGINACAO.md`
+estabeleceu que filtro é o que impede o marcador de página. Não bloqueia nada
+aqui, mas quem for mexer lá precisa saber que a conta mudou.
+
+#### Fora de escopo, registrado (03/09/2026)
+
+**O link do e-mail pré-preencher o campo de número.** Hoje o link abre o
+Histórico com o aviso certo destacado, mas a lista inteira e o campo "Buscar
+por número do processo" vazio -- a pessoa vê o item, não vê *por quê* aquele,
+e ao rolar perde o contexto. Como o link já carrega o número
+(`/historico/{numero}`), a tela poderia chegar com o campo preenchido e a lista
+filtrada naquele processo. É só front. Decidido em 03/09: fica documentado,
+sem ação por enquanto.
+
+### O que a verificação em Chrome pegou, e o roteiro não pegava
+
+Três "falhas" da primeira execução eram do **roteiro**, não da tela, e as três
+viraram comentário lá:
+
+1. **"Mostrando X de Y" tem semântica própria aqui**: o Y é o total SEM
+   filtro -- é o que permite a tela dizer "tem 28, seu filtro escondeu". Quem
+   filtra é o X. Comparar o Y dava "28 -> 28" e parecia filtro quebrado;
+2. **o Histórico não é `<table>`**: `tbody tr` devolvia lista vazia, e lista
+   vazia passa em "todas as alturas são iguais" sem medir nada;
+3. **a última linha mede 1px a menos por desenho** (`_last` sem borda), e a
+   medida acusava a etiqueta por isso.
+
+⚠️ A lição, que já é regra aqui: uma checagem que passa não prova nada até
+alguém quebrar o código de propósito e vê-la falhar. As duas do campo de busca
+foram provadas assim -- voltando ao `Input` cru.
+
+## Lint zerado, caso a caso (03/09/2026)
+
+Eram 12 avisos, parados desde 02/09 ("depois retomamos isso"). O
+`eslint.config.js` já dizia o que fazer com eles: `set-state-in-effect` e
+`no-explicit-any` são **aviso**, não erro, porque *"vale ver caso a caso, não
+travar o build"*. Ver caso a caso é o que foi feito -- e a decisão de cada
+um ficou escrita **no sítio**, no padrão que o projeto já usava em dois
+lugares (`eslint-disable-next-line` com o motivo na mesma linha).
+
+**Três eram defeito de verdade, corrigidos:**
+
+- `AgendaPage`: `const tarefas = tarefasQuery.data || []` criava um array
+  NOVO a cada render sem dados, e o `useMemo` de `visiveis` recomputava
+  sempre. Virou `useMemo` também.
+- `RespostaCruaDaApi.dados` era `any`; é JSON cru, então é `unknown`, e o
+  `client.ts` passou a conferir que é objeto antes de ler `detail`.
+- `EditarMembroForm`: `resemear` faltava nas deps do efeito de semeadura. É
+  `useCallback` (`useGuardaDeDescarte.ts:88`), então entrar nas deps é
+  correto e não muda comportamento -- conferido, não suposto.
+
+**Oito eram decisão, e agora estão escritas onde valem:**
+
+- 🔴 **Semeadura de formulário com `useEffect`** (`ConfiguracoesDoGrupo`,
+  `FormularioDaInscricao`, `EditarMembroForm`): o projeto usa o padrão de
+  propósito. Em 03/09 eu tinha trocado um por `if` durante o render e o
+  usuário perguntou *"não podemos continuar utilizando o useEffect?"* --
+  podemos, e a decisão ficou registrada no sítio.
+- `NomeEditavel` (ressincronizar o rascunho quando a edição reabre) e
+  `KanbanPage` (consumir o deep link uma vez): os dois casos que o
+  `eslint.config.js` já citava como o motivo de a regra ser aviso.
+- `OpcoesLista`: `isPending` fora das deps de propósito -- o comentário
+  longo acima do efeito explica a corrida que isso evita; o `disable` só
+  aponta pra ele.
+- `EditarMembroForm`: o efeito de recarga é chaveado em `membro.email` de
+  propósito; `membro.subgrupos` mudar é justamente o que ele existe pra
+  não confiar.
+- `chamar<T = any>`: 78 chamadas em `services/api/` deixam o tipo pro
+  `Promise<X>` da função que as envolve. `unknown` quebraria todas sem tornar
+  nenhuma mais segura.
+
+➡️ **A regra daqui em diante: zero avisos.** Aviso novo é decisão nova, e
+decisão se escreve no sítio -- não se acumula.
+
+### O intermitente de `FormularioDaInscricao` não reproduziu
+
+Registrado em 02/09 como "~1 em 7". Em 03/09: 15 rodadas isoladas do arquivo
+e 4 suítes inteiras, mais uma com ordem embaralhada -- 1.188 de 1.188 em
+todas. Não há correção porque não há defeito reproduzido; inventar uma
+seria pior. Se voltar, o que registrar é a saída da rodada que falhou, não a
+memória de que falhava.
+
+## Contas e centros paginam; categorias, não (07/09/2026)
+
+A tela de Configurações do Financeiro tinha as três listas vindo de UMA
+leitura, `GET /financeiro/catalogo`. Agora contas e centros de custo têm rota
+própria e paginada, lida do índice estreito do servidor; categorias continua
+vindo inteira.
+
+🔴 **A assimetria é o desenho, e o motivo é o agrupador.** A ordem das
+categorias é hierárquica -- entradas antes de saídas, filha logo abaixo da
+mãe, indentada na tela --, e a quebra de página separa as duas. Medido no
+catálogo padrão, com 10 por página: "Impostos" termina a página 1 e DAS,
+IRRF e ISS abrem a página 2, com o recuo apontando para nada. Paginá-la
+exigiria uma chave de ordenação com natureza + mãe + nome, e **renomear uma
+mãe reescreveria a chave de todas as filhas**.
+
+⚠️ **`lerCatalogoFinanceiro` continua sendo chamado, e não é desperdício:**
+dele saem as categorias, as cores da paleta e a `conta_padrao_id` da etiqueta
+"Padrão". As duas consultas paginadas servem só as TABELAS.
+
+### O que a execução obrigou
+
+🔴 **A seção teve de ir para a URL junto com a página.** Ela era estado
+local de propósito ("são recortes de UMA tela de configuração"), e isso
+continua verdade -- o que mudou é que apareceu um segundo parâmetro que
+depende dela para significar algo. Sem `?secao=`, um F5 em `?pagina=2`
+cairia na página 2 de outra lista. E trocar de pílula **apaga** a página,
+pelo mesmo motivo que trocar de aba limpa `pagina` em `FinanceiroPage`.
+
+🔴 **A invalidação de cache virou função** (`invalidarCatalogoFinanceiro`).
+São TRÊS chaves para o mesmo dado, em três chamadores: sem uma delas, criar
+uma conta atualizava o select do lançamento e deixava a TABELA da tela com a
+lista velha -- defeito que só aparece para quem está com a tela aberta na
+hora.
+
+⚠️ **A barra some sozinha abaixo de 11 itens** (`Pagination` faz
+`if (total <= menorTamanho) return null`), e ela mesma devolve para a
+primeira página quando a atual deixa de existir. Nada disso precisou ser
+repetido por tela.
+
+⚠️ **Teste de URL se afere pelo que a API RECEBEU**, não pela string: dentro
+de `MemoryRouter` o endereço não chega ao `window.location`, e
+`expect(window.location.search).toContain(...)` passa a comparar com vazio.
+É o padrão que `ProcessosPage/index.test.tsx` já usava.
+
+➡️ A história do lado do servidor -- o índice, o prefixo do tipo na chave, e
+o teto que foi proposto e descartado -- está em `api/CONTEXT.md`, seção "O
+catálogo do Financeiro paginado".
+
+## Lançamentos na tela: a Fase 5 (07-08/09/2026)
+
+A aba deixou de ser pendente. Lista com cards e filtros, os quatro
+formulários com o menu do botão, e o detalhe -- que é ROTA, não modal,
+porque precisa aguentar um F5 e um link colado.
+
+### O que o usuário pegou olhando a tela, e os testes não
+
+Quatro defeitos, todos com a suíte verde antes e depois. É o registro mais
+útil desta fase: **lista de seis linhas de teste não mostra desenho.**
+
+🔴 **A coluna VALOR tinha cabeçalho à esquerda e número à direita.** O
+`Tabela` fixava `textAlign="left"` em todo `th`. Ele passou a aceitar
+`{ rotulo, aDireita }`, e a célula ganhou `textAlign` também -- é `th.direita`
+e `td.direita` no artefato, os dois.
+
+🔴 **A transferência mostrava a coluna CONTA em branco**, justamente na
+linha em que a conta é a única coisa que importa: ela não tem `conta_id`,
+tem origem e destino. Virou `contaDoLancamento`, que devolve
+"Bradesco → Caixa".
+
+🔴 **E consertar isso empurrou a coluna VALOR para FORA da tela.** Medido em
+Chrome: a tabela foi a 1170px dentro de 1130px visíveis, e o `th` terminava
+em x=1443 numa janela de 1440. **`truncate` não morde sem teto** -- em
+tabela de layout automático o texto alarga a coluna em vez de cortar. Com
+`LARGURA_MAXIMA_DA_COLUNA_DE_TEXTO`, `th` e `td` voltaram a x=1403.
+
+🔴 **A parcela aparecia duas vezes na mesma linha.** O servidor já escreve
+"· 1/6" no fim da descrição (decisão antiga: a descrição tem de se explicar
+sozinha na fatura e na Área de trabalho), e a linha repetia o número ao lado
+da contraparte. Mesma repetição no detalhe, onde o título É a descrição.
+
+### O detalhe: dois containers errados
+
+🔴 **O formulário estava dentro do `CartaoDeTabela`**, que tem padding de
+4px -- e o docstring dele diz por quê: *"pequeno de propósito, porque quem
+espaça de verdade são as células"*. Num formulário os campos encostavam na
+borda. O certo é `Cartao` (16px/18px), o `.cartao-form` do artefato, que
+`FormularioProcesso` já usava.
+
+🔴 **E o cabeçalho era o de PÁGINA.** No artefato (`.cab-detalhe`) as
+etiquetas ficam DENTRO do bloco do título; com `CabecalhoDePagina` elas
+caíam numa faixa solta entre o cabeçalho e o cartão.
+
+⚠️ **Quatro campos vêm com cadeado, e a razão é a API, não a tela:** situação
+é ação (move o saldo, e quem a muda é "Marcar como recebido"), e cliente e
+vínculo não estão no `PATCH` -- o cliente é por quem a fatura agrupa, o
+vínculo carrega a permissão. O vencimento ERA o quinto e deixou de ser: ver
+abaixo.
+
+### O departamento que não resolvia o nome
+
+O select carrega a primeira página da busca (50 subgrupos) e o escritório do
+offline tem sessenta: o do rateio estava na segunda, e o campo desenhava
+VAZIO num lançamento que tem rateio. É o mesmo defeito que
+`comOpcaoEscolhida` conserta no campo de cliente.
+
+🔴 **E aí ele passou a mostrar o ID** -- que é a régua do projeto
+(`useNomeDeSubgrupo` cai para o id), mas a causa era outra: o departamento
+pertence a uma equipe que a conta não participa, e `GET /subgrupos` só
+devolve os que ela vê. O mesmo recorte causava um **403 em
+`/subgrupos/{id}/membros`** a cada abertura do detalhe, porque o campo de
+responsável pedia os membros de um departamento alheio. Agora ele só
+pergunta quando a pessoa participa.
+
+### O vencimento, e a pergunta do Google Agenda
+
+O campo entrou no `PATCH`, e a série o propaga REANCORADO: mover para o dia
+5 de outubro faz as seguintes caírem no dia 5 dos meses seguintes. O
+diálogo diz **quantas** parcelas o escopo alcança (`GET /lancamentos/{id}/serie`)
+e o que acontece com a data nelas -- sem essa linha, escolher "os próximos"
+parece que vai jogar todas no mesmo dia.
+
+⚠️ **"Está numa série" não bastava.** A última parcela tem `recorrencia_id`
+e não alcança ninguém: a tela perguntava e o servidor ignorava a resposta.
+Agora, sem irmã à frente, a pergunta não aparece.
+
+⚠️ O aviso é `<Text as="span" display="block">`, e não um `Box`: a mensagem
+do diálogo renderiza dentro de um `<Text>`, que é um `<p>`, e `<div>` ali é
+HTML inválido. Foi o guarda de aninhamento que pegou -- o mesmo caso que fez
+o slot `escolha` do `ModalDeConfirmacao` existir.
+
+### Três armadilhas do roteiro de Chrome
+
+Todas encontradas rodando, e todas fazem a falha PARECER defeito de tela:
+
+- **caixa-alta vem do CSS.** No DOM está "Em aberto" e "Tudo que entra";
+  seletor em maiúsculas não acha nada.
+- **a pílula não tem `role="button"`** -- é o `Select` do projeto
+  (react-select). Acha-se por texto.
+- **subir dois níveis a partir de um card pega os TRÊS**, e comparar o bloco
+  inteiro acusa mudança onde ela é correta: filtrar por "tudo que entra"
+  zera mesmo o card de "A pagar".
+
+⚠️ E o roteiro acumulava lixo: ele cria três itens de catálogo por rodada e
+o `limpar()` só DESATIVA (o catálogo não tem exclusão). Eram 23 contas, sete
+delas restos, e a lista paginada passou a empurrar o item recém-criado para
+a terceira página -- quebrando o próprio roteiro. Quem limpa agora é
+`semear_lancamentos_para_desenho.py --recriar`.
+
+➡️ A história do servidor -- o filtro por natureza, a reancoragem e as duas
+chaves derivadas -- está em `api/CONTEXT.md`.
+
+## O Financeiro completo: faturas, o documento e o fluxo (08/09/2026)
+
+A Fase 6 fechou as quatro abas. O que vale guardar não é a lista de telas --
+é o que a execução achou.
+
+### A caixa de marcar nunca passava pela paleta
+
+Ela saía **preta**. O preenchimento do `Checkbox.Control` vem de
+`colorPalette.solid`, o projeto nunca declarou a paleta `brand`, e o Chakra
+caía no `gray.solid` dele. Medido no Chrome: `rgb(24,24,27)` marcada, borda
+`#d4d4d8` desmarcada -- **nenhum dos dois um token nosso**. Nunca foi
+escolha; foi o default da lib passando batido em três telas.
+
+🔴 **A correção vai em `slotRecipes.checkbox`, NÃO em `recipes.checkmark`.**
+A receita do `checkmark` existe, tem exatamente as chaves certas e parece o
+lugar -- mas a do `checkbox` **copia** os valores dela no carregamento do
+módulo (`control: checkmarkRecipe.base`). Foi a primeira tentativa, e a cor
+na tela não mudou um pixel. Um teste de unidade sobre o tema passaria verde
+nas duas versões; quem pega é a medição em Chrome.
+
+⚠️ O checkbox **nativo** das opções do `MultiSelect` (react-select) não passa
+por receita nenhuma: estava em `accent-color: auto`, o azul do sistema
+operacional ao lado do nosso. Uma linha no `globalCss` resolve.
+
+### Botão de contorno sobre o canvas saía cinza
+
+`ghost` e `perigoContorno` eram `bg: transparent`. Dentro de modal e cartão
+isso é branco; **sobre o canvas (`#f5f7f9`) é cinza**, ao lado das pílulas
+brancas. Agora os dois são `bg.surface` -- nas telas em que já eram brancos,
+zero pixel de diferença.
+
+### A impressão é do projeto, não da tela
+
+O botão "Imprimir" da fatura chama `window.print()`, e quem esconde a moldura
+é uma regra `@media print` no tema mais `data-fora-da-impressao` no
+`AppShell`, no `MenuLateral`, na `Topbar` e nas ações da tela. **Duas coisas
+só o papel revelou**, as duas medidas com `emulateMedia`:
+
+1. o branco declarado em `html, body` **perdia** para o `bg.canvas` do
+   `body`, que vem depois no mesmo `globalCss` -- a folha saía cinza;
+2. o breakpoint do Chakra é `@media screen`, então a grade dos dados
+   **desabava para uma coluna** na impressão (medido: `544px 544px` na tela,
+   `1402px` no papel). A media query da grade passou a ser crua.
+
+⚠️ E `auto-fit` + `minmax`, a primeira tentativa de resolver (2), foi pior:
+num cartão de 1100px ele cabe QUATRO colunas, e os quatro campos saíam numa
+fila só.
+
+### `LinhaDeCampos` + `CampoDeLeitura` = pares colados
+
+`LinhaDeCampos` tem `rowGap: 0` **de propósito**: quem espaça na vertical lá
+é a margem do `Campo`. O `CampoDeLeitura` não tem margem nenhuma, e nenhuma
+tela tinha juntado os dois antes -- o detalhe da fatura foi o primeiro, e os
+pares saíram grudados. Quem precisa dos dois monta a própria grade.
+
+⚠️ Junto com isso: `CartaoDeTabela` **já é** cartão. Envolvê-lo num `Cartao`
+desenha moldura dentro de moldura. Os dois são irmãos.
+
+### Três escritas na URL no mesmo gesto apagam umas às outras
+
+`mudarPeriodo` do fluxo escrevia `periodo`, `de` e `ate` com três
+`useEstadoNaUrl` seguidos. Cada `setSearchParams` **navega na hora**, a
+partir da MESMA URL: o último apagava o `periodo`, e escolher outro recorte
+não mudava nada. É a armadilha que o docstring de `useParametrosDaUrl` já
+descrevia -- e a lição é que ela vale para o hook de UM valor também, não só
+para duas chamadas do mecanismo.
+
+### A tabela do fluxo saiu errada e foi refeita contra o artefato
+
+A primeira versão era coerente consigo mesma e divergia do artefato em
+**estrutura**: saldos empilhados no pé, totais na própria faixa da seção
+(antes das categorias que eles somam), cabeçalho de uma linha, realce só do
+mês corrente. O artefato tem outra ordem, e ela é a da leitura: **de onde
+parti** (saldo anterior, primeira linha), o que entrou, o total disso, o que
+saiu, o total disso, e onde cheguei.
+
+🔴 A distinção entre **fato e palpite** aparece três vezes de propósito: a
+legenda do topo ("REALIZADO ATÉ AGOSTO DE 2026, PREVISTO DE SETEMBRO EM
+DIANTE"), o subtítulo de cada coluna, e o fundo âmbar das colunas de
+previsão. Um relatório em que não se sabe o que já é fato não serve para
+decidir nada.
+
+⚠️ **"Dobrar o agrupador" não era possível como o plano escreveu**, e isso se
+descobriu MEDINDO a resposta antes de desenhar: a API entrega "por categoria
+(agrupador somando as filhas)" -- `Impostos` chega com o total do DAS, e as
+filhas não são linha nenhuma. O que dobra são as seções.
+
+⚠️ O guarda de `13px 14px` passou a excluir a célula com `colSpan`, e a
+exceção é **estrutural**, com par negativo: a medida existe para o valor
+nascer sob o título da SUA coluna, e uma faixa que atravessa a tabela não tem
+coluna sob a qual alinhar.
+
+⚠️ **Uma divergência do artefato, mantida a pedido:** os números seguem em
+`mono`, como nas outras tabelas do projeto.
+
+### `pendente` e `AindaNaoChegou` saíram
+
+Com as quatro abas prontas, nada mais lia o flag nem montava a frase. Eles
+voltam juntos se uma aba nova nascer vazia -- está escrito na constante.
+
+### O Financeiro na Área de trabalho (08/09/2026)
+
+⚠️ **O critério de mostrar é a AUSÊNCIA da chave no resumo**, e não um papel
+lido na tela: o servidor já decide quem recebe as chaves do dinheiro, e uma
+segunda régua aqui divergiria da dele no dia em que uma das duas mudasse.
+Sem as chaves, a seção não existe, o card não existe, e ele nem PEDE a lista
+-- sem isso quem é `user` levaria 403 a cada abertura da home.
+
+🔴 **"A pagar ATÉ 7 dias", e não "em".** A soma não tem limite inferior, e
+"em 7 dias" seria mentira. É a mesma lição que o "A verificar até hoje" já
+registra no `ResumoRapido`.
+
+🔴 **E o clique precisou de um filtro novo na lista de Lançamentos**:
+`vencendo`. Nenhuma combinação de período e situação expressa "aberto,
+vencendo até N dias, atrasados inclusive" -- `situacao` oferece aberto OU
+atrasado, e o período tem as duas pontas. Sem ele o card diria um número e a
+lista abriria outro. A pílula de período é SUBSTITUÍDA pela dele enquanto
+está ligado: do lado do servidor `vencendo` troca a Query do vencimento pela
+do índice esparso, e duas pílulas em que só uma manda é o "filtra em
+silêncio" que o card de totais já custou uma correção.
+
+⚠️ `NumeroDoResumo` ganhou `texto`, separado de `valor`: é o `valor` que
+decide se a cor aparece (zero não grita), e formatá-lo em texto perderia essa
+régua.
+
+### O `truncate` que não morde sem teto -- segunda ocorrência
+
+A linha de apoio da lista de lançamentos passou a receber o NOME DO CLIENTE,
+e um nome de 91 caracteres levou a tabela a **1278px dentro de 1130px
+visíveis**. A coluna de descrição era a única sem teto de largura.
+
+🔴 **Numa tabela, `truncate` sozinho é decoração**: a coluna cresce até o
+conteúdo caber, e o texto nunca chega a estourar a própria caixa. Quem corta
+é o `maxW`. É a mesma lição da coluna VALOR saindo da tela, e agora
+`CelulaComSub` tem `maxLargura` -- com ele o principal também trunca, senão
+ele quebraria em duas linhas e a altura deixaria de ser uniforme.
+
+## Ações em lote nas três telas (10/09/2026)
+
+`api/PLANO_ACOES_EM_LOTE.md`, **EXECUTADO**. Área de trabalho, Agenda e Kanban
+selecionam tarefas e agem sobre elas: excluir, concluir, alterar status e
+atribuir. A costura inteira mora em `useAcoesEmLote`; cada tela só decide o que
+a caixa do topo alcança.
+
+### Onde a entrada mora, e por que ela some
+
+A entrada ("Selecionar") fica no cabeçalho do que É a lista: no do **card**
+quando a lista é um card (`CardDeTarefas`, na Área de trabalho), no da
+**página** quando a lista é a página (Agenda, Kanban).
+
+🔴 **Ela some enquanto a barra está na tela.** `BarraDeSelecao` é a moldura do
+modo e carrega o Cancelar -- duas saídas para a mesma ação fariam a pessoa
+procurar a diferença. E na Área de trabalho é **um modo por vez**: com um card
+selecionando, a entrada do outro card também some.
+
+### A barra quebra em duas fileiras no card, e é de propósito
+
+Medido em Chrome: nos 634px do card da Área de trabalho, com as ações da Fase 8,
+o conteúdo passa de 600px. `flex-wrap` desce o grupo de ações para uma segunda
+fileira, à direita, e nunca transborda. Na Agenda e no Kanban, de largura
+cheia, fica numa fileira só -- com a nota do Kanban, também pode quebrar.
+
+### Ação reversível NÃO sai do modo
+
+Distribuir é multi-passo: um punhado para uma pessoa, outro para outra. Concluir,
+alterar status e atribuir tiram do conjunto só o que foi TOCADO
+(`selecao.esquecer`); **só excluir sai** (`selecao.sair`), porque não há o que
+continuar.
+
+### O Desfazer, e por que excluir não tem
+
+É a chamada INVERSA, com a mesma guarda do responsável -- não um endpoint novo.
+Volta só o que o lote de fato tocou (`tocadas`: a tarefa que já estava concluída
+não sai da conclusão), agrupado pela origem (`agruparPorOrigem`), porque cada
+rota aceita um destino por chamada. Excluir não ganha Desfazer: a tarefa voltaria
+com outro id, e o link do sino seguiria morto.
+
+### Seleção
+
+- **Shift+clique** segue a ordem VISÍVEL (`chavesDoIntervalo`).
+- **"Selecionar todas as N"** busca pelo FILTRO, todas as páginas, não só a
+  visível. O link some quando o universo é zero -- a Agenda recarrega o período
+  ao entrar no modo, e oferecia "Selecionar todas as 0" nesse intervalo.
+- **O arraste do Kanban fica desligado** no modo: arrastar e marcar disputariam o
+  mesmo gesto.
+- **"Alterar status…" trava com o motivo À VISTA** quando a seleção cruza
+  subgrupos: nome de coluna é de cada quadro.
+- **As confirmações dizem QUAIS**, não só quantas: `ListaDoLote` mostra três
+  títulos e "e mais N".
+
+### O que a execução corrigiu fora do lote
+
+- **O modal de uma tarefa que o lote excluiu fingia que dava para salvar.** O
+  404 vinha como frase crua e o formulário ficava aberto para insistir. Hoje,
+  editando, salvar fecha com "Esta tarefa foi excluída, e as alterações não
+  foram salvas." e recarrega a lista; excluir o que já sumiu é sucesso.
+- 🔴 **O quadro aberto por link dizia o nome do subgrupo ERRADO**, até na
+  confirmação de excluir. O nome vinha da memória do último subgrupo usado sem
+  conferir o id. Hoje vem da primeira página, da memória só quando é o mesmo
+  subgrupo, e do catálogo (`useNomeDeSubgrupo`).
+
+Conferido de ponta a ponta em produção, num grupo de teste apagado ao fim:
+`scripts/conferir-acoes-em-lote-em-producao.mjs`.
+
+## O sino marca a linha que não leva a lugar nenhum (11/09/2026)
+
+`api/PLANO_SINO_COM_ALVOS_VIVOS.md`, **EXECUTADO**. A API diz, em cada linha,
+o que o clique encontraria (`alvo_estado`), e o sino desenha a resposta.
+
+- **A linha morta** ganha ícone e texto na linha da data: lixeira com "Não existe
+  mais", cadeado com "Sem acesso". O usuário recusou a etiqueta depois de ver as
+  duas versões no Chrome. A linha fica apagada; o ponto azul e o peso da não
+  lida continuam.
+- 🔴 **O clique da morta só marca lida**, sem navegar e sem fechar o painel. A já
+  lida não faz nada, mas segue botão habilitado, alcançável pelo teclado. Sem
+  esse clique, a não lida morta contaria no sino até expirar.
+- ⚠️ **Ausente ou desconhecido abre como sempre** (`estadoMorto`). Foi o que
+  deixou o front subir antes da API, adormecido, e é o que impede um front
+  antigo de esconder uma linha viva.
+- **O subgrupo** é texto discreto ao lado da data, e só quando o painel mistura
+  mais de um. O nome vem do servidor (`subgrupo_nome`): a conferência em
+  produção achou a linha "Sem acesso" com o id cru, porque quem saiu do subgrupo
+  não o tem mais no catálogo. Sem nome, a linha não diz subgrupo nenhum, e o
+  sino deixou de consultar o catálogo.
+- ⚠️ **Medido em Chrome:** com a marca ao lado, a data quebrava na vírgula. A
+  linha dos metadados agora quebra (`wrap`) com a data inteira (`nowrap`).
+
+Conferido de ponta a ponta em produção, num grupo de teste apagado ao fim: as
+doze linhas com a marca certa, a morta clicada virou lida sem navegar, e a viva
+abriu.
+
+➡️ `scripts/verificar-marca-do-sino.mjs` e os testes de `SinoDeNotificacoes`.
+
+## A linha do tempo do atendimento vem 20 por vez (14/09/2026)
+
+Passo 2 da etapa 1 do `PLANO_LER_SO_O_NECESSARIO.md` da API. O atendimento não traz mais os registros (regra 9): o
+detalhe e a lista recebem só o último registro e a quantidade, e a linha do tempo vem da rota dos registros.
+
+- **`useRegistrosDoAtendimento`** usa `useInfiniteQuery`. ⚠️ As páginas chegam da mais nova para a mais antiga, e cada
+  uma vem em ordem de escrita: a linha do tempo junta as páginas de trás para frente. Na ordem de chegada, os 20 mais
+  recentes ficariam antes dos anteriores.
+- **Carrega à parte do cabeçalho**, com o próprio carregando e o próprio erro. Com dados na tela, um pedido que falha
+  depois (os anteriores, uma recarga) vira aviso, e o que a pessoa lia não some.
+- 🔴 **"Ver registros anteriores" não pode mover a vista.** Vinte registros entrando em cima empurram para baixo o que
+  se lia. A `LinhaDoTempo` guarda a posição do primeiro registro ao pedir e, quando eles chegam, rola a janela pela
+  diferença -- quem rola é a janela, porque o casco do app não tem contêiner com rolagem. Se o pedido falha, a âncora é
+  descartada: senão rolaria a tela quando um registro novo chegasse depois. jsdom não desenha, e o teste simula as
+  posições; quem prova é o Chrome (`scripts/verificar-registros-do-atendimento.mjs`: o registro lido fica no mesmo
+  lugar, com 2 px de tolerância).
+- O registro que chega depois da primeira pintura acende por 1,6 s, com o keyframe no tema (keyframe é global), e não
+  anima para quem pede menos movimento.
+- A confirmação de excluir conta a quantidade GUARDADA: a tela carrega 20 por vez, e contar os da tela diria menos do
+  que some.
+- ⚠️ **`clearAllMocks` limpa as chamadas, mas não a fila de respostas de uma vez só.** Um teste que deixava uma página
+  de `mockResolvedValueOnce` sem consumir a entregava ao teste seguinte, e três testes falharam longe da causa. O
+  `beforeEach` do detalhe chama `mockReset` no mock dos registros.
+- **Em produção**, o mesmo roteiro de Chrome rodou num escritório de teste criado por bootstrap, com uma cópia que recebe
+  o endereço, a conta e o subgrupo por variável de ambiente: 24/24, e o escritório apagado com resíduo zero.
+
+## "A faturar" vem por página, e os lançamentos ao abrir o cliente (14/09/2026)
+
+Passo 3.3b da etapa 3 do `PLANO_LER_SO_O_NECESSARIO.md` da API. A lista de "A faturar" trazia todos os clientes com os
+lançamentos dentro; num escritório grande a resposta passava dos 6 MB da API. Agora a API lê o índice dos cobráveis
+(passo 3.3 da API) e a tela pede só o que mostra (regra 9).
+
+- **`SecaoAFaturar` pagina pelo servidor** (`GET /faturas/a-faturar?pagina=`), com o mesmo `usePaginacaoDaLista` e o
+  mesmo `Pagination` de "Emitidas". Cada cliente mostra `N lançamentos · o mais antigo de dd/mm/aaaa`, frase do artefato
+  do "Não cobrar": a quantidade sozinha não diz há quanto tempo o dinheiro espera. A contagem de cima é a do TOTAL de
+  clientes, não a da página.
+- ⚠️ **`listarAFaturar` sempre manda a página.** Sem ela a API devolve o formato antigo, com os lançamentos, que só
+  existe até o passo 3.3c.
+- **`ModalDeEmissao` pede os lançamentos ao abrir** (`GET /faturas/a-faturar/{cliente_id}`), com carregando, erro com
+  "tentar de novo" e "Nada deste cliente para faturar." -- alguém pode ter faturado o cliente entre a lista e o clique.
+  O botão fica desabilitado até eles chegarem.
+- 🔴 **O modal guarda os DESMARCADOS, e não os marcados.** Os lançamentos chegam depois de o modal abrir: guardando os
+  marcados, "tudo marcado ao abrir" pediria um efeito copiando a resposta no estado, e a guarda de descarte leria a
+  chegada deles como mudança da pessoa. Há teste dos dois lados (fechar sem mexer fecha; desmarcar pede confirmação).
+- **Trocar de seção apaga a página**: as duas seções paginam, e a 3ª de "Emitidas" não é a 3ª de "A faturar".
+- **As chaves ficam sob um prefixo só**: `qk.aFaturarPagina` e `qk.aFaturarDoCliente` começam por `qk.aFaturar()`, que é
+  o que emitir, pagar e cancelar invalidam. O teste de chaves prova que o prefixo alcança as duas, e o guarda de
+  invalidação passou a recusar as duas chaves no `invalidateQueries`.
+- **Chrome** (`scripts/verificar-financeiro.mjs`): o antigo "'A faturar' NÃO tem barra" virou a checagem da barra com
+  mais de 10 clientes, da página com no máximo 10 e da frase do mais antigo; o modal espera a caixa chegar antes de
+  medir a cor. Para ver a paginação, o offline precisa de mais de 10 clientes com o que cobrar (a semente de desenho
+  deixa 4): o roteiro de produção do scratchpad semeia 22 clientes pela API local.
+- **Testes:** as páginas de Financeiro e de fatura, as chamadas e as chaves; 19 mutações vermelhas. Chrome no offline:
+  108 de 109. A falha é de "Emitidas" (a tabela transborda a largura) e foi medida na main, com o mesmo resultado: já
+  existia, e fica fora deste passo. ⚠️ Ao trocar de página as colunas de valor mudam de lugar, porque nenhuma das duas
+  tabelas tem largura fixa -- "Emitidas" já fazia o mesmo.
+- **Em produção** (merge 7b153f3, Vercel às 20:39 UTC): `verificar-deploy-em-producao.mjs` com 68 checagens ok, e ponta
+  a ponta num escritório de teste criado por bootstrap, com pessoa em `.invalid` e nenhum e-mail. Doze clientes e treze
+  lançamentos pela API, e a tela real em Chrome: a contagem do total, 10 por página e a página 2, trocar de seção apaga a
+  página, a tela pede sempre a página, o modal traz os 2 lançamentos do cliente pela rota dele, e emitir com um
+  desmarcado deixa só ele em "A faturar". 14 de 14, limpeza com resíduo zero, os lançamentos do escritório real intactos
+  e os logs da `api` sem erro (366 execuções na janela).
+- ⚠️ **No Playwright, a caixa de marcar do Chakra se clica pelo desenho** (`[data-part="control"]`): o `input` é
+  escondido, e o clique nele espera 30 s e falha. A primeira rodada em produção caiu nisso, no roteiro, e não na tela.
+
+## O "Não cobrar" na tela (14/09/2026)
+
+Passo 3.4b da etapa 3 do `PLANO_LER_SO_O_NECESSARIO.md` da API, pelo artefato 83232ad9 (aprovado pelo usuário). A
+despesa de cliente sai de "A faturar" de vez, e volta só por "Voltar a cobrar"; a API é o passo 3.4.
+
+- **"Não cobradas" é a terceira seção de Faturas** (`SecaoNaoCobradas`), entre "A faturar" e "Emitidas": a despesa com o
+  cliente e "marcada por X em dd/mm/aaaa", a data em que foi adiantada, o valor e "Voltar a cobrar". A linha abre o
+  detalhe do lançamento; o botão para o clique antes da linha.
+- 🔴 **A pílula mostra a contagem** ("Não cobradas · N"): é dinheiro adiantado que não volta, e não pode sumir de vista.
+  A contagem é o `total` da primeira página, pedida em qualquer seção -- dentro da seção, a página do endereço.
+- **No modal de emissão, só a DESPESA tem "Não cobrar"**, numa coluna própria: o honorário em aberto já fica de fora
+  desmarcando. O texto diz a diferença (desmarcar deixa para a próxima fatura; "Não cobrar" tira de vez), e a data da
+  despesa paga diz "adiantada em" -- "paga em" se lia como pago pelo cliente. Ao clicar, a despesa sai da lista NA HORA
+  (`setQueryData` na chave do cliente), e o aviso traz o Desfazer.
+- **No detalhe do lançamento**, "Não cobrar" ou "Voltar a cobrar" junto das ações, só na despesa de cliente fora de
+  fatura (a regra do servidor), e a etiqueta "Não cobrar" com "Marcada por X em dd/mm/aaaa: fora de "A faturar"." O
+  nome é o apelido que a API resolve (`nao_cobrar_por_nome`, o e-mail para quem não tem).
+- **Na lista de lançamentos**, a etiqueta cinza "Não cobrar" ao lado da situação (`CORES_DO_NAO_COBRAR`): a despesa paga
+  continua "Efetivado", e é a segunda etiqueta que diz por que ela não está em "A faturar".
+- 🔴 **Todo "Não cobrar" e "Voltar a cobrar" se desfaz pelo AVISO**, o padrão do sistema: o Desfazer chama a ação
+  contrária. As chaves `qk.naoCobradas()` e `qk.aFaturar()` são prefixos, e cada ação invalida as duas e a lista.
+- ⚠️ O guarda `tiposDoPacote` passou a 131 (`NaoCobrada`).
+
+- 🔴 **A tabela do modal transbordava**, e só o Chrome mostrou: com a coluna do botão, 723px numa caixa de 706, e o
+  "Não cobrar" saía cortado. Tirar o nowrap do TEXTO da data não mudou nada -- medido, a `Tabela` põe
+  `white-space: nowrap` em toda célula. A correção é `whiteSpace="normal"` na CÉLULA da data ("adiantada em" em cima, a
+  data embaixo), e o roteiro de Chrome mede o transbordo.
+- **Testes:** seção, pílula, modal, detalhe, linha, chamadas e chaves; suíte 2.695; tsc, eslint e build limpos; 20
+  mutações vermelhas. Uma ficou verde na primeira rodada -- tirar a remoção imediata do modal --, porque o teste deixava
+  a nova busca voltar sem a despesa e a linha sumia de qualquer jeito; o teste passou a deixar a busca PENDENTE.
+- **Em produção** (merge 500ef20, Vercel às 23:34 UTC): `verificar-deploy-em-producao.mjs` com 68 checagens ok, e ponta a
+  ponta em Chrome num escritório de teste criado por bootstrap, com pessoa em `.invalid` e nenhum e-mail: o modal cabendo
+  (706 de 706), a despesa saindo na hora, o Desfazer do aviso, a pílula de 0 para 1, a seção com quem marcou, o detalhe
+  com a etiqueta e voltar a cobrar. 14 de 14, limpeza com resíduo zero, os lançamentos do escritório real intactos e os
+  logs da `api` sem erro (200 execuções na janela). Sem apelido, a pessoa de teste aparece pelo e-mail, como previsto.
+
+## A busca de lançamentos espera parar de digitar (15/09/2026)
+
+Passo 3.7c da etapa 3 do `PLANO_LER_SO_O_NECESSARIO.md` da API, o último da etapa. A API passou a buscar pelo começo da
+palavra nos passos 3.7a e 3.7b; a tela só precisou deixar de pedir a lista a cada letra.
+
+- 🔴 **A consulta usa a busca depois da espera entre teclas** (`useValorComEspera`, `ESPERA_DA_BUSCA_MS`), como Clientes e o
+  Histórico: o campo mostra o que se escreve na hora, porque vem da URL, e a lista só é pedida quando a pessoa para. Antes,
+  digitar "custas" eram seis requisições -- e, em "Todos os períodos", seis listas guardadas montadas no servidor.
+- O campo mostra "buscando…" nas duas fases em que o que se vê ainda não é o que se escreveu: a espera e a consulta em voo
+  (`isPlaceholderData`), o mesmo critério de Clientes.
+- O comentário do campo diz que a busca é pelo COMEÇO de cada palavra ("banc" acha "Banco", "anco" não; os dígitos do
+  documento acham por qualquer pedaço). O placeholder não mudou: é como se digita.
+
+**Testes.** Dois na página do Financeiro: digitar "custas" pede a lista uma vez, com a palavra inteira, e nenhuma com um
+pedaço; apagar a busca volta a pedir a lista sem ela. A mutação (a consulta com o texto sem espera) deixou o primeiro
+vermelho. Suíte 2.697; `tsc -b`, `yarn build` e `eslint src` limpos. ⚠️ A primeira rodada da suíte teve uma falha no sino
+("Enter na morta marca lida"), que passou sozinho duas vezes e na suíte seguinte: instável sob carga, sem ligação com a busca.
+
+**Chrome, contra o offline.** "honorarios" digitado letra a letra em "Todos os períodos": uma requisição com a busca, com a
+palavra inteira; o "buscando…" aparece na espera e some com a lista; a URL guarda a busca; apagar volta à lista sem ela.
+
+**Produção.** Merge fd37ec2, publicado pela Vercel às 05:09 UTC de 15/09 (status do commit pela API do GitHub). Num
+escritório de teste criado por bootstrap, com 6 lançamentos (3 honorários) e pessoa em `.invalid`, em Chrome com janela e
+uma entrada pela tela: a lista abriu em "Todos os períodos"; "honorarios" digitado letra a letra fez UMA requisição, com a
+palavra inteira; a API devolveu os 3 e a tabela mostrou os 3; o "buscando…" apareceu e sumiu; nenhum erro de página nem
+resposta 4xx/5xx. Limpeza com resíduo zero e o escritório real intacto.
+
+⚠️ **O que a limpeza achou:** o roteiro de apagar grupo passou antes de o Stream processar as exclusões, e o consumidor
+das palavras subiu a versão das listas guardadas daquele escritório, recriando o item `versao#lancamentos`. Uma segunda
+passada do roteiro o tirou; a correção do roteiro está na API.
+
+## Arquivar e reativar cliente na tela (15/09/2026)
+
+Passo 4.4c do `PLANO_LER_SO_O_NECESSARIO.md`, o front do arquivar; a API é o 4.4b. Cliente deixou de ser excluído e
+passou a ser arquivado -- decisão do usuário --, e esta tela é onde isso aparece.
+
+**Como fica:**
+
+- **Chip com menu** (`PilulaDeMenu`) na linha da busca, com Todos · Ativos · Arquivados, abrindo em Ativos e aceso fora
+  dele. O estado mora na URL (`useEstadoNaUrl`), e `estadoDeClienteValido` derruba o que não for um dos três: a URL é
+  digitável, e um valor inventado chegaria à API como filtro inválido, com a tela dizendo só "não foi possível
+  carregar";
+- **as colunas mudam com o filtro** (`colunasDeClientes`): em Arquivados a coluna Processos sai -- cliente com processo
+  não se arquiva, e a coluna seria uma fileira de zeros -- e entra a de ação, onde mora o "Reativar"; em Todos as duas
+  aparecem, e o arquivado ganha a etiqueta. Sob o nome, quem arquivou e quando;
+- 🔴 **"Reativar" na própria linha**, como o artefato validado desenha: a lista de Arquivados existe para trazer alguém
+  de volta, e abrir cada ficha seria um clique a mais por cliente. O clique do botão PARA de subir para a linha, senão
+  reativa e abre a ficha junto;
+- **na ficha**, "Excluir" deu lugar a "Arquivar" e "Reativar" (`manager`+, o piso da API), com a etiqueta, a `Faixa` que
+  diz o que o arquivamento preserva, e o cadastro ainda editável -- cliente arquivado se edita;
+- 🔴 **o bloqueio vem do 409**: os motivos que o servidor manda viram uma lista no `ModalDeAviso`, um por linha, sem
+  botão que insista no que já foi negado. Não há pré-checagem na tela, e é uma leitura a menos: só o servidor sabe de
+  fatura em aberto e cobrança pendente, e perguntar antes envelheceria entre a pergunta e o clique;
+- **avisos com Desfazer** nos dois sentidos. ⚠️ Desfazer uma reativação é arquivar de novo, e isso PODE ser recusado --
+  o erro avisa e recarrega a lista, em vez de a tela afirmar o contrário do que houve;
+- a função de excluir cliente saiu daqui; a rota continua na API até o passo 4.4f.
+
+**Testes.** `ClientesPage` e `ClienteDetalhePage` cobrem o chip (inclusive aceso, por `data-ativo`), o valor inválido na
+URL, as colunas por filtro, a etiqueta só em Todos, o "Reativar" da linha e o fato de ele não abrir a ficha, o bloqueio
+com os motivos, o erro SEM motivos que cai no aviso de sempre, a ficha arquivada e o piso de papel. `src/services/api/clientes.test.ts`
+é novo e existe por uma razão: os testes de tela simulam o módulo de serviços inteiro, e sem ele a busca ignorando o
+estado e a rota de arquivar trocada pela de reativar passavam despercebidas. Suíte 2.708.
+
+**Mutações.** 23, todas vermelhas -- cinco só depois de ganhar teste: a busca sem estado, o chip nunca aceso, a célula
+de processos sobrando na linha, o clique que abria a ficha e a rota trocada.
+
+**Chrome.** 21 checagens contra o `yarn offline` e 15 contra produção, com fotos das três listas e da ficha arquivada.
+
+**Produção.** Merge 4b8731f, publicado pela Vercel. Num escritório de teste criado por bootstrap, com três clientes e um
+honorário para a trava, em Chrome com janela: as três listas, a etiqueta, o "Reativar" da linha com Desfazer (conferido
+na API dos dois lados), o bloqueio com o motivo do servidor e o arquivar pela ficha com Desfazer. Nenhum erro de página
+nem resposta inesperada; limpeza com resíduo zero em sete tabelas e o escritório real intacto.
+
+⚠️ **Um teste instável apareceu no caminho**, em `FormularioDaInscricao` (Perfil), sem relação com clientes: falhou uma
+vez em dez rodadas da suíte cheia e nunca isolado. A hipótese de a releitura do perfil apagar o que estava digitado foi
+TESTADA e DESCARTADA; a causa exata não foi provada, porque o log da falha original se perdeu. O conserto entrou antes
+deste passo, e é de determinismo: `userEvent.setup()` e conferir o campo antes de salvar.
+
+## O chip de arquivados em fases, situações e no catálogo (16/09/2026)
+
+Passo 4.4e do `PLANO_LER_SO_O_NECESSARIO.md`, o front do arquivar nas listas de configuração. A API é o passo 4.4d.
+
+**Como fica:**
+
+- o vocabulário de estado virou GERAL (`constants/arquivamento.ts`): nasceu em clientes e agora serve contas, centros,
+  categorias, fases e situações. O de cliente ficou como apelido do mesmo valor -- duas listas independentes divergiriam
+  no primeiro ajuste;
+- **catálogo do Financeiro**: chip ao lado das pílulas de seção, com o estado na URL (ali a seção já mora nela, porque a
+  página depende dela). Contas e centros pedem o recorte ao SERVIDOR, e o estado entra na CHAVE DE CACHE -- sem isso,
+  Ativos e Arquivados dividiriam a mesma entrada e a lista mostraria o recorte do chip anterior até o refetch chegar;
+- 🔴 **categorias filtram NA TELA**, e é a decisão do usuário no passo 4.4d: a lista delas vem inteira, com a filha logo
+  abaixo da mãe. E **mãe arquivada com filha ATIVA continua aparecendo em Ativos** -- escondê-la deixaria a filha
+  recuada embaixo de nada, lendo como se fosse de outra mãe. O par negativo está no teste: mãe arquivada sem filha
+  ativa some;
+- **fases e situações**: chip em linha própria acima do cartão (a aba não tem busca onde encaixá-lo), filtrando na tela
+  -- a lista já vem inteira, e é isso que permite arrastar para reordenar entre todas. ⚠️ O estado é LOCAL, e não na
+  URL: a MESMA tela é montada duas vezes (Fases e Situações), e uma chave só faria um chip mexer no outro;
+- **vocabulário**: "(Inativa)"/"(Inativo)" viraram "(Arquivada)"/"(Arquivado)", e "Desativar" virou "Arquivar" nas
+  quatro telas. As frases da API citadas em testes e comentários acompanharam a mudança do passo 4.4d ("Conta arquivada:
+  escolha outra").
+
+**Testes.** O chip nas duas telas (inclusive aceso, por `data-ativo`), o estado inválido na URL caindo em Ativos, o
+filtro na tela sem pedir nada ao servidor, o vazio por FILTRO que não mente ("Nenhuma arquivada." em vez de "Nenhuma
+opção ainda."), a hierarquia das categorias com o par negativo, e o texto de cada etiqueta. `src/services/api/financeiroCatalogo.test.ts`
+é novo: só um teste de serviço pega o estado sumindo da chamada, porque os testes de tela simulam o módulo inteiro.
+Suíte 2.723.
+
+**Mutações.** 17, todas vermelhas. Três só depois de ganhar teste: o estado inválido na URL do catálogo, o chip nunca
+aceso e a etiqueta do centro de custo.
+
+⚠️ **Achado da verificação em Chrome:** o centro de custo continuava dizendo "(Inativo)" -- outro arquivo, outro gênero,
+e nenhuma asserção sobre ele; a mutação daquele texto só cobria contas. Ganhou teste e mutação. É o tipo de defeito que
+a foto pega e a suíte não.
+
+⚠️ **E a aba de Grupo NÃO mora na URL**: `?aba=fases` é ignorado e a tela abre em Subgrupos, calado. Em roteiro de
+Chrome, chega-se nessas abas clicando; no Financeiro, `?aba=` e `?secao=` são endereçáveis de verdade.
+
+**Produção.** Merge 60f00c3, publicado pela Vercel em 60 s. Num escritório de teste criado por bootstrap, com uma fase
+e um centro, em Chrome com janela: as duas telas abrindo em Ativos, o diálogo dizendo "Arquivar", o item saindo de
+Ativos e aparecendo em Arquivados com a etiqueta certa em cada gênero, o servidor confirmando o recorte dos centros, a
+reativação conferida pela API e o "Todos" das categorias. Nenhum erro de página nem resposta inesperada; limpeza com
+resíduo zero em três tabelas e o catálogo do escritório real intacto.
+
+## Dois ajustes do filtro de arquivados, pedidos pelo usuário (16/09/2026)
+
+Os dois vieram do uso, depois do passo 4.4e em produção -- e o segundo era um defeito de verdade, não um ajuste de
+gosto.
+
+**1. O chip de estado em Fases e Situações foi para a ESQUERDA.** Estava em `justify="flex-end"`, o único do projeto
+jogado para a direita: Clientes, Atendimentos e as pílulas de seção do Financeiro põem o filtro no começo da linha. O
+alinhamento é MEDIDO por coordenada nos roteiros de Chrome (folga até a borda esquerda do conteúdo contra a que sobra à
+direita), e não conferido a olho -- e Situações é comparada com Fases, porque são duas montagens do mesmo componente.
+
+**2. 🔴 Configurações do Financeiro "às vezes não abria Categorias, e o filtro sempre aparecia".** Uma causa só para as
+duas queixas: as quatro abas dividem UM endereço, e duas delas guardavam `?secao=` com valores próprios -- `emitidas`,
+`a-faturar` e `nao-cobradas` em Faturas; `categorias`, `contas` e `centros` em Configurações. Vindo de Faturas, o
+catálogo lia `secao=emitidas`, nenhum dos três blocos casava, **nada renderizava**, e sobrava só a linha das pílulas com
+o chip -- que é o "filtro sempre é mostrado" do relato. Sem lista e sem erro, que é pior do que um erro.
+
+O conserto tem duas metades, e as duas são necessárias:
+
+- `FinanceiroPage.mudarAba` passou a apagar também `secao` e `estado`, ao lado de `pagina`, `tamanho` e `busca`;
+- cada tela VALIDA a seção na leitura (`abaValida`), porque a limpeza não alcança endereço colado ou editado à mão.
+
+⚠️ **A lição vale para todo estado de URL com valores fechados:** `lerParametroDaUrl` devolve texto CRU de propósito (a
+faixa válida é de quem declara o estado), então `useEstadoNaUrl<T>` tipa como `T` sem garantir nada em execução -- a
+tipagem mente, e o defeito aparece como tela vazia. Ler enum da URL sem validar é a armadilha; `abaValida` e
+`estadoDeArquivamentoValido` são os moldes.
+
+**Testes.** Seção de outra aba caindo em Categorias; a ida-e-volta de aba abrindo Categorias com o filtro de volta em
+Ativos -- conferido pelo que a tela PEDE ao servidor, e não só pelo que mostra; e o par negativo do lado das Faturas,
+onde `secao=categorias` cai em "A faturar". Suíte 2.726; `tsc`, `eslint` e `vite build` verdes; 3 mutações, 3
+vermelhas.
+
+**Produção.** Merge fe79389, publicado pela Vercel em 60 s. Dez checagens em Chrome com janela, SOMENTE LEITURA: o
+roteiro só clica em aba e em pílula, nunca numa linha de dado real, e não cria nem apaga nada -- resíduo zero por
+construção. Nenhum erro de página nem resposta inesperada.

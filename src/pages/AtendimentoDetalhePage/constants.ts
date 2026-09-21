@@ -15,7 +15,7 @@
  *
  * ⚠️ O nome do parâmetro na URL (`?aba=`) e o `abaValida` que o lê são
  * compartilhados -- ver `utils/abas`. Aqui fica só o que é desta tela.
- * ➡️ `CONTEXT.md`, "Histórias que saíram dos comentários", grupo 2.
+ * ➡️ `NARRATIVA.md`, "Histórias que saíram dos comentários", grupo 2.
  */
 export const ABAS_DO_ATENDIMENTO = [
   { id: "registros", rotulo: "Registros" },

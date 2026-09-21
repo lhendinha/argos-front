@@ -13,7 +13,7 @@ import { mesmoValor } from "./iguais";
  * sobrescrita total: qualquer campo que o formulário esquecesse de carregar
  * seria APAGADO ao salvar -- com `responsaveis` o servidor ao menos recusa
  * com 400; com `cliente_ids` apagaria calado.
- * ➡️ `CONTEXT.md`, "Histórias que saíram dos comentários", grupo 4.
+ * ➡️ `NARRATIVA.md`, "Histórias que saíram dos comentários", grupo 4.
  *
  * ⚠️ A convenção do servidor é a de PATCH parcial: `None` (campo ausente) =
  * "não enviei, não toque"; valor presente = "grave isto", inclusive vazio.

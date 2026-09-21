@@ -164,7 +164,7 @@ export default function PreviaDaImportacao({
                  prévia aparece, então nesta tela não há nada a que "este" se
                  refira. "Selecionado" aponta para uma escolha que a pessoa
                  fez, e não para um contexto que a tela não mostra.
-                 ➡️ `CONTEXT.md`, "Histórias que saíram dos comentários". */
+                 ➡️ `NARRATIVA.md`, "Histórias que saíram dos comentários". */
               "Você não é membro do subgrupo selecionado, então precisa escolher quem responde entre os membros dele."
         }
       >

@@ -17,7 +17,7 @@ import type { DicaDeCampoProps } from "./types";
  * registra *"positioner subtree intercepts pointer events"*), e o balão abre
  * sozinho ao passar o mouse e resiste a fechar. Hover que abre um elemento
  * por cima do próprio gatilho briga com o clique por definição.
- * ➡️ `CONTEXT.md`, "Histórias que saíram dos comentários", grupo 3.
+ * ➡️ `NARRATIVA.md`, "Histórias que saíram dos comentários", grupo 3.
  *
  * ⚠️ O gatilho é `BotaoNu`, e não `Box as="button"`: aquele não aceita `type`
  * na tipagem do Chakra, e botão sem `type="button"` dentro de formulário vira

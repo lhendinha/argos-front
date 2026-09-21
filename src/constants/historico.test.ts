@@ -8,7 +8,7 @@ describe("o filtro de leitura do histórico", () => {
    * como no tipo de envio: um terceiro valor -- "todos", ou o vazio dentro da
    * lista -- viraria um filtro que a API não conhece.
    *
-   * ➡️ O rótulo de cada opção mora na página (seção 0c do `CONTEXT.md`).
+   * ➡️ O rótulo de cada opção mora na página (a regra da constante, no `CLAUDE.md`).
    */
   it("tem só os dois valores que filtram, distintos e sem o vazio", () => {
     expect(LEITURAS_DO_HISTORICO).toHaveLength(2);
