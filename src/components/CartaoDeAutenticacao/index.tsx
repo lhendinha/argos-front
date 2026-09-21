@@ -38,7 +38,11 @@ import type { CartaoDeAutenticacaoProps } from "./types";
  * -- margem automática cede a zero e devolve o começo do cartão.
  */
 export default function CartaoDeAutenticacao({ titulo, subtitulo, children }: CartaoDeAutenticacaoProps) {
-  const areaVisivel = useAreaVisivel(true);
+  /* ⚠️ `comPiso: false` -- esta tela não prende rodapé nenhum, e o piso de
+     180px, que existe para isso, desligava a correção num Android comum:
+     medido em Chrome real, o teclado deixa 172px de área visível e o campo
+     de senha ficava atrás dele. Ver `useAreaVisivel`. */
+  const areaVisivel = useAreaVisivel(true, false);
   useCampoFocadoAVista(areaVisivel.altura);
 
   return (
