@@ -14,3 +14,11 @@ dist/
 
 # Grafo de codigo gerado pelo graphify -- artefato, nao fonte.
 graphify-out/
+
+# Configuracao de MAQUINA, nao de projeto: `.claude/settings.json` tem o
+# caminho absoluto do graphify desta maquina, e `settings.local.json` tem
+# permissoes pessoais. O `CLAUDE.md` fica versionado porque e so texto --
+# as regras valem para qualquer um que clone.
+.claude/
+# Aponta para `graphify-out/graph.json`, que e ignorado -- a regra nunca vale.
+.gitattributes
