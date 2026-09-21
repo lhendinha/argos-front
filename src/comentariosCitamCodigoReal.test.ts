@@ -42,6 +42,10 @@ const DE_FORA = new Set([
   "backspaceRemovesValue", "isolatedModules", "VoidFunction", "Label",
   // Receitas e tipos do Chakra/Ark citados na explicação da caixa de marcar
   "checkmark", "checkboxAnatomy", "SlotRecipeDefinition",
+  // `Pagination.PageText` é peça do Chakra que NÃO usamos: a `Pagination`
+  // daqui é nossa. O comentário a cita como fonte do padrão -- trocar a
+  // fileira de números por uma frase no estreito foi ideia de lá.
+  "PageText",
   // DOM e CSS
   "defaultPrevented", "opener", "borderBottom", "paddingLeft", "classNames",
   "confirm", "back",

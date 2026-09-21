@@ -2,12 +2,18 @@ import { BotaoNu } from "../../BotaoNu";
 import type { NumeroPaginaProps } from "./types";
 
 /** Número de página (`.pagination-numero` do artifact): sem borda, fonte
- * mono, e o atual em cheio na cor da marca. */
-export default function NumeroPagina({ numero, atual, onClick }: NumeroPaginaProps) {
+ * mono, e o atual em cheio na cor da marca.
+ *
+ * ⚠️ **O rótulo diz "página", o glifo não.** Lido em sequência, um leitor de
+ * tela anunciava "1, 2, 3, 4" -- quatro botões sem dizer do quê, encostados
+ * no seletor "Por página", que também é número. É o que a paginação do
+ * Chakra faz, e a última ela nomeia: saber que 7 é o fim evita tentar a 8. */
+export default function NumeroPagina({ numero, atual, ultima, onClick }: NumeroPaginaProps) {
   return (
     <BotaoNu
       type="button"
       onClick={onClick}
+      aria-label={ultima ? `última página, página ${numero}` : `página ${numero}`}
       aria-current={atual ? "page" : undefined}
       display="flex"
       alignItems="center"

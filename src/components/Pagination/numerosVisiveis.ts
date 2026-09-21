@@ -4,6 +4,10 @@
  * regra do artifact (`visiblePageNumbers`).
  *
  * Fora do componente porque é dado derivado, testável sem montar React.
+ *
+ * ⚠️ **Só o desktop chega aqui.** No celular a fileira de números vira uma
+ * frase -- ver `Pagination`, que mede o container. Esta função nunca precisou
+ * saber de largura, e continua não sabendo.
  */
 export function numerosVisiveis(pagina: number, totalPaginas: number): (number | "...")[] {
   if (totalPaginas <= 7) {

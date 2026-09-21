@@ -236,20 +236,20 @@ describe("a paginação de Emitidas", () => {
   it("⚠️ com três faturas a barra não aparece -- não há o que paginar", async () => {
     montar("/financeiro?aba=faturas&secao=emitidas");
     await screen.findByText("2026-0007");
-    expect(screen.queryByRole("button", { name: "2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /página 2$/ })).not.toBeInTheDocument();
   });
 
   it("com mais que uma página, a barra aparece e a contagem é a do TOTAL", async () => {
     mocks.listarFaturas.mockResolvedValue(FATURAS_COM_QUATRO_PAGINAS);
     montar("/financeiro?aba=faturas&secao=emitidas");
     expect(await screen.findByText("Mostrando 3 de 42 faturas emitidas")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /página 2$/ })).toBeInTheDocument();
   });
 
   it("clicar na página 2 pede a página 2 ao servidor e a põe na URL", async () => {
     mocks.listarFaturas.mockResolvedValue(FATURAS_COM_QUATRO_PAGINAS);
     montar("/financeiro?aba=faturas&secao=emitidas");
-    await userEvent.click(await screen.findByRole("button", { name: "2" }));
+    await userEvent.click(await screen.findByRole("button", { name: /página 2$/ }));
     await waitFor(() =>
       expect(mocks.listarFaturas).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 })),
     );
@@ -309,7 +309,7 @@ describe("a paginação de A faturar", () => {
   it("⚠️ com um cliente só a barra não aparece -- não há o que paginar", async () => {
     montar();
     await screen.findByText("Construtora Alfa");
-    expect(screen.queryByRole("button", { name: "2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /página 2$/ })).not.toBeInTheDocument();
   });
 
   it("🔴 a contagem de cima é a do TOTAL de clientes, não a da página", async () => {
@@ -318,13 +318,13 @@ describe("a paginação de A faturar", () => {
     expect(
       await screen.findByText("45 clientes com honorários e despesas a faturar · clique no cliente para emitir"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "2" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /página 2$/ })).toBeInTheDocument();
   });
 
   it("clicar na página 2 pede a página 2 ao servidor e a põe na URL", async () => {
     mocks.listarAFaturar.mockResolvedValue(A_FATURAR_COM_TRES_PAGINAS);
     montar();
-    await userEvent.click(await screen.findByRole("button", { name: "2" }));
+    await userEvent.click(await screen.findByRole("button", { name: /página 2$/ }));
     await waitFor(() =>
       expect(mocks.listarAFaturar).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 })),
     );

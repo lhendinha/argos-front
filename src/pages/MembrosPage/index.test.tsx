@@ -142,6 +142,6 @@ describe("paginação", () => {
     // E o sintoma visível: a barra de paginação APARECE. Antes o total era
     // `pessoas.length` (10), e `Pagination` se esconde quando o total cabe na
     // menor página -- então num grupo de 14 não havia página 2 pra clicar.
-    expect(await screen.findByRole("button", { name: "2" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /página 2$/ })).toBeInTheDocument();
   });
 });

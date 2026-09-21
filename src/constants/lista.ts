@@ -81,3 +81,17 @@ export const LARGURA_MINIMA_DA_TABELA = {
  * este número nunca entra em jogo.
  */
 export const LARGURA_MAXIMA_DO_ITEM = "520px";
+
+/** Abaixo desta largura de CONTAINER, a paginação encolhe para três números.
+ *
+ * 🔴 **É a soma dos alvos de toque.** Sete números e duas setas, todos com
+ * 44px no apontador grosso, mais os intervalos, pedem 424px -- medido em
+ * Chrome real num Android de 360px, onde o conteúdo tem 328 e a página
+ * inteira passava a rolar de lado (`/financeiro` foi a 461).
+ *
+ * ⚠️ 420 e não 424: o limiar é de CONTAINER, e a fileira também carrega o
+ * "Por página" à direita, que desce por conta própria quando aperta. Abaixo
+ * de 420 a fileira encolhida pede ~240px e sobra folga para qualquer
+ * aparelho pequeno.
+ */
+export const LIMIAR_DA_PAGINACAO = 420;

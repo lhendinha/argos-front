@@ -445,7 +445,7 @@ describe("o Financeiro na Área de trabalho", () => {
       expect(screen.getByText("Conta 4")).toBeInTheDocument();
       expect(screen.queryByText("Conta 5")).not.toBeInTheDocument();
 
-      await userEvent.click(screen.getByRole("button", { name: "2" }));
+      await userEvent.click(screen.getByRole("button", { name: /página 2$/ }));
       await waitFor(() => expect(screen.getByText("Conta 5")).toBeInTheDocument());
       expect(screen.queryByText("Conta 0")).not.toBeInTheDocument();
     });
@@ -454,7 +454,7 @@ describe("o Financeiro na Área de trabalho", () => {
       mocks.resumoDaAreaDeTrabalho.mockResolvedValue(RESUMO_COM_DINHEIRO);
       montar();
       await screen.findByText("Aluguel da sede");
-      expect(screen.queryByRole("button", { name: "2" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /página 2$/ })).not.toBeInTheDocument();
     });
 
     it("marcar como pago efetiva e relê a lista", async () => {

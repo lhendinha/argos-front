@@ -811,7 +811,7 @@ describe("FinanceiroPage", () => {
       await screen.findByText("Conta 00");
       expect(screen.getByText("Mostrando 10 de 11 contas")).toBeInTheDocument();
 
-      await userEvent.click(await screen.findByRole("button", { name: "2" }));
+      await userEvent.click(await screen.findByRole("button", { name: /página 2$/ }));
       await waitFor(() => expect(screen.getByText("Conta 10")).toBeInTheDocument());
       expect(screen.queryByText("Conta 00")).not.toBeInTheDocument();
     });
@@ -826,7 +826,7 @@ describe("FinanceiroPage", () => {
       });
       await abrirContas();
       await screen.findByText("Conta 00");
-      expect(screen.queryByRole("button", { name: "2" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /página 2$/ })).not.toBeInTheDocument();
       expect(screen.queryByText("Por página")).not.toBeInTheDocument();
     });
 
@@ -854,7 +854,7 @@ describe("FinanceiroPage", () => {
       await abrirContas();
       await screen.findByText("Conta 00");
 
-      await userEvent.click(await screen.findByRole("button", { name: "2" }));
+      await userEvent.click(await screen.findByRole("button", { name: /página 2$/ }));
       await waitFor(() =>
         expect(mocks.listarContas).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 })),
       );
@@ -866,7 +866,7 @@ describe("FinanceiroPage", () => {
          vazia, e sem nada na tela explicando por quê. */
       comOnzeContas();
       await abrirContas();
-      await userEvent.click(await screen.findByRole("button", { name: "2" }));
+      await userEvent.click(await screen.findByRole("button", { name: /página 2$/ }));
       await waitFor(() =>
         expect(mocks.listarContas).toHaveBeenCalledWith(expect.objectContaining({ pagina: 2 })),
       );

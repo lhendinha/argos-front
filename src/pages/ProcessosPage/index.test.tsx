@@ -432,7 +432,7 @@ describe("paginação com filtro ativo", () => {
       ),
     );
 
-    expect(await screen.findByRole("button", { name: "2" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /página 2$/ })).toBeInTheDocument();
   });
 });
 
@@ -453,7 +453,7 @@ describe("filtro e página", () => {
     renderComProviders(<MemoryRouter><ProcessosPage /></MemoryRouter>);
     await screen.findByText("Meu processo");
 
-    await user.click(await screen.findByRole("button", { name: "3" }));
+    await user.click(await screen.findByRole("button", { name: /página 3$/ }));
     await waitFor(() =>
       expect(mocks.listarProcessos).toHaveBeenLastCalledWith(
         expect.objectContaining({ pagina: 3 }),
@@ -488,7 +488,7 @@ describe("filtro e página", () => {
     renderComProviders(<MemoryRouter><ProcessosPage /></MemoryRouter>);
     await screen.findByText(PROCESSO.apelido);
 
-    await user.click(await screen.findByRole("button", { name: "2" }));
+    await user.click(await screen.findByRole("button", { name: /página 2$/ }));
     await waitFor(() =>
       expect(mocks.listarProcessos).toHaveBeenLastCalledWith(
         expect.objectContaining({ pagina: 2 }),
