@@ -27,7 +27,13 @@ import { chromium } from "playwright";
 
 import { fingirSessao, instalarStubs } from "./stubsDaApi.mjs";
 
-const BASE = "http://localhost:5173";
+/** ⚠️ **Dá para apontar a régua para o BUILD, e não só para o dev.**
+ * `BASE=http://localhost:4173 node scripts/medir-mobile.mjs` mede o bundle
+ * servido por `vite preview`, que é o que o navegador de verdade recebe:
+ * React em modo produção, CSS minificado e na ordem final. Tudo o que esta
+ * régua mediu até hoje foi o servidor de desenvolvimento, e a diferença
+ * entre os dois é exatamente o tipo de coisa que só aparece em produção. */
+const BASE = process.env.BASE ?? "http://localhost:5173";
 
 /** Os quatro formatos que a régua cobre, medidos em aparelho de verdade.
  *
