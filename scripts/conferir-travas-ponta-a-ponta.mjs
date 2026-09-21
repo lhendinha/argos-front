@@ -1,5 +1,6 @@
 /** A conferência ponta a ponta do `PLANO_TRAVAS_E_TETOS.md`, num grupo de
- *  teste em produção (regra 6 da seção 0 do CONTEXT).
+ *  teste em produção -- regra 4 de `CLAUDE.md`, "nasce com quatro
+ *  coisas".
  *
  * 🔴 **Não é a conferência de deploy.** Esta USA o sistema: cria cliente e
  * processo PELA TELA, percorre as sete telas e afirma que NENHUMA produz
