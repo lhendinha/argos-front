@@ -22,6 +22,12 @@ import { describe, expect, it } from "vitest";
  * ponteiro é legítimo e corrigir os dez seria ruído, então a busca tenta
  * `front/` e depois `api/`. Por isso o guarda pula quando o front está
  * sozinho -- igual ao irmão.
+ *
+ * ⚠️ **O README também cita seção, e cita CRUZADO** (`api/CONTEXT.md` do
+ * front, `front/CONTEXT.md` da api) -- ficou de fora na primeira versão e
+ * dois ponteiros do `api/README.md` quebraram calados quando o `CONTEXT.md`
+ * dele foi fatiado. Entra como fonte, com o arquivo inteiro tratado como
+ * "comentário" -- ele já é só prosa.
  */
 
 const COMENTARIO_DE_LINHA = /\/\/[^\n]*/g;
@@ -36,9 +42,19 @@ const NAO_E_ARQUIVO = new Set([
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, "../..");
 
-/** Os títulos de um `.md`, sem o `#`. Vazio quando o arquivo não existe. */
-function titulos(relativo: string): string[] {
-  for (const base of ["", "front", "api"]) {
+/** Os títulos de um `.md`, sem o `#`. Vazio quando o arquivo não existe.
+ *
+ * 🔴 **`preferencia` desempata nome que existe nos DOIS repositórios**
+ * (`CONTEXT.md`, `NARRATIVA.md`, `CLAUDE.md`). Sem prefixo, `api/README.md`
+ * citando `NARRATIVA.md` batia primeiro em `front/NARRATIVA.md` -- existe,
+ * então a ordem fixa parava ali, no repositório ERRADO. Quem cita sem
+ * prefixo quer o PRÓPRIO; o outro é só fallback pro caso cross-repo
+ * explícito (`api/CONTEXT.md` citado de dentro do front). */
+function titulos(relativo: string, preferencia?: "front" | "api"): string[] {
+  const ordem = preferencia
+    ? [preferencia, "", preferencia === "front" ? "api" : "front"]
+    : ["", "front", "api"];
+  for (const base of ordem) {
     const abs = path.join(RAIZ, base, relativo);
     if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) continue;
     return fs
@@ -64,28 +80,55 @@ function arvore(base: string, extensoes: string[]): [string, string][] {
 const FONTES: [string, string][] = [
   ...arvore("front/src", [".ts", ".tsx"]),
   ...arvore("front/scripts", [".mjs", ".ts"]),
+  // 🔴 O README também cita seção -- e cita CRUZADO (api/CONTEXT.md do
+  // front, front/CONTEXT.md da api), então é código de verdade pro guarda.
+  ...(["front/README.md", "api/README.md"] as const)
+    .map((rel): [string, string] => [rel, path.join(RAIZ, rel)])
+    .filter(([, abs]) => fs.existsSync(abs))
+    .map(([rel, abs]): [string, string] => [rel, fs.readFileSync(abs, "utf8")]),
 ];
 
 /** Os comentários de um arquivo numa linha só.
  *
  * ⚠️ As quebras do bloco (`\n * `) viram espaço: sem isso, um título citado
- * que atravessa duas linhas nunca casaria. */
-const comentarios = (texto: string) =>
-  [
-    ...(texto.match(COMENTARIO_DE_BLOCO) ?? []),
-    ...(texto.match(COMENTARIO_DE_LINHA) ?? []),
-  ]
-    .join("\n")
-    .replace(/\s*\n\s*\*?\s*/g, " ");
+ * que atravessa duas linhas nunca casaria.
+ * ⚠️ Um `.md` inteiro já É prosa -- nada de comentário pra extrair, o
+ * arquivo inteiro entra, só com a quebra de linha normalizada igual.
+ * ⚠️ **`>` de blockquote sobrevivia à junção** e colava no meio do título
+ * ("Quem responde, > recebe") -- citação CORRETA acusada de quebrada
+ * porque o texto extraído tinha lixo. */
+const comentarios = (texto: string, caminho: string) =>
+  caminho.endsWith(".md")
+    ? texto
+        .split("\n")
+        .map((l) => l.replace(/^>\s*/, ""))
+        .join("\n")
+        .replace(/\s*\n\s*/g, " ")
+    : [
+        ...(texto.match(COMENTARIO_DE_BLOCO) ?? []),
+        ...(texto.match(COMENTARIO_DE_LINHA) ?? []),
+      ]
+        .join("\n")
+        .replace(/\s*\n\s*\*?\s*/g, " ");
 
 const CITACAO = /(?:([\w-]+)\s+(?:do|da|de)\s+)?`?([\w./-]+\.md)`?([^`\n]{0,60})/g;
 const SECAO_DEPOIS = /^[,:]?\s*(?:se(?:ç|c)(?:ão|ao)\s+([\w-]+)|,\s*\*?"([^"]+)")/i;
 const SECAO_ANTES = /^se(?:ç|c)(?:ão|ao)$/i;
 
+/** O título vem ANTES do arquivo, ligado por "no"/"na"/"em" -- não
+ * "do/da/de" (essa forma o `SECAO_ANTES` já cobre). Sem este segundo
+ * padrão a citação nem é reconhecida: não "resolve errado", é INVISÍVEL --
+ * foi assim que uma mutação passou batido na primeira versão (README usa
+ * esta forma o tempo todo).
+ * ⚠️ Escrita SEM o exemplo entre crases de propósito: um exemplo literal
+ * aqui seria uma citação de verdade, e o sentinela pegaria a si mesmo. */
+const CITACAO_ANTES_DO_NOME = /\*?"([^"]+)"\*?\s+(?:no|na|em|do|da|de)\s+`([\w./-]+\.md)`/g;
+
 /** Ponteiros citados num arquivo: `[nome do documento, seção]`. */
-function ponteiros(texto: string): [string, string | null][] {
+function ponteiros(texto: string, caminho: string): [string, string | null][] {
   const achados: [string, string | null][] = [];
-  for (const [, antes, arquivo, depois] of comentarios(texto).matchAll(CITACAO)) {
+  const comentado = comentarios(texto, caminho);
+  for (const [, antes, arquivo, depois] of comentado.matchAll(CITACAO)) {
     if (NAO_E_ARQUIVO.has(arquivo)) continue;
     const seguinte = SECAO_DEPOIS.exec(depois);
     // "seção 3 do `CONTEXT.md`" -- o número vem ANTES do nome do arquivo.
@@ -97,6 +140,9 @@ function ponteiros(texto: string): [string, string | null][] {
       ? antes
       : null;
     achados.push([arquivo, seguinte?.[1] ?? seguinte?.[2] ?? anterior ?? null]);
+  }
+  for (const [, titulo, arquivo] of comentado.matchAll(CITACAO_ANTES_DO_NOME)) {
+    if (!NAO_E_ARQUIVO.has(arquivo)) achados.push([arquivo, titulo]);
   }
   return achados;
 }
@@ -110,10 +156,14 @@ const achaSecao = (tituloDoArquivo: string[], secao: string) =>
 
 const TEM_A_API = fs.existsSync(path.join(RAIZ, "api/src"));
 
+/** De qual repositório é o arquivo que cita -- pra `titulos` desempatar. */
+const repoDe = (caminho: string): "front" | "api" =>
+  caminho.startsWith("api/") ? "api" : "front";
+
 describe("os ponteiros da prosa levam a algum lugar", () => {
   it("varre a árvore de verdade -- senão passaria vazio", () => {
     expect(FONTES.length).toBeGreaterThan(300);
-    const todos = FONTES.flatMap(([, t]) => ponteiros(t));
+    const todos = FONTES.flatMap(([caminho, t]) => ponteiros(t, caminho));
     expect(todos.length).toBeGreaterThan(40);
     expect(titulos("CLAUDE.md").length).toBeGreaterThan(5);
     // 🔴 Montado: escrito inteiro, o sentinela existiria NESTE arquivo.
@@ -124,7 +174,9 @@ describe("os ponteiros da prosa levam a algum lugar", () => {
     const orfaos: Record<string, string[]> = {};
     for (const [caminho, texto] of FONTES) {
       const faltando = [
-        ...new Set(ponteiros(texto).map(([a]) => a).filter((a) => !titulos(a).length)),
+        ...new Set(
+          ponteiros(texto, caminho).map(([a]) => a).filter((a) => !titulos(a, repoDe(caminho)).length),
+        ),
       ];
       if (faltando.length) orfaos[caminho] = faltando.sort();
     }
@@ -140,9 +192,9 @@ describe("os ponteiros da prosa levam a algum lugar", () => {
     for (const [caminho, texto] of FONTES) {
       const faltando = [
         ...new Set(
-          ponteiros(texto)
+          ponteiros(texto, caminho)
             .filter(([arquivo, secao]) => {
-              const t = titulos(arquivo);
+              const t = titulos(arquivo, repoDe(caminho));
               return secao !== null && t.length > 0 && !achaSecao(t, secao);
             })
             .map(([arquivo, secao]) => `${arquivo} -> ${secao}`),
