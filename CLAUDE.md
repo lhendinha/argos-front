@@ -167,6 +167,18 @@ desmonta ao navegar -- valor lido uma vez fica "congelado" na tela. Estado
 que muda em runtime vive em contexto (`useSessaoContexto()`, alimentado por
 `useSessao.ts`, é o molde); `localStorage` continua sendo só a persistência.
 
+## A API mora no API Gateway, com o estágio no caminho
+
+🔴 **O endereço da API termina em `/prod`** (`VITE_API_URL`, e
+`scripts/apiDeProducao.mjs` para os roteiros). Nunca achar a base cortando a
+URL no terceiro `/` -- o estágio vai junto e toda chamada vira 403 do Gateway.
+⚠️ **Endereço novo exige o `connect-src` do `vercel.json`**: esquecido, o
+Chrome bloqueia tudo com "falha de rede" e o `curl` funciona.
+⚠️ **Na Vercel, `VITE_*` é Config, nunca Secret**: o valor vai para o
+navegador de qualquer jeito, a Vercel recusa a combinação ao editar, e Secret
+não converte -- apaga e recria. Mudar a variável só vale no próximo build: não
+disparar redeploy antes de o código que a acompanha estar na `main`.
+
 ## Onde cada arquivo mora
 
 `src/`: `types/` (um arquivo por domínio, `index.ts` só reexporta),
@@ -212,6 +224,7 @@ um arquivo grande, e há arquivos acima da régua hoje. Rodá-lo depois de mexer
 | `src/nomeDoProduto.test.ts` | o nome antigo voltando pelo `<title>` |
 | `src/contagensDoReadme.test.ts` | os números do README contra a árvore |
 | `src/padraoDosCamposOpcionais.test.ts` | "(opcional)" no rótulo; o asterisco já diz |
+| `src/test/cspLiberaAApi.test.ts` | o `connect-src` sem o endereço da API de produção, ou com a Function URL de volta |
 
 ## Onde está o resto
 
