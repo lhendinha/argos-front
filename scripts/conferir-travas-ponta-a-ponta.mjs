@@ -27,6 +27,7 @@
  */
 import { chromium } from "playwright";
 import { readFileSync } from "node:fs";
+import { ehDaApi, rotaDaApi } from "./apiDeProducao.mjs";
 
 const APP = "https://argos-monitor.vercel.app";
 const env = Object.fromEntries(
@@ -44,9 +45,9 @@ const navegador = await chromium.launch({ channel: "chrome", headless: false, sl
 const contexto = await navegador.newContext({ viewport: { width: 1500, height: 1000 } });
 const pagina = await contexto.newPage();
 pagina.on("response", (r) => {
-  const u = new URL(r.url());
-  if (u.hostname.includes("lambda-url"))
-    respostas.push({ metodo: r.request().method(), rota: u.pathname + u.search, status: r.status() });
+  // A rota SEM o estágio: `/prod/clientes` não casaria com o `startsWith("/clientes")` abaixo.
+  if (ehDaApi(r.url()))
+    respostas.push({ metodo: r.request().method(), rota: rotaDaApi(r.url()), status: r.status() });
 });
 
 async function esperar(casa, desde) {

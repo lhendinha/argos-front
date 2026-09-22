@@ -58,6 +58,19 @@ describe("avisoDeTentativas", () => {
     expect(r.ofereceRecuperacao).toBe(true);
   });
 
+  it("429 do WAF ou do Gateway, sem `retry_after_segundos`: a mensagem deles, e SEM oferecer redefinir a senha", () => {
+    // Redefinir a senha destrava o bloqueio de SENHA; o de volume não. Oferecer
+    // o atalho mandaria a pessoa trocar uma senha que estava certa.
+    const r = avisoDeTentativas(
+      new ApiError("Muitas requisições. Tente de novo em instantes.", 429, {
+        detail: "Muitas requisições. Tente de novo em instantes.",
+      }),
+    );
+
+    expect(r.erro).toBe("Muitas requisições. Tente de novo em instantes.");
+    expect(r.ofereceRecuperacao).toBeUndefined();
+  });
+
   it("menos de um minuto de espera arredonda pra 1, nunca pra 0", () => {
     // "Tente de novo em 0 minutos" é pior que não dizer nada.
     const r = avisoDeTentativas(

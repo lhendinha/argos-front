@@ -13,9 +13,10 @@
  */
 import { chromium } from "playwright";
 import { readFileSync } from "node:fs";
+import { API_DE_PRODUCAO } from "./apiDeProducao.mjs";
 
 const APP = "https://argos-monitor.vercel.app";
-const API = "https://6onytielawp7g5fniczhomhhta0qlszl.lambda-url.sa-east-1.on.aws";
+const API = API_DE_PRODUCAO;
 const FOTOS = "/tmp/fase10";
 const E = JSON.parse(readFileSync(process.env.ESTADO, "utf8"));
 const PASSOS = process.argv.slice(2);
