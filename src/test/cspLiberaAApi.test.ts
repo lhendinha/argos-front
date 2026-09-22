@@ -39,6 +39,10 @@ describe("o CSP libera a API", () => {
     expect(connectSrc().some((f) => libera(f, origem)), `${origem} fora de: ${connectSrc().join(" ")}`).toBe(true);
   });
 
+  it("a Function URL saiu -- a API não tem mais essa porta, e o CSP não a libera", () => {
+    expect(connectSrc().some((f) => f.includes("lambda-url"))).toBe(false);
+  });
+
   it("o socket continua liberado -- o wss:// do mesmo host NÃO cobre o https://, e vice-versa", () => {
     const fontes = connectSrc();
     expect(fontes.some((f) => libera(f, "wss://abc.execute-api.sa-east-1.amazonaws.com"))).toBe(true);
