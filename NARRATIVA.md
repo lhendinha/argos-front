@@ -3507,3 +3507,470 @@ vermelhas.
 **Produção.** Merge fe79389, publicado pela Vercel em 60 s. Dez checagens em Chrome com janela, SOMENTE LEITURA: o
 roteiro só clica em aba e em pílula, nunca numa linha de dado real, e não cria nem apaga nada -- resíduo zero por
 construção. Nenhum erro de página nem resposta inesperada.
+
+## Mais 12 decisões da seção 3 que eram narrativa, fatiadas em 22/09/2026
+
+### `services/api/` tem SÓ as chamadas de API (27/08/2026)
+
+Nada de `interface`, `type` ou função auxiliar dentro de
+`src/services/api/*.ts`: ali entra só a função que fala com a API
+(`criarCliente`, `listarProcessos`, `lerConfiguracoesDoGrupo`). **Tipos vão
+para `types/`, auxiliares de transformação para `utils/`.**
+
+⚠️ O padrão anterior era o oposto -- eram **15 interfaces locais em 12
+arquivos** de serviço, e a medição disso chegou a ser usada como argumento para
+manter as coisas onde estavam. A decisão foi a inversa: o padrão existente é
+que estava errado.
+
+✅ **Migrados os 18 arquivos em 27/08/2026.** `services/api/` tem só chamadas.
+`paginacao.ts` saiu de lá inteiro -- ele não chama API nenhuma, RECEBE uma
+função de busca e a chama em laço.
+
+🔴 **E o nome muda junto com o lugar.** O que era claro dentro do arquivo de
+origem fica vago num barrel compartilhado, e foi preciso renomear seis:
+
+| era | virou | por quê |
+|---|---|---|
+| `RECURSO` | `CAMINHO_POR_TIPO_DE_OPCAO` | uma constante `RECURSO` no barrel não diz de que recurso |
+| `Envelope` | `EnvelopePaginado` | envelope de quê? |
+| `RespostaCrua` | `RespostaCruaDaApi` | crua em relação a quê? |
+| `OpcoesDePagina` | `OpcoesDePaginacao` | é o par que o laço passa, não "uma página" |
+| `ValorQuery` | `ValorDeParametroDeQuery` | query de banco ou de URL? |
+| `DadosDeDocumento` | `CamposDeDocumento` | "dados de documento" não diz nada |
+| `OpcoesListarOpcoesProcesso` | `OpcoesListarFasesOuSituacoes` | trava-língua, e escondia o recurso |
+| `corpoCamposOpcionais` | `corpoDosCamposDeProcesso` | opcionais de qual coisa? |
+
+### Toda mudança nasce com o teste que a cobre (26/08/2026)
+
+**Regra**: nenhuma mudança ou adição -- componente, campo, filtro, correção --
+entra sem teste que a cubra. Não é "se der tempo": é parte da mudança, no mesmo
+commit.
+
+**Por que está escrito.** Os defeitos deste front passaram por não terem par, e
+nenhum foi descuido:
+
+- `status.warn.text` apontava para um token que **não existia**; caía em `ink`,
+  passava no teste de contraste com 14,81:1 e a cor estava visualmente errada.
+  Só a **cor computada em Chrome real** revelou;
+- a verificação do documento de outro subgrupo afirmava a ausência **antes de a
+  lista carregar** -- um teste que passava sem provar nada;
+- três números da home não eram clicáveis porque as telas "ainda não
+  existiam", e passaram a existir sem ninguém voltar lá.
+
+**O que "cobrir" significa aqui**, e é mais que "existe um teste":
+
+- **O par negativo.** Afirmar que aparece não prova nada sozinho; afirme também
+  o que NÃO deve aparecer -- e **depois de a tela ter carregado**, senão o teste
+  passa por chegar cedo demais.
+- **A mutação.** Reverter a mudança e confirmar que **só** o teste dela falha.
+- **A concordância**, quando duas telas mostram a mesma coisa: cada uma pode
+  estar "certa" sozinha e diferente da outra.
+- **O guarda mecânico**, quando a regra depende de lembrar de repetir algo --
+  ver `src/constants/limites.test.ts`, que varre os `maxLength`.
+
+**O que NÃO precisa de teste novo**: o que um guarda existente já pega sozinho.
+Duplicar guarda é ruído, não cobertura.
+
+🔴 **Cobrir não é o mesmo que passar, e aqui isso é literal.** `jsdom` e Chrome
+**headless** já deram "passou" em tela quebrada. Interface se confere em
+**Chrome com janela**, pelos scripts `verificar-*.mjs` -- e o que se mede é o
+resultado computado (cor, tamanho, posição), não a existência do elemento.
+
+⚠️ **Quando uma mudança não puder ser coberta, isso se escreve** -- aqui,
+nominalmente, com o motivo. Lacuna conhecida é dívida; lacuna silenciosa é
+armadilha. Um caso vivo: `constants/notificacoes.ts` espelha à mão os
+`NOTIFICACAO_*` da API, e **nenhum teste atravessa os dois runtimes**. A rede é
+a degradação graciosa -- `frasePrincipal` cai no título cru para tipo
+desconhecido, `destinoDaNotificacao` devolve `null` para alvo desconhecido.
+
+### Todo número da home leva à lista que ele contou (26/08/2026)
+
+Três números do "Resumo rápido" não eram clicáveis enquanto os vizinhos
+eram, e o motivo estava no código: `// Tarefas levam ao Kanban, que ainda
+não existe` e `// Atendimentos ainda não tem tela`. **As telas passaram a
+existir e ninguém voltou lá.**
+
+Medindo os que TINHAM link, dois abriam a lista errada:
+
+| card | contava | abria |
+|---|---|---|
+| Envios com falha | 2 | **6** |
+| Movimentações (7 dias) | 3 | **4** |
+
+A régua é o cabeçalho de `ResumoRapido`: *"o número e o destino contam a
+MESMA história -- o clique aplica exatamente o filtro da contagem"*. Foi ela
+que decidiu cada caso, e não a simetria visual.
+
+**Atendimentos em andamento** → `/atendimentos` já filtrado, via
+`useLocation().state` como `ProcessosPage` faz. O status vive numa constante
+compartilhada, pra o número e o filtro não divergirem sozinhos.
+
+**Envios com falha** e **Movimentações (N dias)** → o Histórico ganhou duas
+pílulas ("Todos os envios"/"Só com falha" e "Todos os períodos"/"Últimos N
+dias"), e a API ganhou os filtros correspondentes -- ela não tinha nenhum
+dos dois.
+
+⚠️ `DIAS_DA_JANELA_RECENTE` é UM valor, usado no rótulo do card E no `dias`
+que vai pra API. Dois literais divergiriam no primeiro ajuste, e aí o card
+voltaria a anunciar uma janela diferente da que a lista aplica.
+
+**Tarefas sem responsável** → **não navega**. A lista já está na mesma tela
+(o card "Disponíveis para assumir" usa filtro idêntico): o clique rola até
+ele e o destaca por 1,6s. ⚠️ Destacar E rolar -- em tela larga as duas
+colunas cabem juntas e `scrollIntoView` não move nada, então o clique
+ficaria sem resposta.
+
+**Tarefas atrasadas** → a Agenda, **em modo novo**. Este é o interessante:
+
+🔴 Ela passou um tempo sem link **de propósito**, e havia um teste guardando
+essa ausência com o pedido de que quem lhe desse destino apagasse o teste e
+escrevesse por quê. O motivo era real: "atrasadas" é `data < hoje` em
+QUALQUER dia passado, e toda visão da Agenda é limitada por janela de datas
+(dia, semana, 14 dias, grade de 42) abrindo no mês corrente. Mandar pra lá
+levava a uma tela mostrando **zero** delas.
+
+A Agenda ganhou a pílula "Todos os períodos" com a opção "Atrasadas". Com
+ela ligada:
+
+- a consulta troca de FORMA: sai a janela, entram `apenasAbertas` +
+  `dataAte: ontem` -- a mesma definição que o card conta;
+- a lista monta os dias **presentes no resultado**, não 14 à frente, e o
+  vazio diz "Nenhuma tarefa atrasada";
+- **setas e "Hoje" somem**; o **rótulo fica**, dizendo *"Atrasadas — até
+  25/08"*. ⚠️ Manter "Agosto de 2026" ali seria a tela afirmando o contrário
+  do que é -- o defeito que a própria Agenda acabou de perder;
+- o **seletor de visão fica desabilitado**, com o motivo no `title`.
+  Controle desabilitado sem explicação é pior que controle que some.
+
+⚠️ **`periodo` entra na `queryKey`.** Sem isso, ligar "Atrasadas" reusaria o
+resultado da janela anterior -- lista errada, sem erro nenhum. Vale igual
+para os dois filtros do Histórico, e há teste de mutação provando: tirar da
+chave derruba exatamente os testes que a vigiam.
+
+**A auditoria das mudanças achou quatro defeitos, todos introduzidos por
+esta própria rodada** -- e três eram a tela afirmando o contrário do que é,
+que é exatamente o que ela veio consertar:
+
+- **A pílula de visão dizia "Por mês" sobre uma lista corrida.** No modo
+  atrasadas `visao` continuava `"mes"`, e a pílula desabilitada exibia o
+  rótulo antigo. Acontecia pelos DOIS caminhos: chegando da home e ligando o
+  filtro na própria tela. Ligar o modo passou a trocar a visão junto.
+- 🔴 **O cartão "Hoje" afirmava "Nenhuma tarefa para hoje"** -- num modo cuja
+  consulta pede `data_ate: ontem`, então as de hoje NUNCA chegam. A pessoa
+  podia ter cinco vencendo hoje. Agora ele diz que a lista traz só o passado.
+- **"Ver todos os envios" não saía.** O botão do estado vazio limpava só o
+  tipo; com "Só com falha" ligado, o único caminho de volta deixava a lista
+  vazia. E a frase "Nenhum envio deste tipo" apontava pro filtro errado.
+- **"Nova tarefa" herdava o mês navegado** -- quem fosse pra dezembro e
+  depois ligasse o filtro criaria tarefa em 1º/12, já nascida atrasada.
+
+⚠️ E um teste meu **não guardava nada**: o do caminho de volta montava a tela
+com os filtros nos padrões (`apenasComFalha: false`, `dias: 0`), então
+passava mesmo com o botão limpando só o tipo. Agora monta com os três
+LIGADOS -- e a mutação prova que falha sem a correção.
+
+**Como se prova**: `scripts/verificar-links-da-home.mjs` clica em cada
+número em Chrome e compara com o total da tela. Na Agenda a asserção é
+QUAIS tarefas aparecem -- a atrasada **concluída** tem que ficar de fora,
+senão um filtro que esquecesse `apenasAbertas` passaria por acaso. O
+controle (front anterior, mesma API) falha no primeiro clique.
+
+### Por que o Toast virou contexto (03/09/2026)
+
+`ToastProvider` e `useToast` moravam em `components/Toast/`, ao lado de
+`SessaoContext` e `DescarteContext` que já estavam em `contexts/`. A pergunta
+"por que ele está fora?" não tinha resposta escrita.
+
+🔴 **A resposta que eu dei primeiro estava errada.** Argumentei que o Toast
+*desenha na tela* (empilha os avisos) enquanto os outros dois só devolvem
+`{children}`, e que por isso ele era componente. É um critério de **forma** --
+e este projeto não decide por forma em lugar nenhum. A regra escrita aqui é
+*alcance decide o destino*.
+
+**Pelo alcance, ele é o mais global dos três**: `useToast` é importado por 33
+arquivos; `useSessaoContexto` por 8 e `usePedirParaFechar` por 2.
+
+⚠️ **E pasta por TIPO só se paga se for completa.** O valor de `contexts/` é
+poder listar e saber o que existe. Com uma exceção, ela deixa de responder
+isso, e a pergunta volta a exigir busca -- foi exatamente o que aconteceu.
+
+Resultado: `contexts/ToastContext.tsx` (provê) e `components/Aviso/` (desenha
+um aviso). O barril de `components` **não** exporta mais `useToast`: ele não é
+componente, e deixá-lo lá manteria o atalho que escondia a bagunça.
+
+Uma página completa fica assim (`AgendaPage`):
+
+```
+AgendaPage/
+  index.tsx  index.test.tsx
+  constants.ts              -- VISOES, DIAS_DA_LISTA, PONTOS_POR_CELULA
+  types.ts                  -- VisaoDaAgenda, FiltrosDaAgenda (privados daqui)
+  periodoDaAgenda.ts  periodoDaAgenda.test.ts     -- helpers, soltos
+  tarefasPorDia.ts    tarefasPorDia.test.ts
+  hooks/useTarefasDaAgenda.ts  …
+  components/VisaoPorMes/index.tsx  …
+```
+
+### O catálogo inteiro pra traduzir um id (25/08/2026)
+
+Sete telas baixavam um catálogo completo só pra virar id em nome. **A
+Agenda já tinha sido corrigida** com `/atendimentos/resumos`; faltavam as
+que dependem do catálogo de CLIENTES -- o único que cresce sem limite
+(equipe e subgrupos são dezenas por natureza).
+
+O nome agora vem em `cliente_nomes`, DENTRO de cada processo/atendimento.
+`AtendimentosPage` e `AtendimentoDetalhePage` deixaram de pedir `/clientes`
+por completo -- verificado em Chrome: **zero requisições**.
+
+**Os seletores foram os últimos, e fecharam em 25/08/2026** -- ver *Toda
+lista que pode crescer sem limite* logo abaixo. `useTodosOsClientes` não
+existe mais: era o último lugar que baixava o catálogo de clientes.
+
+⚠️ A leitura é `cliente_nomes ?? cliente_ids`, e NÃO um `map` indexado sobre
+os ids. A primeira versão fazia isso e a tabela de Processos apareceu vazia
+na verificação em Chrome: o stub tinha `cliente_nomes` sem `cliente_ids`, e
+iterar pelos ids não produzia nada. Jsdom não pegou -- as fixtures dos testes
+tinham os dois campos.
+
+### Auditoria da rodada de 25/08/2026 — cinco defeitos, todos em Chrome
+
+Feita antes de commitar, sobre o diff da própria rodada. Nenhum apareceu
+lendo o código; todos precisaram de navegador, e **três só com latência**
+(na máquina local a resposta é instantânea e o defeito não existe).
+
+**A raiz de três deles era a mesma:** a página e a pílula liam a MESMA lista,
+e digitar é da pílula.
+
+1. **Fechar a pílula sem escolher deixava a lista da página filtrada, pra
+   sempre.** Buscar "zzz", não achar nada e apertar Esc desabilitava o botão
+   "Nova tarefa" da Agenda -- a tela passava a achar que não existe subgrupo
+   nenhum. `useBuscaDoPainel` zerava o termo ao fechar mas não avisava o pai,
+   porque o aviso era barrado justamente por estar fechado. Hoje FECHAR envia
+   termo vazio.
+2. **Digitar na pílula de subgrupo trocava o quadro inteiro por um
+   esqueleto**, letra a letra. A tela usava `carregando`, que inclui a espera
+   de cada busca. Virou `carregandoPrimeiraVez`.
+3. **O modal de tarefa dividia o hook com a pílula da página**: digitar
+   "famil" dentro do modal filtrava a barra de filtros atrás dele. Agora ele
+   chama `useSubgruposBuscaveis` por conta própria -- o que já era a regra
+   escrita pro quadro e pros membros (*"O modal de tarefa busca os próprios
+   dados"*).
+
+A correção estrutural dos três é `OpcoesBuscaveis.primeiraPagina`: a pílula
+lê `opcoes` (que encolhe ao digitar) e a página lê `primeiraPagina` (que
+não). São duas consultas na mesma chave enquanto não há busca, então o React
+Query faz uma requisição só.
+
+4. **No múltiplo de formulário, escolher não limpava o que tinha sido
+   digitado.** Marcar "Família" depois de digitar "famil" deixava o campo
+   dizendo "famil" -- e como `ResumoSelecionados` esconde o "N selecionados"
+   enquanto há texto, não sobrava nenhum sinal de que algo fora escolhido. O
+   react-select limpa sozinho quando é ele que controla o campo; como aqui
+   quem controla somos nós, faltava tratar a ação `set-value`.
+5. **A tela de Clientes anunciava "120 clientes" com 50 linhas embaixo.**
+   Efeito colateral do teto de busca que a API ganhou nesta mesma rodada.
+   Hoje a linha diz *"Mostrando 50 de 120 clientes — refine a busca"*.
+
+   ⚠️ E a primeira tentativa de consertar criou outro: passou a dizer
+   "Mostrando 10 de 120 — refine a busca" na tela SEM busca, onde a saída
+   certa é clicar na página 2. O aviso só vale com busca ativa **e** com a
+   tabela já correspondendo ao que foi digitado -- durante a espera entre
+   teclas ela ainda mostra o resultado anterior.
+
+**O que a auditoria confirmou que NÃO era defeito:** Backspace num campo de
+busca não apaga o valor escolhido (o `onChange(null)` que o X introduziu
+chega a existir, mas `backspaceRemovesValue` não dispara aqui), e a barra de
+páginas não aparece durante a busca de clientes -- o `total_paginas` que a
+API devolve ali não vira página clicável.
+
+### Teto de campo: o front discordava de si mesmo (25/08/2026)
+
+Cada formulário escrevia o próprio `maxLength`, e por isso eles não batiam.
+O nome do cliente é o caso que fecha o argumento:
+
+| onde | teto |
+|---|---|
+| criar cliente | **nenhum** |
+| editar cliente | **256** |
+| o que o servidor aceita | **512** |
+
+Três respostas para a mesma pergunta, no mesmo campo. Quem cadastrasse uma
+razão social longa passava pela criação e **não conseguia corrigi-la
+depois**; quem tentasse editar batia numa parede invisível na metade do que
+o sistema permite -- sem mensagem, porque `maxLength` não avisa, só para de
+aceitar tecla.
+
+Os tetos agora vêm de `constants/limites.ts`, no mesmo espírito de
+`constants/senha.ts`: **quem decide continua sendo o servidor**, isto é
+conveniência pra a pessoa não descobrir o limite depois de enviar.
+
+⚠️ A tela de Configurações do grupo NÃO usa a constante, e faz certo: ela lê
+`nome_tamanho_maximo` de `GET /configuracoes`. Onde dá pra perguntar,
+perguntar é melhor que espelhar.
+
+⚠️ Vários tetos valem 512 e continuam SEPARADOS, igual do lado da API: valor
+igual não é decisão igual.
+
+**E `ALTURA_MAXIMA_MENU` existia duas vezes**, com nomes diferentes -- aqui e
+como `ALTURA_LISTA` em `theme/painelFiltro.ts`, ambos 240. Os dois limitam a
+MESMA lista do MESMO componente por caminhos diferentes (`maxMenuHeight` na
+variante `padrao`, `menuList.maxHeight` na `chip`): mudar um só faria as duas
+variantes do mesmo `Select` discordarem de altura.
+
+`constants/limites.test.ts` varre por LITERAL, não por campo -- um número
+solto num `maxLength` já é a duplicata, tenha nome do outro lado ou não. Tem
+um teste de controle junto: sem ele, apagar todos os `maxLength` do projeto
+também deixaria a lista vazia e o teste verde.
+
+### Arrumação de 25/08/2026: env, tipos e rotas
+
+Três coisas fora do lugar, corrigidas juntas.
+
+**1. `import.meta.env` espalhado.** `VITE_API_URL` era lida em DOIS arquivos
+(`services/auth.ts` e `services/api/client.ts`), cada um com o próprio
+`as string | undefined`. Agora só `constants/ambiente.ts` toca
+`import.meta.env` -- um `grep` que ache outro é regressão.
+
+- ⚠️ `EM_DESENVOLVIMENTO` passa por constante e **não** estraga a eliminação
+  de código morto: medido, o bundle saiu byte a byte igual e o
+  `react-query-devtools` continuou fora de todo chunk.
+- ⚠️ A URL do canal é **função**, não constante: ela é lida na hora de
+  conectar, dentro do efeito. Virar constante mudaria esse momento.
+
+**2. Tipos declarados onde deu.** Doze tipos de alcance global viviam dentro
+do módulo que os usou primeiro (`utils/`, `constants/`, `theme/`,
+`components/`, `services/`). Enquanto o consumidor era um só isso não
+incomodava; quando passou a ser vários, o import cruzava a casa inteira e a
+resposta pra "onde declaro este tipo?" passou a depender de quem chegou
+primeiro. Dois arquivos existiam SÓ pra segurar um tipo
+(`components/Toast/tipos.ts`, `components/Select/types.ts`) e sumiram.
+
+Nome global exige nome global -- cinco foram renomeados ao subir:
+
+| antes | depois | por quê |
+|---|---|---|
+| `Intervalo` | `IntervaloDeDatas` | intervalo de quê? tempo, número, página? |
+| `DiaDaGrade` | `DiaDoCalendario` | "grade" não diz de que grade |
+| `Opcao` | `OpcaoDeSelect` | havia **três** `Opcao` diferentes no projeto |
+| `FormaDaOpcao` | `FormaDaOpcaoDeSelect` | acompanha a de cima |
+| `Prioridade` | `PrioridadeDaTarefa` | ao lado de `Tarefa`, dizer de quem é |
+| `OpcaoDePeriodo` | `OpcaoDeMenu` | a forma `{id, rotulo}` não é de período |
+
+O último revelou uma duplicata: `PilulaDeMenu` tinha uma `interface Opcao`
+local idêntica, **com o mesmo comentário sobre o zag copiado junto**. O nome
+descrevia o primeiro uso, não a forma -- então quem precisou da mesma forma
+pra outra coisa escreveu de novo. A cópia foi removida.
+
+⚠️ `PrioridadeDaTarefa` e `StatusDeAtendimento` são DERIVADOS
+(`typeof PRIORIDADES[number]`), o que obriga `types/` a importar de
+`constants/`. O import é `import type`: some na compilação, então não há
+ciclo em tempo de execução. A alternativa -- escrever o tipo à mão -- é
+justamente o que deixaria a lista de palavras e o tipo divergirem.
+
+⚠️ Tipo PRIVADO de uma página continua no `types.ts` dela. O critério é
+alcance, não arquivo.
+
+**3. Rotas dentro do `App.tsx`.** O mapa saiu pra `routes/index.tsx`, onde os
+componentes de rota já eram vizinhos. O `App` ficou com o que é dele: montar
+os provedores.
+
+**Junto foram as pastas de um arquivo só:** oito `pages/*/constants/nome.ts`
+viraram `pages/*/constants.ts`, e quatro `pages/*/helpers/` viraram arquivos
+soltos na pasta da página. `TAMANHOS_PAGINA` estava em `types/` (constante na
+pasta de tipos) e foi pra `constants/paginacao.ts`; `DIAS_DA_LISTA` estava
+declarada dentro de um helper e foi pro `constants.ts` da Agenda.
+
+⚠️ **Um defeito que eu mesmo introduzi e a varredura pegou:** copiei
+`FiltrosBuscaProcessos` e `CamposOpcionaisProcesso` pra `types/` e esqueci de
+apagar os originais em `services/api/processos.ts`. Ficaram DUAS definições
+de cada, com os consumidores ainda na antiga -- exatamente o tipo de divergência
+silenciosa que esta arrumação existe pra impedir. Achado rodando a varredura
+de export sem consumidor depois do refactor, não à mão.
+
+Verificado em Chrome com janela: as nove telas abrem, sem um erro de runtime.
+
+### Prefixo de `queryKey` é contrato: dois formatos não dividem a mesma chave
+
+O carimbo otimista do arraste fazia
+`setQueriesData<Tarefa[]>({ queryKey: ["tarefas"] }, ...)`. Esse prefixo era
+compartilhado por consultas que guardam **objeto**, não array -- a Área de
+trabalho e o detalhe do processo. O `.map` lançava dentro do `onMutate`, e
+quando o `onMutate` lança **o React Query nunca chama o `mutationFn`**: o
+PATCH não saía e o cartão não mudava de coluna no servidor.
+
+Ao mexer em `setQueriesData`/`getQueriesData` por prefixo, restrinja com
+`predicate` ao formato esperado.
+
+### Leitura de `localStorage` no render é congelada pelo React Compiler
+
+O compilador está ligado (`vite.config.ts`). Uma chamada sem dependência
+reativa -- `getApelido()` no corpo do componente -- é memoizada por todo o
+*mount*, e o `AppShell` não desmonta ao navegar: o nome antigo ficava na
+topbar a sessão inteira depois de editar o perfil.
+
+Estado que muda em runtime vive no `SessaoContext` (`apelido`,
+`trocarApelido`). `localStorage` continua sendo a persistência; o contexto é
+quem faz a tela reagir.
+
+### Auditorias de 24/08/2026 — seis rodadas depois da primeira
+
+Seis rodadas adicionais sobre o mesmo diff, com correção e verificação por
+mutação a cada uma. A suíte foi de 501 para 534 testes.
+
+**O padrão dominante:** em quatro das seis, o achado mais grave foi
+regressão da correção da rodada anterior. Não é sinal de que auditar não
+funciona — é de que cada correção é código novo, e código novo tem defeito.
+O que muda entre as rodadas é a gravidade: começou em "renomear uma fase não
+atualiza a tela" e "o cartão do cliente trunca em dez", terminou em mensagem
+inconsistente entre leitura e escrita.
+
+**A forma recorrente do defeito:** corrigir um lado e deixar o gêmeo aberto.
+`TarefasVinculadas` tratava `isError` e `ProcessosDoCliente`, um arquivo ao
+lado, não; `toastErroMutation` ganhou o ramo do 401 transitório e
+`useToastOnQueryError` não.
+
+**O erro mais caro não foi de código, foi de afirmação.** Escrevi num
+comentário que `renovarToken` só limpava tokens em recusa do servidor. Não
+verifiquei — ele limpava em qualquer resposta não-ok, inclusive o 502 de um
+deploy. Outra guarda foi construída em cima dessa afirmação e não protegia o
+caso que descrevia. Daí a varredura de comentários citando símbolo
+inexistente no repo da API (`test_comentarios_citam_codigo_real.py`), que
+cobre a metade mecânica do problema; a metade semântica continua dependendo
+de ir conferir.
+
+### Auditoria de 23-24/08/2026
+
+Revisão completa do front (~19.900 linhas) em 6 frentes paralelas, junto com
+a da API. Os defeitos e as decisões acima saíram dela. A suíte foi de 490
+para 501 testes, cada correção com regressão verificada por mutação.
+
+Três testes que eu tinha escrito passavam com o defeito de volta -- o da
+paginação com filtro precisou esperar o debounce de 300ms antes de olhar a
+tela. Vale desconfiar de teste que passa de primeira.
+
+O projeto também ganhou **ESLint** (`eslint.config.js`, `yarn lint`): antes
+só o `tsc --noEmit` rodava. A config é enxuta e focada no que pega bug --
+`react-hooks/exhaustive-deps` e variável não usada como erro, sem regra de
+estilo.
+
+## 🔴 A paleta é contrato com o E-MAIL da API (30/08/2026)
+
+**Trocar uma cor em `theme/tokens.ts` obriga a alinhar o e-mail de notificação.**
+
+O e-mail vive na API (`api/src/shared/email_template.py`) e **copia** esta
+paleta. A cópia não é descuido: cliente de e-mail não entende variável CSS. Os
+tokens semânticos do `theme/index.ts` viram `var(--chakra-...)`, e nada disso
+sobrevive no Gmail, no Outlook ou no Apple Mail -- o que sobrevive é o VALOR,
+escrito inline em cada elemento.
+
+⚠️ **Duas fontes derivam, e esta derivaria CALADA**: ninguém abre o e-mail de
+teste ao mexer numa cor da tela. A divergência só apareceria para quem recebe.
+
+✅ Por isso há guarda mecânico: `api/tests/test_cores_do_email_batem_com_o_front.py`
+lê `tokens.ts` deste repositório e deixa a suíte da API **vermelha** quando os
+dois divergem. Ele tem um par que impede burlá-lo -- escrever o hex direto no
+HTML, em vez da constante, também acusa.
+
+⚠️ **Mas ele PULA quando os dois repositórios não estão lado a lado.** Trocar
+uma cor sem a API clonada não acusa nada. A regra está escrita também no topo
+de `theme/tokens.ts`, que é onde quem troca a cor está olhando.
