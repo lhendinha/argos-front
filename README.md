@@ -29,7 +29,7 @@ Sua conta AWS foi criada depois da mudança de julho/2025 no modelo de free tier
 Esse front-end não tem tela de auto-cadastro (por design). O primeiro usuário de cada Grupo nasce via API, com a `x-api-key`:
 
 ```bash
-curl -X POST https://SUA_URL.lambda-url.sa-east-1.on.aws/usuarios \
+curl -X POST https://SEU_ID.execute-api.sa-east-1.amazonaws.com/prod/usuarios \
   -H "x-api-key: $PJE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -866,7 +866,7 @@ escritório antigo.
 
 ## Segurança (headers)
 
-`vercel.json` define Content-Security-Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` e HSTS pra todo o app. O CSP libera `connect-src` só pra `https://*.lambda-url.sa-east-1.on.aws` (a API) e bloqueia `script-src`/`object-src` externos — se a Function URL mudar de subdomínio ou surgir uma dependência de terceiro nova (fonte, script), ajustar o CSP em `vercel.json` junto.
+`vercel.json` define Content-Security-Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` e HSTS pra todo o app. O CSP libera `connect-src` só pra `https://*.execute-api.sa-east-1.amazonaws.com` (a API, pelo API Gateway), `wss://` do mesmo host (o sino) e o bucket de documentos, e bloqueia `script-src`/`object-src` externos — se o endereço da API mudar de host ou surgir uma dependência de terceiro nova (fonte, script), ajustar o CSP em `vercel.json` junto. ⚠️ O `https://` e o `wss://` são entradas SEPARADAS: um não cobre o outro. `src/test/cspLiberaAApi.test.ts` cobra que o endereço de produção dos roteiros (`scripts/apiDeProducao.mjs`) esteja liberado.
 
 ## Sobre o React Compiler
 
