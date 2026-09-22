@@ -43,8 +43,8 @@ o motivo. Lacuna conhecida é dívida; lacuna silenciosa é armadilha.
 
 ## Todo plano (`PLANO_*.md`) nasce com quatro coisas
 
-1. A régua de arquivos menores: nada passa de 250 linhas de código, e tipo,
-   hook e helper nascem onde a seção *Onde cada arquivo mora* manda.
+1. A régua de arquivos menores aplicada fase a fase -- ela vale sempre, e o
+   plano só a reafirma: ver *Onde cada arquivo mora*.
 2. A prosa no padrão abaixo, em todo código que o plano escreve.
 3. Uma fase final de documentação, com commit próprio.
 4. 🔴 Uma conferência PONTA A PONTA em produção, **num grupo de teste**: cria
@@ -68,14 +68,36 @@ o motivo. Lacuna conhecida é dívida; lacuna silenciosa é armadilha.
   passa a usá-la, e só então a API tira o campo. Na ordem inversa a tela lê
   `undefined`.
 
-## Tipo de notificação novo: o front sobe ANTES da API
+## Tipo de notificação novo: os DOIS lados, e o compilador cobra
 
-🔴 É a única inversão da ordem normal do projeto. Com a API primeiro, existe
-um intervalo em que ela emite um tipo que o front não conhece, e a pessoa vê
-uma **linha vazia no sino**. Com o front primeiro, o intervalo é inofensivo.
-➡️ Os três arquivos que mudam juntos: `CONTEXT.md`, seção 3.
+Três arquivos mudam juntos: `api/src/domain/entities/notificacao.py` (a
+constante `NOTIFICACAO_*`/`ALVO_*`), `front/src/constants/notificacoes.ts`
+(a constante e a entrada em `TIPOS_DE_NOTIFICACAO`/`ALVOS_DE_NOTIFICACAO`) e
+`front/src/utils/notificacao.ts` (o `case` no `switch`).
+
+🔴 **O front sobe ANTES da API aqui** -- é a única inversão da ordem normal
+do projeto. Com a API primeiro, existe um intervalo em que ela emite um tipo
+que o front não conhece, e a pessoa vê uma **linha vazia no sino**. Com o
+front primeiro, o intervalo é inofensivo.
+
+🔴 **`Notificacao.tipo` e `alvo_tipo` são uniões FECHADAS, não `string`**: o
+`default` dos dois `switch` atribui a `const naoTratado: never`, então um
+tipo novo não tratado **não compila**. Com `string`, o caso novo cairia no
+`default` e viraria a mesma linha vazia, sem o compilador dizer palavra.
+
+🔴 **Do lado da API há um guarda que lê ESTE repositório**:
+`tests/test_tipos_de_notificacao_batem_com_o_front.py` compara as duas
+listas e falha dizendo o que falta onde. ⚠️ Ele pula quando o front não está
+ao lado.
 
 ## O padrão de prosa
+
+| forma | onde | é o quê |
+|---|---|---|
+| `/** ... */` no `export default function` ou no primeiro export | todo arquivo | docstring de módulo -- a primeira linha diz o que o arquivo é |
+| `/** ... */` numa função, hook, tipo ou constante exportada | quando ela pede | docstring da definição |
+| `/* ... */` antes de uma instrução, ou `//` na linha | dentro do corpo | comentário de decisão local |
+| `{/* ... */}` no JSX | entre elementos | idem, na árvore |
 
 Todo bloco tem três partes, nesta ordem, e nada mais: **a primeira linha diz
 o que é** (uma frase, sem "Este componente..."), **a regra e o custo**, e **o
@@ -95,6 +117,11 @@ acompanha um número medido, porque número envelhece e a data diz quando
 remedir. ⚠️ **Nada se perde**: a história entra no `NARRATIVA.md` ANTES de
 sair do código. ➡️ `src/prosaSemDiario.test.ts` cobra a parte mecânica.
 
+⚠️ **Tamanho é sinal, não lei.** Docstring de módulo acima de vinte linhas, ou
+de definição acima de dez, quase sempre carrega diário ou repetição. Não vira
+guarda mecânico -- vira pergunta na revisão: *"o que aqui é regra, e o que é
+história?"*.
+
 🔴 **O ponteiro para documento se escreve `ARQUIVO.md`, "Título da seção"**
 -- nessa ordem, com vírgula. É a forma que `ponteirosDaProsaExistem.test.ts`
 confere; escrita ao contrário ("a seção X do arquivo"), ela passa sem prova.
@@ -110,12 +137,49 @@ existir, andam lado a lado com a isenção escrita.
 ⚠️ Filtro que só existe numa tela (`STATUS_TODOS`) é opção de MENU, não
 status: fica na pasta da página. Rótulo é livre; o `id` é que é contrato.
 ➡️ `src/constanteNuncaViraStringSolta.test.ts`.
+🔴 **Só palavra DISTINTIVA entra no guarda.** "todos", "eu", "nome" são
+comuns demais para varrer por valor -- o guarda viraria ruído, e ruído vira
+teste silenciado. Uma constante assim se cobre pelo tipo (union), não pela
+varredura.
+
+## 🔴 A paleta é contrato com o e-mail da API
+
+Trocar uma cor em `theme/tokens.ts` obriga a alinhar o e-mail de notificação.
+O e-mail vive na API (`api/src/shared/email_template.py`) e **copia** esta
+paleta -- cliente de e-mail não entende variável CSS, então o que sobrevive é
+o VALOR, escrito inline. ⚠️ **Duas fontes derivam, e esta derivaria CALADA**:
+ninguém abre o e-mail de teste ao mexer numa cor da tela.
+➡️ `api/tests/test_cores_do_email_batem_com_o_front.py` lê `tokens.ts` deste
+repositório e deixa a suíte da API vermelha quando os dois divergem.
+⚠️ Ele PULA quando os dois repositórios não estão lado a lado.
+
+## Duas armadilhas gerais, fora de qualquer tela específica
+
+⚠️ **Prefixo de `queryKey` é contrato**: `setQueriesData`/`getQueriesData`
+por prefixo alcançam TODA consulta que começa com ele, mesmo as que guardam
+formato diferente (array vs. objeto). Um `.map` dentro do `onMutate` lançando
+faz o React Query nunca chamar o `mutationFn` -- o PATCH não sai e nada
+avisa. Restrinja com `predicate` ao formato esperado.
+
+⚠️ **Leitura de `localStorage` no render é memoizada pelo React Compiler**
+(ligado em `vite.config.ts`) por todo o *mount* de um componente que não
+desmonta ao navegar -- valor lido uma vez fica "congelado" na tela. Estado
+que muda em runtime vive em contexto (`useSessaoContexto()`, alimentado por
+`useSessao.ts`, é o molde); `localStorage` continua sendo só a persistência.
 
 ## Onde cada arquivo mora
 
 `src/`: `types/` (um arquivo por domínio, `index.ts` só reexporta),
 `constants/`, `utils/`, `services/api/` (só as chamadas de API), `theme/`,
 `hooks/`, `contexts/`, `components/`, `pages/`.
+
+🔴 **Arquivo novo ou TOCADO não passa de 250 linhas de código** -- sem prosa e
+sem linhas vazias, e vale com plano ou sem plano. O que transborda se divide
+pelas regras abaixo.
+⚠️ **Sem guarda que reprove**, ao contrário dos itens 4 e 5 abaixo.
+`scripts/medirArquivos.mjs` RELATA a contagem; nenhum teste fica vermelho por
+um arquivo grande, e há arquivos acima da régua hoje. Rodá-lo depois de mexer
+é o que faz a régua existir.
 
 1. **Componente e página viram PASTA com `index.tsx`.** Tudo o mais --
    constante, tipo, helper, hook -- é arquivo solto. ⚠️ A exceção é
@@ -148,7 +212,6 @@ status: fica na pasta da página. Rótulo é livre; o `id` é que é contrato.
 | `src/nomeDoProduto.test.ts` | o nome antigo voltando pelo `<title>` |
 | `src/contagensDoReadme.test.ts` | os números do README contra a árvore |
 | `src/padraoDosCamposOpcionais.test.ts` | "(opcional)" no rótulo; o asterisco já diz |
-| `scripts/medirArquivos.mjs` | arquivo acima de 250 linhas de código |
 
 ## Onde está o resto
 
