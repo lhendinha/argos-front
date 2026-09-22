@@ -9,7 +9,7 @@
  * rota -- não haveria como separar o sino do resto.
  *
  * ⚠️ **Zero tentativa de login**: a sessão vem de `abrirProducaoLogado`. O site
- * da Vercel é aberto UMA vez; as chamadas vão direto à URL da lambda, com o
+ * da Vercel é aberto UMA vez; as chamadas vão direto à API, com o
  * token que a própria tela guardou. Um laço contra a Vercel dispara o
  * Security Checkpoint dela.
  *
@@ -17,8 +17,9 @@
  * insistir com token vencido não mede nada.
  */
 import { abrirProducaoLogado } from "./sessaoDeProducao.mjs";
+import { API_DE_PRODUCAO } from "./apiDeProducao.mjs";
 
-const API = "https://6onytielawp7g5fniczhomhhta0qlszl.lambda-url.sa-east-1.on.aws";
+const API = API_DE_PRODUCAO;
 const CHAMADAS = 10;
 const ESPACO_MS = 30_000;
 

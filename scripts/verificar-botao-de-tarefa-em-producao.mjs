@@ -17,6 +17,7 @@
  */
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { API_DE_PRODUCAO } from "./apiDeProducao.mjs";
 
 /* 🔴 Nenhum erro sobe cru daqui.
  *
@@ -75,11 +76,11 @@ if (!entrou) {
 console.log("entrou\n");
 
 // ── o dado, antes da tela ────────────────────────────────────────────────
-const base = await pagina.evaluate(
-  () =>
-    performance.getEntriesByType("resource").map((e) => e.name)
-      .find((n) => n.includes("lambda-url"))?.split("/").slice(0, 3).join("/") ?? null,
-);
+// ⚠️ Nunca cortando a URL no terceiro `/`: o estágio `/prod` iria junto.
+const base = (await pagina.evaluate(
+  (api) => performance.getEntriesByType("resource").some((e) => e.name.startsWith(`${api}/`)),
+  API_DE_PRODUCAO,
+)) ? API_DE_PRODUCAO : null;
 const chave = await pagina.evaluate(
   () => Object.keys(localStorage).find((k) => k.toLowerCase().includes("access")) ?? null,
 );

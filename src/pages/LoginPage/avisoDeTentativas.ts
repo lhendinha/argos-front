@@ -37,6 +37,10 @@ export function avisoDeTentativas(err: unknown): Aviso {
   }
 
   if (err.status === 429) {
+    // ⚠️ Só o bloqueio de SENHA manda `retry_after_segundos`. O 429 do WAF e
+    // o do limite geral do Gateway vêm sem ele -- e ali redefinir a senha
+    // não destrava nada: é volume de requisições, não tentativa errada.
+    if (typeof err.corpo.retry_after_segundos !== "number") return { erro: err.message };
     const segundos = Number(err.corpo.retry_after_segundos) || 0;
     const minutos = Math.max(1, Math.ceil(segundos / 60));
     return {

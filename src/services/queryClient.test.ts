@@ -169,3 +169,19 @@ describe("troca de grupo reseta o cache", () => {
     invalidate.mockRestore();
   });
 });
+
+describe("o 429 nunca é repetido sozinho", () => {
+  /** 🔴 Repetir uma requisição recusada por VOLUME é somar volume em cima do
+   * limite: o WAF e o limite geral do Gateway respondem 429, e três
+   * tentativas automáticas por consulta triplicariam a carga de quem já
+   * passou da conta. */
+  const repetir = queryClient.getDefaultOptions().queries?.retry as (n: number, erro: unknown) => boolean;
+
+  it("429 não repete", () => {
+    expect(repetir(0, new ApiError("Muitas requisições. Tente de novo em instantes.", 429))).toBe(false);
+  });
+
+  it("503 repete -- o par: transitório de servidor continua tentando", () => {
+    expect(repetir(0, new ApiError("indisponível", 503))).toBe(true);
+  });
+});

@@ -16,6 +16,7 @@
  */
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { API_DE_PRODUCAO } from "./apiDeProducao.mjs";
 
 const APP = "https://argos-monitor.vercel.app";
 
@@ -71,16 +72,11 @@ if (!entrou) {
 console.log("entrou\n");
 
 // A base da API não é adivinhada: sai da própria requisição que a página faz.
-const urlDaApi = await pagina.evaluate(
-  () =>
-    performance
-      .getEntriesByType("resource")
-      .map((e) => e.name)
-      .find((n) => n.includes("lambda-url"))
-      ?.split("/")
-      .slice(0, 3)
-      .join("/") ?? null,
-);
+// ⚠️ Nunca cortando a URL no terceiro `/`: o estágio `/prod` iria junto.
+const urlDaApi = (await pagina.evaluate(
+  (api) => performance.getEntriesByType("resource").some((e) => e.name.startsWith(`${api}/`)),
+  API_DE_PRODUCAO,
+)) ? API_DE_PRODUCAO : null;
 conferir(Boolean(urlDaApi), "achou a base da API pelas requisições da própria página", urlDaApi ?? "");
 
 const chaveDoToken = await pagina.evaluate(
