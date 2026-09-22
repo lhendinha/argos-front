@@ -1,9 +1,10 @@
 /** Valor que o servidor entende não se escreve à mão duas vezes.
  *
  * 🔴 O defeito que este guarda existe para impedir é o mesmo do backend
- * (`api/CONTEXT.md`, seção 0c): a palavra funciona hoje e some em silêncio
- * no dia em que mudar, porque a comparação continua válida e só passa a ser
- * sempre falsa. Aqui a versão dele é pior de achar, porque some numa tela:
+ * (`api/CLAUDE.md`, "Constante nunca vira string solta"): a palavra funciona
+ * hoje e some em silêncio no dia em que mudar, porque a comparação continua
+ * válida e só passa a ser sempre falsa. Aqui a versão dele é pior de achar,
+ * porque some numa tela:
  * o card conta 7 e a lista abre vazia.
  *
  * ⚠️ **No front o TypeScript já pega parte disso** -- `minimo: Papel` ou
