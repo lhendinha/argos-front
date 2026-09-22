@@ -23,7 +23,7 @@ import type { ListaDeCentrosProps } from "./types";
  * editar, olho para desativar. Ele já nasceu inline (um campo no topo do
  * cartão) e depois como linha nova em edição; com as três viradas TABELA e
  * as irmãs abrindo modal, dois gestos diferentes na mesma tela liam como
- * inacabado. A história está no `CONTEXT.md`.
+ * inacabado. A história está no `NARRATIVA.md`.
  *
  * ⚠️ **Paginada como Contas**, e ao contrário de Categorias: aqui a ordem é
  * alfabética pura, e a quebra de página não separa nada que dependa de estar

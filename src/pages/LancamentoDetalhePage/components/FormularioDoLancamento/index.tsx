@@ -40,7 +40,7 @@ import type { FormularioDoLancamentoProps } from "./types";
  * saída, e é a que o projeto já usa em três outros campos.
  *
  * ⚠️ **Manda só o que MUDOU** (`camposAlteradosDoLancamento`), como o
- * processo e o atendimento -- ver a história no `CONTEXT.md` do front.
+ * processo e o atendimento -- ver a história no `NARRATIVA.md`.
  *
  * ➡️ `../../index.test.tsx`.
  */

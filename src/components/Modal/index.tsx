@@ -217,7 +217,7 @@ export default function Modal({ titulo, subtitulo, onFechar, descarte, largo, ro
          de uma vez: o Tab deixa de passear pelo formulário de trás (não há
          armadilha de foco em lugar nenhum), e o X daqui some da árvore de
          acessibilidade -- senão haveria dois botões chamados "Fechar" no
-         mesmo documento, que o `CONTEXT.md` proíbe. */
+         mesmo documento -- a regra está no `NARRATIVA.md`. */
       {...(perguntando ? { inert: "" } : {})}
     >
       <Box

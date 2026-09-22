@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 /** Data em comentário só na mesma frase que "medi" -- o resto é diário, e
- * diário mora no `CONTEXT.md`.
+ * diário mora no `NARRATIVA.md`.
  *
- * 🔴 É a parte mecânica da seção 0b do `CONTEXT.md`: "até tal dia dizia",
+ * 🔴 É a parte mecânica do padrão de prosa do `CLAUDE.md`: "até tal dia dizia",
  * "corrigido em", "a versão anterior" saem do código; fica só a data que
  * acompanha um número medido, porque número envelhece e a data diz quando
  * remedir. O irmão é `api/tests/test_docstring_sem_diario.py`.

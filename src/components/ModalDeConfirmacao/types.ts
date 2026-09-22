@@ -36,7 +36,7 @@ export interface ModalDeConfirmacaoProps {
    * de um formulário que continua montado, e o rodapé dele já tem um
    * "Cancelar". Dois botões com o mesmo nome acessível no mesmo documento
    * fazem o leitor de tela anunciar a mesma escolha duas vezes e quebram
-   * qualquer busca por nome -- a regra está em `CONTEXT.md`, seção sobre
+   * qualquer busca por nome -- a regra está no `NARRATIVA.md`, seção sobre
    * nome acessível duplicado. */
   rotuloDeCancelar?: string;
   /** Ação que dá pra desfazer (desativar, arquivar). Some a lixeira e o
