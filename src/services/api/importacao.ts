@@ -1,4 +1,11 @@
-import type { BuscaLida, BuscaPedida, PreviaDaImportacao, ResultadoDaImportacao } from "../../types";
+import type {
+  BuscaLida,
+  BuscaPedida,
+  GravacaoLida,
+  GravacaoPedida,
+  PreviaDaImportacao,
+  ResultadoDaImportacao,
+} from "../../types";
 import { chamar } from "./client";
 
 /** `POST /subgrupos/{id}/processos/buscar-por-oab` -- procura e NÃO grava.
@@ -51,9 +58,16 @@ export function importarProcessos(
   idDaBusca: string,
   numeros: string[],
   responsaveis: string[] = [],
-): Promise<ResultadoDaImportacao> {
+): Promise<ResultadoDaImportacao | GravacaoPedida> {
   return chamar(`/subgrupos/${subgrupoId}/processos/importar`, {
     method: "POST",
     body: { id: idDaBusca, numeros, responsaveis },
-  }) as Promise<ResultadoDaImportacao>;
+  }) as Promise<ResultadoDaImportacao | GravacaoPedida>;
+}
+
+/** `GET /subgrupos/{id}/processos/importacoes/{trabalho_id}` -- o estado da gravação,
+ * e os três números quando ela terminou. ⚠️ A API antiga respondia os números no
+ * `POST` (201); a da Fase 4 do balde responde 202, e o front aceita as duas. */
+export function lerGravacao(subgrupoId: string, trabalhoId: string): Promise<GravacaoLida> {
+  return chamar(`/subgrupos/${subgrupoId}/processos/importacoes/${trabalhoId}`) as Promise<GravacaoLida>;
 }

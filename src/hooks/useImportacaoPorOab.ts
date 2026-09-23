@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
-  BUSCA_CONCLUIDA,
-  BUSCA_FALHOU,
+  TRABALHO_CONCLUIDO,
+  TRABALHO_FALHOU,
   INTERVALO_DE_RELEITURA_DA_BUSCA_MS,
+  MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO,
   TIPO_DA_PAGINA_DA_BUSCA,
   TIPO_DO_FIM_DA_BUSCA,
 } from "../constants";
@@ -11,9 +12,11 @@ import { buscarProcessosPorOab, importarProcessos, lerBusca } from "../services/
 import { esquecerBusca, guardarBusca, lerBuscaGuardada } from "../utils/buscaGuardada";
 import { assinarCanal } from "../utils/canalDeTempoReal";
 import { fundirPagina } from "../utils/importacao";
+import { useGravacaoEmSegundoPlano } from "./useGravacaoEmSegundoPlano";
 import type {
   BuscaLida,
   FimDaBusca,
+  GravacaoLida,
   PaginaDaBusca,
   PreviaDaImportacao,
   ProcessoEncontrado,
@@ -57,7 +60,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
   const aplicar = useCallback(
     (lida: BuscaLida) => {
       if (lida.trabalho_id !== trabalhoAtual.current) return;
-      if (lida.estado === BUSCA_CONCLUIDA) {
+      if (lida.estado === TRABALHO_CONCLUIDO) {
         trabalhoAtual.current = null;
         esquecerBusca(subgrupoId);
         const processos = lida.processos ?? [];
@@ -68,7 +71,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
           processos,
         });
         setEtapa(processos.length === 0 ? "vazio" : "previa");
-      } else if (lida.estado === BUSCA_FALHOU) {
+      } else if (lida.estado === TRABALHO_FALHOU) {
         trabalhoAtual.current = null;
         esquecerBusca(subgrupoId);
         setErro(lida.erro ?? "Não foi possível buscar agora.");
@@ -173,6 +176,22 @@ export function useImportacaoPorOab(subgrupoId: string) {
     [subgrupoId],
   );
 
+  /** O fim da gravação em segundo plano: os três números, ou o erro de quem caiu. */
+  const aoTerminarGravacao = useCallback((lida: GravacaoLida) => {
+    if (lida.estado === TRABALHO_CONCLUIDO) {
+      setResultado({
+        cadastrados: lida.cadastrados ?? 0,
+        ja_existiam: lida.ja_existiam ?? 0,
+        falharam: lida.falharam ?? [],
+      });
+      setEtapa("concluido");
+    } else {
+      setErro(lida.erro ?? MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO);
+      setEtapa("erro");
+    }
+  }, []);
+  const gravacao = useGravacaoEmSegundoPlano(subgrupoId, etapa === "importando", aoTerminarGravacao);
+
   const importar = useCallback(
     async (numeros: string[], responsaveis: string[]) => {
       if (!previa) return;
@@ -182,28 +201,26 @@ export function useImportacaoPorOab(subgrupoId: string) {
          -- se ele não chegar, ela fica indeterminada em vez de ausente. */
       setProgresso({ feitos: 0, total: numeros.length });
       try {
-        setResultado(await importarProcessos(subgrupoId, previa.id, numeros, responsaveis));
+        const resposta = await importarProcessos(subgrupoId, previa.id, numeros, responsaveis);
+        if ("trabalho_id" in resposta) {
+          /* A API em segundo plano: o progresso segue pelo canal, e o fim também. */
+          gravacao.esperar(resposta.trabalho_id);
+          return;
+        }
+        setResultado(resposta);
         setEtapa("concluido");
       } catch (e) {
-        /* 🔴 A mensagem NÃO pode afirmar que nada foi gravado.
-         *
-         * Um timeout no meio deixa os processos já criados no banco -- dizer
-         * "a importação falhou" mandaria a pessoa procurar o que já está lá.
-         * Repetir é seguro: o servidor pula o que já existe. */
-        setErro(
-          e instanceof Error
-            ? e.message
-            : "A importação foi interrompida; parte dos processos pode ter sido cadastrada. " +
-              "Buscar de novo cadastra só o que falta.",
-        );
+        /* 🔴 A mensagem NÃO pode afirmar que nada foi gravado -- ver a constante. */
+        setErro(e instanceof Error ? e.message : MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO);
         setEtapa("erro");
       }
     },
-    [previa, subgrupoId],
+    [previa, subgrupoId, gravacao],
   );
 
   const recomecar = useCallback(() => {
     buscaAtual.current++;
+    gravacao.esquecer();
     trabalhoAtual.current = null;
     esquecerBusca(subgrupoId);
     setParcial([]);
@@ -212,7 +229,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
     setResultado(null);
     setErro("");
     setProgresso(null);
-  }, [subgrupoId]);
+  }, [subgrupoId, gravacao]);
 
   return { etapa, previa, parcial, resultado, erro, progresso, buscar, importar, recomecar };
 }
