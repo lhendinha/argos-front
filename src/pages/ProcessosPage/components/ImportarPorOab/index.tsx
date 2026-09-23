@@ -9,6 +9,7 @@ import { getEmail } from "../../../../services/auth";
 import { qk } from "../../../../services/queryKeys";
 import { resumoDaImportacao } from "../../../../utils/importacao";
 import AvisoDaImportacao from "../AvisoDaImportacao";
+import BuscaEmAndamento from "../BuscaEmAndamento";
 import FormularioDeOab from "../FormularioDeOab";
 import PreviaDaImportacao from "../PreviaDaImportacao";
 import type { ImportarPorOabProps } from "./types";
@@ -26,7 +27,7 @@ export default function ImportarPorOab({
   onImportou,
 }: ImportarPorOabProps) {
   const [subgrupoId, setSubgrupoId] = useState(subgrupos[0]?.subgrupo_id ?? "");
-  const { etapa, previa, resultado, erro, progresso, buscar, importar, recomecar } =
+  const { etapa, previa, parcial, resultado, erro, progresso, buscar, importar, recomecar } =
     useImportacaoPorOab(subgrupoId);
 
   const meuEmail = getEmail() ?? "";
@@ -143,6 +144,8 @@ export default function ImportarPorOab({
            quer alargar. */
         periodoAberto={etapa === "vazio"}
       />
+
+      {etapa === "buscando" && <BuscaEmAndamento processos={parcial} />}
     </Cartao>
   );
 }

@@ -5,6 +5,7 @@ import {
   erroDaBusca,
   estadoDoAchado,
   etiquetaDoAchado,
+  fundirPagina,
   preSelecionados,
   quantosNoutroSubgrupo,
   resumoDaImportacao,
@@ -314,5 +315,22 @@ describe("a concordância dos rótulos", () => {
   it("plural com zero e com muitos", () => {
     expect(concordar(0, "encontrado", "encontrados")).toBe("encontrados");
     expect(concordar(45, "encontrado", "encontrados")).toBe("encontrados");
+  });
+});
+
+describe("fundirPagina", () => {
+  const p = (numero: string, comunicacoes: number) =>
+    ({ numero_processo: numero, apelido: numero, comunicacoes, ja_existe: false }) as ProcessoEncontrado;
+
+  it("🔴 substitui a linha pelo número e mantém a ordem da primeira aparição", () => {
+    const fundidas = fundirPagina([p("A", 1), p("B", 1)], [p("C", 2), p("A", 4)]);
+    expect(fundidas.map((x) => [x.numero_processo, x.comunicacoes])).toEqual([
+      ["A", 4], ["B", 1], ["C", 2],
+    ]);
+  });
+
+  it("o par negativo: a mesma linha duas vezes NÃO duplica nem soma", () => {
+    const fundidas = fundirPagina(fundirPagina([], [p("A", 3)]), [p("A", 3)]);
+    expect(fundidas).toEqual([p("A", 3)]);
   });
 });

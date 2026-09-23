@@ -15,6 +15,7 @@ export * from "./arquivamento";
 export * from "./cliente";
 export * from "./historico";
 export * from "./canal";
+export * from "./importacao";
 export * from "./notificacoes";
 export * from "./vinculoDeRegistro";
 export * from "./senha";

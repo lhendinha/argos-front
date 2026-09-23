@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const api = vi.hoisted(() => ({
   buscarProcessosPorOab: vi.fn(),
   importarProcessos: vi.fn(),
+  lerBusca: vi.fn(),
 }));
 vi.mock("../services/api", () => api);
 
@@ -27,6 +28,7 @@ function previa(processos = [ACHADO]) {
 beforeEach(() => {
   vi.clearAllMocks();
   limparOuvintesDoCanal();
+  sessionStorage.clear();
 });
 
 describe("as duas etapas", () => {
@@ -180,5 +182,123 @@ describe("a interrupção no meio", () => {
 
     expect(result.current.erro).toContain("pode ter sido cadastrada");
     expect(result.current.erro).toContain("só o que falta");
+  });
+});
+
+
+describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => {
+  const OUTRO = { ...ACHADO, numero_processo: "50000011220248210001", apelido: "Usucapião" };
+
+  function pagina(trabalho_id: string, processos: unknown[]) {
+    return { tipo: "importacao_busca", trabalho_id, processos } as unknown as MensagemDoCanal;
+  }
+  function fim(trabalho_id: string, extra = {}) {
+    return { tipo: "importacao_busca_fim", trabalho_id, ...extra } as unknown as MensagemDoCanal;
+  }
+
+  async function buscarComId(result: { current: ReturnType<typeof useImportacaoPorOab> }, id = "t-1") {
+    api.buscarProcessosPorOab.mockResolvedValue({ trabalho_id: id });
+    await act(() => result.current.buscar("123456", "RS"));
+  }
+
+  it("fica em `buscando` e FUNDE as páginas pelo número (substitui, não acrescenta)", async () => {
+    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    await buscarComId(result);
+
+    act(() => publicarNoCanal(pagina("t-1", [{ ...ACHADO, comunicacoes: 3 }])));
+    act(() => publicarNoCanal(pagina("t-1", [OUTRO, { ...ACHADO, comunicacoes: 5 }])));
+
+    expect(result.current.etapa).toBe("buscando");
+    expect(result.current.parcial.map((p) => [p.numero_processo, p.comunicacoes])).toEqual([
+      [ACHADO.numero_processo, 5],
+      [OUTRO.numero_processo, 3],
+    ]);
+  });
+
+  it("⚠️ página de OUTRA busca é descartada", async () => {
+    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    await buscarComId(result);
+
+    act(() => publicarNoCanal(pagina("t-velha", [ACHADO])));
+
+    expect(result.current.parcial).toEqual([]);
+  });
+
+  it("o fim relê pelo GET, e a prévia é a do GET (fonte), não a das páginas", async () => {
+    /* ⚠️ A primeira volta da releitura periódica sai logo, e ainda está na fila:
+       sem isto a prévia chegaria por ELA, e o teste passaria com o fim ignorado. */
+    api.lerBusca.mockResolvedValueOnce({ trabalho_id: "t-1", estado: "na_fila" }).mockResolvedValue({
+      trabalho_id: "t-1", estado: "concluido", id: "bloco", total_encontrado: 2,
+      atingiu_o_teto: true, processos: [ACHADO, OUTRO],
+    });
+    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    await buscarComId(result);
+    await waitFor(() => expect(api.lerBusca).toHaveBeenCalledTimes(1));
+    act(() => publicarNoCanal(pagina("t-1", [ACHADO])));
+    expect(result.current.etapa).toBe("buscando");
+
+    await act(async () => publicarNoCanal(fim("t-1")));
+
+    await waitFor(() => expect(result.current.etapa).toBe("previa"));
+    expect(api.lerBusca).toHaveBeenCalledTimes(2);
+    expect(api.lerBusca).toHaveBeenCalledWith("sub", "t-1");
+    expect(result.current.previa).toEqual({
+      id: "bloco", total_encontrado: 2, atingiu_o_teto: true, processos: [ACHADO, OUTRO],
+    });
+  });
+
+  it("fim sem nada encontrado é `vazio`, e o PJe fora é `erro` com a mensagem", async () => {
+    api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [] });
+    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    await buscarComId(result);
+    await act(async () => publicarNoCanal(fim("t-1")));
+    await waitFor(() => expect(result.current.etapa).toBe("vazio"));
+
+    api.lerBusca.mockResolvedValueOnce({ trabalho_id: "t-2", estado: "falhou", erro: "O PJe está limitando" });
+    await buscarComId(result, "t-2");
+    await act(async () => publicarNoCanal(fim("t-2", { erro: "O PJe está limitando" })));
+    await waitFor(() => expect(result.current.etapa).toBe("erro"));
+    expect(result.current.erro).toBe("O PJe está limitando");
+  });
+
+  it("🔴 sem canal, a releitura periódica traz o fim", async () => {
+    vi.useFakeTimers();
+    try {
+      api.lerBusca
+        .mockResolvedValueOnce({ trabalho_id: "t-1", estado: "na_fila" })
+        .mockResolvedValue({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [ACHADO] });
+      const { result } = renderHook(() => useImportacaoPorOab("sub"));
+      await buscarComId(result);
+
+      await act(async () => vi.advanceTimersByTime(0));
+      expect(result.current.etapa).toBe("buscando");
+      await act(async () => vi.advanceTimersByTime(5000));
+
+      expect(result.current.etapa).toBe("previa");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a tela reaberta volta à busca guardada, e recomeçar a esquece", async () => {
+    sessionStorage.setItem("argos:busca-por-oab:sub", "t-9");
+    api.lerBusca.mockResolvedValue({ trabalho_id: "t-9", estado: "concluido", id: "b", processos: [ACHADO] });
+    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+
+    await waitFor(() => expect(result.current.etapa).toBe("previa"));
+    expect(sessionStorage.getItem("argos:busca-por-oab:sub")).toBeNull();
+
+    sessionStorage.setItem("argos:busca-por-oab:sub", "t-10");
+    act(() => result.current.recomecar());
+    expect(sessionStorage.getItem("argos:busca-por-oab:sub")).toBeNull();
+  });
+
+  it("o par negativo: a resposta ANTIGA (a prévia inteira) continua funcionando", async () => {
+    api.buscarProcessosPorOab.mockResolvedValue(previa());
+    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    await act(() => result.current.buscar("123456", "RS"));
+
+    expect(result.current.etapa).toBe("previa");
+    expect(api.lerBusca).not.toHaveBeenCalled();
   });
 });
