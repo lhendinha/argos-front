@@ -1,4 +1,4 @@
-import type { PreviaDaImportacao, ResultadoDaImportacao } from "../../types";
+import type { BuscaLida, BuscaPedida, PreviaDaImportacao, ResultadoDaImportacao } from "../../types";
 import { chamar } from "./client";
 
 /** `POST /subgrupos/{id}/processos/buscar-por-oab` -- procura e NÃO grava.
@@ -9,13 +9,18 @@ import { chamar } from "./client";
  * seria pior nos dois pontos.
  *
  * ⚠️ Piso `manager` -- a mesma régua da confirmação. Um `user` não chega aqui.
+ *
+ * 🔴 **Duas respostas possíveis, de propósito.** A API antiga devolve a prévia
+ * inteira; a da Fase 3b do balde devolve 202 com o id, e a lista vem pelo
+ * canal. O front sobe PRIMEIRO e aceita as duas -- na ordem inversa, a tela
+ * leria `processos` de uma resposta que não os tem.
  */
 export function buscarProcessosPorOab(
   subgrupoId: string,
   numeroOab: string,
   ufOab: string,
   periodo: { de?: string; ate?: string } = {},
-): Promise<PreviaDaImportacao> {
+): Promise<PreviaDaImportacao | BuscaPedida> {
   return chamar(`/subgrupos/${subgrupoId}/processos/buscar-por-oab`, {
     method: "POST",
     body: {
@@ -24,7 +29,13 @@ export function buscarProcessosPorOab(
       de: periodo.de ?? "",
       ate: periodo.ate ?? "",
     },
-  }) as Promise<PreviaDaImportacao>;
+  }) as Promise<PreviaDaImportacao | BuscaPedida>;
+}
+
+/** `GET /subgrupos/{id}/processos/buscas/{trabalho_id}` -- o estado da busca, e a
+ * prévia inteira quando ela terminou. `404` para busca de outra pessoa. */
+export function lerBusca(subgrupoId: string, trabalhoId: string): Promise<BuscaLida> {
+  return chamar(`/subgrupos/${subgrupoId}/processos/buscas/${trabalhoId}`) as Promise<BuscaLida>;
 }
 
 /** `POST /subgrupos/{id}/processos/importar` -- grava os escolhidos.

@@ -195,3 +195,21 @@ export function quantosNoutroSubgrupo(processos: ProcessoEncontrado[]): number {
 export function concordar(n: number, singular: string, plural: string): string {
   return n === 1 ? singular : plural;
 }
+
+/** Junta uma página da busca ao que a tela já mostra.
+ *
+ * 🔴 **SUBSTITUI pelo número, nunca acrescenta.** A paginação do PJe é por
+ * comunicação: o mesmo processo volta em várias páginas, e cada mensagem traz a
+ * linha dele RECALCULADA (contagem, apelido). Acrescentar duplicaria a linha;
+ * somar inflaria a contagem com a comunicação repetida entre páginas.
+ * ⚠️ A ordem é a da primeira aparição: a linha que se atualiza não pula de lugar.
+ */
+export function fundirPagina(
+  atual: ProcessoEncontrado[],
+  pagina: ProcessoEncontrado[],
+): ProcessoEncontrado[] {
+  const novas = new Map(pagina.map((p) => [p.numero_processo, p]));
+  const fundidas = atual.map((p) => novas.get(p.numero_processo) ?? p);
+  const vistos = new Set(atual.map((p) => p.numero_processo));
+  return [...fundidas, ...pagina.filter((p) => !vistos.has(p.numero_processo))];
+}

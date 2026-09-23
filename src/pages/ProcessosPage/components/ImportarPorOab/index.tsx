@@ -9,6 +9,7 @@ import { getEmail } from "../../../../services/auth";
 import { qk } from "../../../../services/queryKeys";
 import { resumoDaImportacao } from "../../../../utils/importacao";
 import AvisoDaImportacao from "../AvisoDaImportacao";
+import BuscaEmAndamento from "../BuscaEmAndamento";
 import FormularioDeOab from "../FormularioDeOab";
 import PreviaDaImportacao from "../PreviaDaImportacao";
 import type { ImportarPorOabProps } from "./types";
@@ -25,8 +26,13 @@ export default function ImportarPorOab({
   onFechar,
   onImportou,
 }: ImportarPorOabProps) {
-  const [subgrupoId, setSubgrupoId] = useState(subgrupos[0]?.subgrupo_id ?? "");
-  const { etapa, previa, resultado, erro, progresso, buscar, importar, recomecar } =
+  const [escolhido, setSubgrupoId] = useState("");
+  /* 🔴 Sem escolha, vale o PRIMEIRO da lista -- inclusive quando ela chega
+     DEPOIS de o modal abrir. Guardar `subgrupos[0]` no `useState` congelava o
+     vazio: com a lista ainda carregando, a busca ia para `/subgrupos//...` e a
+     tela mostrava "Not Found" (visto no Chrome, com o offline recém-subido). */
+  const subgrupoId = escolhido || (subgrupos[0]?.subgrupo_id ?? "");
+  const { etapa, previa, parcial, resultado, erro, progresso, buscar, importar, recomecar } =
     useImportacaoPorOab(subgrupoId);
 
   const meuEmail = getEmail() ?? "";
@@ -143,6 +149,8 @@ export default function ImportarPorOab({
            quer alargar. */
         periodoAberto={etapa === "vazio"}
       />
+
+      {etapa === "buscando" && <BuscaEmAndamento processos={parcial} />}
     </Cartao>
   );
 }

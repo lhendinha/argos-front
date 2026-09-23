@@ -155,6 +155,41 @@ export interface ProgressoDaImportacao extends ContagemDaImportacao {
   tipo: "importacao_progresso";
 }
 
+/** `POST .../buscar-por-oab` depois da Fase 3b do balde: o pedido aceito (202).
+ * A lista chega pelo canal, e a tela recarregada a relê pelo id. */
+export interface BuscaPedida {
+  trabalho_id: string;
+}
+
+export type EstadoDaBusca = "na_fila" | "concluido" | "falhou";
+
+/** Uma página da busca pelo canal: as linhas ATUALIZADAS dos processos que ela
+ * tocou -- recalculadas no servidor sobre o acumulado ordenado por data. */
+export interface PaginaDaBusca {
+  tipo: "importacao_busca";
+  trabalho_id: string;
+  processos: ProcessoEncontrado[];
+}
+
+/** O fim da busca pelo canal. ⚠️ Só o resumo: a lista inteira a tela relê pelo
+ * `GET`, que é a fonte -- uma página perdida no canal não some da prévia. */
+export interface FimDaBusca {
+  tipo: "importacao_busca_fim";
+  trabalho_id: string;
+  erro?: string;
+}
+
+/** `GET .../processos/buscas/{id}`: o estado, e a prévia quando terminou. */
+export interface BuscaLida {
+  trabalho_id: string;
+  estado: EstadoDaBusca;
+  id?: string;
+  total_encontrado?: number;
+  atingiu_o_teto?: boolean;
+  erro?: string;
+  processos?: ProcessoEncontrado[];
+}
+
 /** O que a barra de progresso da importação lê: os dois números da
  * mensagem do canal, sem o `tipo` -- é o que o hook guarda e a prévia
  * desenha. */
