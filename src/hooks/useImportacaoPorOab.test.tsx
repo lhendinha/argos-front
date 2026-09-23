@@ -7,6 +7,7 @@ const api = vi.hoisted(() => ({
   buscarProcessosPorOab: vi.fn(),
   importarProcessos: vi.fn(),
   lerBusca: vi.fn(),
+  lerGravacao: vi.fn(),
 }));
 vi.mock("../services/api", () => api);
 
@@ -313,5 +314,74 @@ describe("sem subgrupo", () => {
     expect(api.buscarProcessosPorOab).not.toHaveBeenCalled();
     expect(result.current.etapa).toBe("erro");
     expect(result.current.erro).toMatch(/subgrupo/);
+  });
+});
+
+
+describe("🔴 a gravação em segundo plano (API da Fase 4: 202 e o canal)", () => {
+  const FIM = (trabalho_id: string) =>
+    ({ tipo: "importacao_fim", trabalho_id }) as unknown as MensagemDoCanal;
+
+  async function importarComId(id = "g-1") {
+    api.buscarProcessosPorOab.mockResolvedValue(previa());
+    api.importarProcessos.mockResolvedValue({ trabalho_id: id });
+    const hook = renderHook(() => useImportacaoPorOab("sub"));
+    await act(() => hook.result.current.buscar("123456", "RS"));
+    await act(() => hook.result.current.importar([ACHADO.numero_processo], []));
+    return hook;
+  }
+
+  it("fica em `importando`, com a barra, até o fim; o fim relê os TRÊS números pelo GET", async () => {
+    api.lerGravacao.mockResolvedValue({
+      trabalho_id: "g-1", estado: "concluido", cadastrados: 1, ja_existiam: 0, falharam: [],
+    });
+    const { result } = await importarComId();
+    expect(result.current.etapa).toBe("importando");
+    act(() => publicarNoCanal({ tipo: "importacao_progresso", feitos: 1, total: 1 } as unknown as MensagemDoCanal));
+    expect(result.current.progresso).toEqual({ feitos: 1, total: 1 });
+
+    await act(async () => publicarNoCanal(FIM("g-1")));
+
+    await waitFor(() => expect(result.current.etapa).toBe("concluido"));
+    expect(api.lerGravacao).toHaveBeenCalledWith("sub", "g-1");
+    expect(result.current.resultado).toEqual({ cadastrados: 1, ja_existiam: 0, falharam: [] });
+  });
+
+  it("a gravação que caiu no meio é `erro`, com a mensagem de que PARTE pode estar gravada", async () => {
+    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-1", estado: "falhou", erro: "A importação foi interrompida" });
+    const { result } = await importarComId();
+    await act(async () => publicarNoCanal(FIM("g-1")));
+    await waitFor(() => expect(result.current.etapa).toBe("erro"));
+    expect(result.current.erro).toBe("A importação foi interrompida");
+  });
+
+  it("⚠️ o fim de OUTRA gravação é descartado, e recomeçar esquece a que estava em curso", async () => {
+    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-1", estado: "concluido", cadastrados: 1, ja_existiam: 0, falharam: [] });
+    const { result } = await importarComId();
+    await act(async () => publicarNoCanal(FIM("g-velha")));
+    expect(api.lerGravacao).not.toHaveBeenCalled();
+
+    act(() => result.current.recomecar());
+    await act(async () => publicarNoCanal(FIM("g-1")));
+    expect(api.lerGravacao).not.toHaveBeenCalled();
+    expect(result.current.etapa).toBe("formulario");
+  });
+
+  it("🔴 sem canal, a releitura periódica traz o fim", async () => {
+    vi.useFakeTimers();
+    try {
+      api.lerGravacao
+        .mockResolvedValueOnce({ trabalho_id: "g-1", estado: "na_fila" })
+        .mockResolvedValue({ trabalho_id: "g-1", estado: "concluido", cadastrados: 1, ja_existiam: 0, falharam: [] });
+      const { result } = await importarComId();
+
+      await act(async () => vi.advanceTimersByTime(5000));
+      expect(result.current.etapa).toBe("importando");
+      await act(async () => vi.advanceTimersByTime(5000));
+
+      expect(result.current.etapa).toBe("concluido");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -40,9 +40,11 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    de dentro da linha para `utils/` -- o tipo do retorno dela foi junto. A
    Fase 3b do balde trouxe cinco: `BuscaPedida`, `EstadoDaBusca`,
    `PaginaDaBusca`, `FimDaBusca` e `BuscaLida` -- a busca por OAB passou a
-   responder 202 e mandar a lista pelo canal. O número é o guarda: tipo novo
-   sem pensar não passa. */
-const TIPOS_NO_PACOTE = 143;
+   responder 202 e mandar a lista pelo canal. A Fase 4 trouxe três --
+   `GravacaoPedida`, `FimDaGravacao` e `GravacaoLida` -- a gravação da
+   importação, pelo mesmo caminho. O número é o guarda: tipo novo sem pensar
+   não passa. */
+const TIPOS_NO_PACOTE = 146;
 
 const dominios = readdirSync(PASTA)
   .filter((a) => a.endsWith(".ts") && !FORA_DO_INDICE.has(a))

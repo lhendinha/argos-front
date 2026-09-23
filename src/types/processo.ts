@@ -179,6 +179,27 @@ export interface FimDaBusca {
   erro?: string;
 }
 
+/** `POST .../importar` depois da Fase 4 do balde: a gravação aceita (202). */
+export interface GravacaoPedida {
+  trabalho_id: string;
+}
+
+/** O fim da gravação pelo canal. ⚠️ Só o gatilho: os números a tela relê pelo `GET`. */
+export interface FimDaGravacao {
+  tipo: "importacao_fim";
+  trabalho_id: string;
+}
+
+/** `GET .../processos/importacoes/{id}`: o estado, e os três números quando terminou. */
+export interface GravacaoLida {
+  trabalho_id: string;
+  estado: EstadoDaBusca;
+  cadastrados?: number;
+  ja_existiam?: number;
+  falharam?: string[];
+  erro?: string;
+}
+
 /** `GET .../processos/buscas/{id}`: o estado, e a prévia quando terminou. */
 export interface BuscaLida {
   trabalho_id: string;
