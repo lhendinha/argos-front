@@ -140,6 +140,14 @@ export function useImportacaoPorOab(subgrupoId: string) {
   const buscar = useCallback(
     async (numeroOab: string, ufOab: string, periodo: { de?: string; ate?: string } = {}) => {
       const minha = ++buscaAtual.current;
+      /* 🔴 Sem subgrupo não sai pedido: a lista de subgrupos pode ainda estar
+         chegando, e o `POST` iria para `/subgrupos//...` -- um 404 que a tela
+         mostrava como "Not Found" (visto no Chrome). */
+      if (!subgrupoId) {
+        setErro("Escolha o subgrupo onde os processos vão ficar.");
+        setEtapa("erro");
+        return;
+      }
       setEtapa("buscando");
       setErro("");
       setProgresso(null);

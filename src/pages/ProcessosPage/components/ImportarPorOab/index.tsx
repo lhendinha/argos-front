@@ -26,7 +26,12 @@ export default function ImportarPorOab({
   onFechar,
   onImportou,
 }: ImportarPorOabProps) {
-  const [subgrupoId, setSubgrupoId] = useState(subgrupos[0]?.subgrupo_id ?? "");
+  const [escolhido, setSubgrupoId] = useState("");
+  /* 🔴 Sem escolha, vale o PRIMEIRO da lista -- inclusive quando ela chega
+     DEPOIS de o modal abrir. Guardar `subgrupos[0]` no `useState` congelava o
+     vazio: com a lista ainda carregando, a busca ia para `/subgrupos//...` e a
+     tela mostrava "Not Found" (visto no Chrome, com o offline recém-subido). */
+  const subgrupoId = escolhido || (subgrupos[0]?.subgrupo_id ?? "");
   const { etapa, previa, parcial, resultado, erro, progresso, buscar, importar, recomecar } =
     useImportacaoPorOab(subgrupoId);
 

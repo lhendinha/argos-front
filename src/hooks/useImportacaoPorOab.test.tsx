@@ -302,3 +302,16 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
     expect(api.lerBusca).not.toHaveBeenCalled();
   });
 });
+
+
+describe("sem subgrupo", () => {
+  it("🔴 não manda o pedido, e diz o que falta", async () => {
+    const { result } = renderHook(() => useImportacaoPorOab(""));
+
+    await act(() => result.current.buscar("123456", "RS"));
+
+    expect(api.buscarProcessosPorOab).not.toHaveBeenCalled();
+    expect(result.current.etapa).toBe("erro");
+    expect(result.current.erro).toMatch(/subgrupo/);
+  });
+});
