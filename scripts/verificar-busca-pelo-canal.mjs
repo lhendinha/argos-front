@@ -36,10 +36,15 @@ await p.getByRole("button", { name: /entrar/i }).click();
 await p.getByText("Resumo rápido").waitFor();
 
 async function abrirEPreencher() {
-  await p.goto(APP + "/processos");
+  /* 🔴 Espera a LISTA DE SUBGRUPOS chegar antes de buscar, como uma pessoa que vê o
+     seletor preenchido. A primeira versão lia o texto em volta do seletor, que
+     passava de cara: em produção o clique saiu antes da lista, e a guarda (certa)
+     recusou com "Escolha o subgrupo". */
+  await Promise.all([
+    p.waitForResponse((r) => /\/subgrupos(\?|$)/.test(new URL(r.url()).pathname + new URL(r.url()).search.slice(0, 1)) && r.ok()),
+    p.goto(APP + "/processos"),
+  ]);
   await p.getByRole("button", { name: /Importar por OAB/i }).click();
-  /* Como uma pessoa faria: o subgrupo preenchido antes de buscar. */
-  await p.waitForFunction(() => !document.getElementById("subgrupo-importacao")?.closest("[class]")?.textContent?.includes("Selecione"));
   await p.getByRole("textbox", { name: /Número da OAB/ }).fill(OAB.numero);
   await p.getByRole("combobox", { name: /UF da OAB/ }).fill(OAB.uf);
   await p.keyboard.press("Enter");
