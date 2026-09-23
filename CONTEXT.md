@@ -408,6 +408,33 @@ fora da tela, e ela só NAVEGA:
 | sem a verificação | `g-alfa` | **aparece** | não |
 | com a verificação | `g-beta` | não | aparece |
 
+### A importação por OAB em segundo plano: o canal traz, o `GET` confirma (23/09/2026)
+
+Desde as Fases 3b e 4 do `PLANO_BALDE_DO_PJE.md` da API, a busca e a gravação
+respondem **202 com um id**, e o resto vem pelo canal WebSocket:
+
+| etapa | pelo canal | relido por |
+|---|---|---|
+| busca | `importacao_busca` (as linhas atualizadas) e `importacao_busca_fim` | `lerBusca` |
+| gravação | `importacao_progresso` (a barra) e `importacao_fim` | `lerGravacao` |
+
+- 🔴 **O `GET` é a fonte, e o canal é aviso.** O fim só dispara a releitura, e enquanto
+  o trabalho anda a tela relê a cada `INTERVALO_DE_RELEITURA_DA_BUSCA_MS` -- o canal pode
+  ter caído (aba sem conexão), e o fim chegaria só por ele.
+- 🔴 **A tela SUBSTITUI a linha pelo número** (`fundirPagina`), nunca acrescenta: a
+  paginação do PJe é por comunicação, e o mesmo processo volta em várias páginas.
+- ⚠️ **Mensagem de outro trabalho é descartada** (o id que a tela espera mora num `ref`):
+  sem isso, a busca abandonada misturaria a lista da OAB errada.
+- ⚠️ **A busca em andamento é guardada na sessão** (`utils/buscaGuardada`): a tela
+  reaberta ou recarregada volta ao resultado. Conveniência -- sem armazenamento, só não
+  volta sozinha.
+- ⚠️ **O front subiu ANTES da API nas duas fases** e aceita as duas respostas (a antiga,
+  com a lista ou os números; a nova, com o id). Na ordem inversa a tela leria campos que
+  não vêm.
+- Conferência: `scripts/verificar-busca-pelo-canal.mjs` e
+  `scripts/verificar-gravacao-pelo-canal.mjs` contra o offline;
+  `scripts/verificar-importacao-ponta-a-ponta.mjs` em produção, num grupo de teste.
+
 ### Yarn, não npm
 
 `package-lock.json` removido, `yarn.lock` gerado. Existe um `.yarnrc` no
