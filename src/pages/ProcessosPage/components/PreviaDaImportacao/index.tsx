@@ -69,7 +69,11 @@ export default function PreviaDaImportacao({
     [buscando, previa.processos],
   );
   const marcados = previstos ?? marcadosAoFim;
-  const [responsaveis, setResponsaveis] = useState<string[]>(souMembro ? [meuEmail] : []);
+  /* ⚠️ Enquanto a pessoa não mexe, o padrão ACOMPANHA `souMembro`: a consulta de
+     membros pode chegar depois de a prévia montar, e o padrão calculado uma vez só
+     deixava o campo vazio -- visto no Chrome, na prévia que se enche. */
+  const [responsaveisEscolhidos, setResponsaveis] = useState<string[] | null>(null);
+  const responsaveis = responsaveisEscolhidos ?? (souMembro ? [meuEmail] : []);
 
   const [pagina, setPagina] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState(TAMANHO_PAGINA_PADRAO);
