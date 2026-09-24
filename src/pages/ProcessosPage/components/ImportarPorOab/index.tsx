@@ -11,7 +11,6 @@ import { resumoDaImportacao } from "../../../../utils/importacao";
 import { MENSAGEM_SUBSTITUIDA } from "../../../../constants";
 import AvisoDaImportacao from "../AvisoDaImportacao";
 import ProgressoDaGravacao from "../ProgressoDaGravacao";
-import BuscaEmAndamento from "../BuscaEmAndamento";
 import FormularioDeOab from "../FormularioDeOab";
 import PreviaDaImportacao from "../PreviaDaImportacao";
 import type { ImportarPorOabProps } from "./types";
@@ -36,7 +35,7 @@ export default function ImportarPorOab({
   const subgrupoEscolhido = escolhido || (subgrupos[0]?.subgrupo_id ?? "");
   const meuEmail = getEmail() ?? "";
   const {
-    etapa, previa, parcial, resultado, erro, progresso, semContato, subgrupoId, subgrupoTravado,
+    etapa, previa, parcial, resultado, erro, progresso, semContato, subgrupoId, importacaoEmCurso,
     buscar, importar, recomecar, descartar,
   } = useImportacaoPorOab(subgrupoEscolhido, meuEmail);
 
@@ -44,10 +43,10 @@ export default function ImportarPorOab({
      Decidido só DEPOIS de a lista chegar: vazia, ela ainda está carregando. */
   const subgrupoSumiu = subgrupos.length > 0 && !subgrupos.some((s) => s.subgrupo_id === subgrupoId);
   useEffect(() => {
-    if (subgrupoTravado && subgrupoSumiu) {
+    if (importacaoEmCurso && subgrupoSumiu) {
       descartar("O subgrupo desta importação não existe mais. Escolha outro e busque de novo.");
     }
-  }, [subgrupoTravado, subgrupoSumiu, descartar]);
+  }, [importacaoEmCurso, subgrupoSumiu, descartar]);
 
   /* ⚠️ Sem contato não é erro: o trabalho segue no servidor, e a tela tenta de novo sozinha. */
   const avisoDeContato = semContato && (
@@ -90,12 +89,19 @@ export default function ImportarPorOab({
     );
   }
 
-  if (etapa === "previa" || etapa === "importando") {
+  /* 🔴 A busca abre DIRETO na prévia, que vai se enchendo (pedido do usuário): a
+     mesma tabela, na mesma ordem da prévia final -- a do servidor, sem reordenar --
+     para as linhas não pularem no fim. A `key` troca na passagem para a prévia final:
+     ela nasce de novo, e a marcação sai da lista inteira. */
+  if (etapa === "buscando" || etapa === "previa" || etapa === "importando") {
+    const buscando = etapa === "buscando";
     return (
       <Cartao>
         {avisoDeContato}
         <PreviaDaImportacao
-          previa={previa!}
+          key={buscando ? "busca" : "previa"}
+          buscando={buscando}
+          previa={buscando ? { id: "", total_encontrado: parcial.length, atingiu_o_teto: false, processos: parcial } : previa!}
           subgrupoId={subgrupoId}
           meuEmail={meuEmail}
           souMembro={souMembro}
@@ -174,8 +180,6 @@ export default function ImportarPorOab({
           id="subgrupo-importacao"
           opcoes={subgrupos.map((s) => ({ value: s.subgrupo_id, label: s.nome }))}
           valor={subgrupoId}
-          /* 🔴 Travado enquanto há importação: a prévia é do subgrupo da busca. */
-          desabilitado={subgrupoTravado}
           /* ⚠️ Trocar de subgrupo REVALIDA quem pode ser responsável: um
              `manager` pode ser membro de Cível e não de Trabalhista, e a
              pré-seleção precisa acompanhar. A consulta de membros tem o
@@ -185,7 +189,6 @@ export default function ImportarPorOab({
       </Campo>
 
       <FormularioDeOab
-        buscando={etapa === "buscando"}
         onBuscar={(numeroOab, ufOab, periodo) => buscar(numeroOab, ufOab, periodo)}
         onCancelar={onFechar}
         /* Depois de um resultado vazio, o período é a primeira coisa que a
@@ -194,7 +197,6 @@ export default function ImportarPorOab({
         periodoAberto={etapa === "vazio"}
       />
 
-      {etapa === "buscando" && <BuscaEmAndamento processos={parcial} />}
     </Cartao>
   );
 }

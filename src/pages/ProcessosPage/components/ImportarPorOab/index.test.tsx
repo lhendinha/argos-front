@@ -13,7 +13,9 @@ const api = vi.hoisted(() => ({
 vi.mock("../../../../services/api", async (original) => ({ ...(await original<object>()), ...api }));
 
 import { LIMIAR_SEM_CONTATO_MS, MENSAGEM_SUBSTITUIDA } from "../../../../constants";
+import { publicarNoCanal } from "../../../../utils/canalDeTempoReal";
 import { guardarImportacao } from "../../../../utils/importacaoGuardada";
+import type { MensagemDoCanal } from "../../../../types";
 import { renderComProviders } from "../../../../test/queryTestUtils";
 import ImportarPorOab from "./index";
 
@@ -93,39 +95,32 @@ describe("⚠️ sem contato com o servidor durante a busca", () => {
   });
 });
 
-describe("🔴 a importação em curso trava o subgrupo (item 11)", () => {
+describe("🔴 a importação em curso fica no subgrupo DELA (item 11)", () => {
   function comImportacaoGuardada(subgrupoId: string, extra: { gravacao?: string } = {}) {
     sessionStorage.clear();
     comoEu();
     guardarImportacao({ email: EU, subgrupoId, busca: "t-1", ...extra });
   }
 
-  it("durante a busca, o seletor mostra o subgrupo DELA e fica desabilitado", async () => {
+  it("a busca lê o subgrupo DELA -- e o seletor nem aparece enquanto ela anda", async () => {
     comImportacaoGuardada(CRIMINAL.subgrupo_id);
     api.lerBusca.mockReset();
     api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "na_fila" });
     renderComProviders(<ImportarPorOab subgrupos={[CIVEL, CRIMINAL]} onFechar={() => {}} onImportou={() => {}} />);
 
     await waitFor(() => expect(api.lerBusca).toHaveBeenCalledWith(CRIMINAL.subgrupo_id, "t-1"));
-    expect(screen.getByText("Criminal")).toBeTruthy();
-    expect((document.getElementById("subgrupo-importacao") as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByText("Buscando no PJe…")).toBeTruthy();
+    expect(document.getElementById("subgrupo-importacao")).toBeNull();
   });
 
-  it("o par: sem importação, o seletor fica livre", () => {
-    sessionStorage.clear();
-    comoEu();
-    renderComProviders(<ImportarPorOab subgrupos={[CIVEL, CRIMINAL]} onFechar={() => {}} onImportou={() => {}} />);
-    expect((document.getElementById("subgrupo-importacao") as HTMLInputElement).disabled).toBe(false);
-  });
-
-  it("⚠️ o subgrupo da importação foi apagado: avisa e destrava", async () => {
+  it("⚠️ o subgrupo da importação foi apagado: avisa, e o formulário volta com o seletor", async () => {
     comImportacaoGuardada("s-apagado");
     api.lerBusca.mockReset();
     api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "na_fila" });
     renderComProviders(<ImportarPorOab subgrupos={[CIVEL]} onFechar={() => {}} onImportou={() => {}} />);
 
     await waitFor(() => expect(screen.getByText(/O subgrupo desta importação não existe mais/)).toBeTruthy());
-    expect((document.getElementById("subgrupo-importacao") as HTMLInputElement).disabled).toBe(false);
+    expect(document.getElementById("subgrupo-importacao")).not.toBeNull();
     expect(sessionStorage.length).toBe(0);
   });
 
@@ -153,5 +148,49 @@ describe("o fim da importação", () => {
 
     expect(onFechar).toHaveBeenCalled();
     expect(sessionStorage.length).toBe(0);
+  });
+});
+
+describe("🔴 a busca abre DIRETO na prévia, que vai se enchendo (pedido do usuário)", () => {
+  const achado = (numero: string, apelido: string, extra = {}) => ({
+    numero_processo: numero, apelido, tribunal: "TJMG", comunicacoes: 1, ja_existe: false,
+    noutros_subgrupos: [], em_outro_subgrupo: false, removido_antes: false, ...extra,
+  });
+  const A = achado("50000011220248130001", "Usucapião");
+  const B = achado("50000029920248130001", "Inventário", { removido_antes: true });
+  const C = achado("50000037620248130001", "Cobrança");
+  const pagina = (processos: unknown[]) =>
+    ({ tipo: "importacao_busca", trabalho_id: "t-1", processos }) as unknown as MensagemDoCanal;
+  const fim = () => ({ tipo: "importacao_busca_fim", trabalho_id: "t-1" }) as unknown as MensagemDoCanal;
+  const apelidos = () => screen.getAllByText(/Usucapião|Inventário|Cobrança/).map((e) => e.textContent);
+  const botao = (nome: RegExp) => screen.getByRole("button", { name: nome }) as HTMLButtonElement;
+
+  it("as páginas enchem a MESMA tabela; nada se marca nem se grava até o fim; a prévia final não reordena", async () => {
+    sessionStorage.clear();
+    comoEu();
+    guardarImportacao({ email: EU, subgrupoId: CIVEL.subgrupo_id, busca: "t-1" });
+    api.lerBusca.mockReset();
+    api.lerBusca
+      .mockResolvedValueOnce({ trabalho_id: "t-1", estado: "na_fila" })
+      .mockResolvedValue({ trabalho_id: "t-1", estado: "concluido", id: "b", total_encontrado: 3, atingiu_o_teto: false, processos: [A, B, C] });
+    renderComProviders(<ImportarPorOab subgrupos={[CIVEL]} onFechar={() => {}} onImportou={() => {}} />);
+    await waitFor(() => expect(api.lerBusca).toHaveBeenCalledTimes(1));
+
+    expect(screen.getByText("Buscando no PJe…")).toBeTruthy();
+    act(() => publicarNoCanal(pagina([A, B])));
+    act(() => publicarNoCanal(pagina([C])));
+
+    expect(screen.getByText("3 processos encontrados até agora")).toBeTruthy();
+    expect(apelidos()).toEqual(["Usucapião", "Inventário", "Cobrança"]);
+    expect(botao(/Importar/).disabled).toBe(true);
+    expect(botao(/Voltar/).disabled).toBe(true);
+    /* A marcação é a que a prévia final terá: o removido antes NÃO vem marcado. */
+    expect(screen.getByText(/de 3 marcados/).parentElement?.textContent).toContain("2 de 3 marcados");
+
+    await act(async () => publicarNoCanal(fim()));
+    await waitFor(() => expect(screen.queryByText("Buscando no PJe…")).toBeNull());
+    expect(apelidos()).toEqual(["Usucapião", "Inventário", "Cobrança"]);
+    expect(botao(/Importar/).disabled).toBe(false);
+    expect(screen.getByText(/de 3 marcados/).parentElement?.textContent).toContain("2 de 3 marcados");
   });
 });

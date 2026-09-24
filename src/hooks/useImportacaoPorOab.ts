@@ -25,9 +25,9 @@ import type {
 
 /** A importação por OAB inteira: a busca, a prévia e a gravação, no subgrupo da busca.
  *
- * 🔴 O subgrupo TRAVA da busca até recomeçar: a prévia é montada para ele ("já está
- * aqui"), e a gravação entra nele -- trocá-lo no meio gravava a prévia de um
- * subgrupo em outro.
+ * 🔴 O subgrupo é o DA BUSCA até recomeçar, e não o do seletor: a prévia é montada
+ * para ele ("já está aqui"), e a gravação entra nele -- ler o seletor no meio
+ * gravava a prévia de um subgrupo em outro.
  * ⚠️ A aba guarda a importação (`importacaoGuardada`), e a tela recarregada volta à
  * busca, à prévia ou à gravação -- no subgrupo guardado, e não no do seletor.
  */
@@ -233,11 +233,11 @@ export function useImportacaoPorOab(subgrupoEscolhido: string, email: string) {
 
   /** A barra: o progresso da SUA gravação, ou o zero do pedido até o primeiro pulso. */
   const progresso = etapa === "importando" ? (gravacao.progresso ?? pedidos) : null;
-  /** 🔴 O seletor trava enquanto há importação -- ver o docstring. */
-  const subgrupoTravado = subgrupoDaImportacao !== null && ["buscando", "previa", "importando"].includes(etapa);
+  /** Há busca, prévia ou gravação em curso, no subgrupo dela. */
+  const importacaoEmCurso = subgrupoDaImportacao !== null && ["buscando", "previa", "importando"].includes(etapa);
 
   return {
-    etapa, previa, parcial, resultado, erro, progresso, semContato, subgrupoId, subgrupoTravado,
+    etapa, previa, parcial, resultado, erro, progresso, semContato, subgrupoId, importacaoEmCurso,
     buscar, importar, recomecar, descartar,
   };
 }

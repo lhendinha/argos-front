@@ -431,7 +431,7 @@ describe("🔴 a importação guardada na aba, e o subgrupo travado (itens 10 e 
     await waitFor(() => expect(result.current.etapa).toBe("previa"));
     expect(api.lerBusca).toHaveBeenCalledWith("s-criminal", "t-9");
     expect(result.current.subgrupoId).toBe("s-criminal");
-    expect(result.current.subgrupoTravado).toBe(true);
+    expect(result.current.importacaoEmCurso).toBe(true);
     expect(guardada()).toEqual({ email: EU, subgrupoId: "s-criminal", busca: "t-9" });
   });
 
@@ -444,27 +444,27 @@ describe("🔴 a importação guardada na aba, e o subgrupo travado (itens 10 e 
     expect(api.lerBusca).not.toHaveBeenCalled();
   });
 
-  it("buscar trava o subgrupo e guarda a busca; recomeçar esquece e destrava", async () => {
+  it("buscar fixa o subgrupo da importação e a guarda; recomeçar esquece e solta", async () => {
     api.buscarProcessosPorOab.mockResolvedValue({ trabalho_id: "t-1" });
     api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "na_fila" });
     const { result } = renderHook(() => useImportacaoPorOab("s-civel", EU));
     await act(() => result.current.buscar("123456", "RS"));
 
-    expect(result.current.subgrupoTravado).toBe(true);
+    expect(result.current.importacaoEmCurso).toBe(true);
     expect(guardada()).toEqual({ email: EU, subgrupoId: "s-civel", busca: "t-1" });
 
     act(() => result.current.recomecar());
-    expect(result.current.subgrupoTravado).toBe(false);
+    expect(result.current.importacaoEmCurso).toBe(false);
     expect(guardada()).toBeNull();
   });
 
-  it("o par: a busca que acha NADA destrava e não deixa nada guardado", async () => {
+  it("o par: a busca que acha NADA solta o subgrupo e não deixa nada guardado", async () => {
     api.buscarProcessosPorOab.mockResolvedValue({ trabalho_id: "t-1" });
     api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [] });
     const { result } = renderHook(() => useImportacaoPorOab("s-civel", EU));
     await act(() => result.current.buscar("123456", "RS"));
     await waitFor(() => expect(result.current.etapa).toBe("vazio"));
-    expect(result.current.subgrupoTravado).toBe(false);
+    expect(result.current.importacaoEmCurso).toBe(false);
     expect(guardada()).toBeNull();
   });
 

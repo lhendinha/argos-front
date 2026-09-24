@@ -13,6 +13,8 @@ export interface PreviaDaImportacaoProps {
    * inteira falharia depois da busca. */
   souMembro: boolean;
   importando: boolean;
+  /** 🔴 A busca ainda está chegando: a prévia se enche, e nada se marca nem se grava até o fim. */
+  buscando?: boolean;
   progresso: ContagemDaImportacao | null;
   onImportar: (numeros: string[], responsaveis: string[]) => void;
   onVoltar: () => void;
