@@ -40,11 +40,16 @@ async function abrirEPreencher() {
      seletor preenchido. A primeira versão lia o texto em volta do seletor, que
      passava de cara: em produção o clique saiu antes da lista, e a guarda (certa)
      recusou com "Escolha o subgrupo". */
-  await Promise.all([
-    p.waitForResponse((r) => /\/subgrupos(\?|$)/.test(new URL(r.url()).pathname + new URL(r.url()).search.slice(0, 1)) && r.ok()),
-    p.goto(APP + "/processos"),
-  ]);
+  /* Cada busca nova começa sem importação guardada na aba: guardada, o painel
+     reabriria na prévia anterior, e não no formulário. */
+  await p.evaluate(() => sessionStorage.clear());
+  await p.goto(APP + "/processos");
+  /* 🔴 Espera o SUBGRUPO escolhido, como uma pessoa que vê o seletor preenchido: a
+     consulta de membros só sai com ele. Clicar antes da lista chegar é recusado
+     (certo) com "Escolha o subgrupo" -- e com as lambdas frias ela demora. */
+  const membros = p.waitForResponse((r) => /\/subgrupos\/[^/]+\/membros/.test(new URL(r.url()).pathname), { timeout: 60_000 });
   await p.getByRole("button", { name: /Importar por OAB/i }).click();
+  await membros;
   await p.getByRole("textbox", { name: /Número da OAB/ }).fill(OAB.numero);
   await p.getByRole("combobox", { name: /UF da OAB/ }).fill(OAB.uf);
   await p.keyboard.press("Enter");
@@ -58,7 +63,11 @@ const contagem = async () => {
   const t = await alvo.first().textContent();
   return t ? Number(t.match(/\d+/)[0]) : 0;
 };
-const naPrevia = () => p.getByText(/marcados$/).isVisible().catch(() => false);
+/* ⚠️ A prévia se enche DURANTE a busca: "marcados" aparece logo no começo. Na prévia
+   FINAL é quando ele está na tela e o "Buscando no PJe…" não. */
+const naPrevia = async () =>
+  (await p.getByText(/marcados$/).isVisible().catch(() => false)) &&
+  !(await p.getByText("Buscando no PJe…").isVisible().catch(() => false));
 
 // 1. a busca inteira
 await abrirEPreencher();
@@ -98,10 +107,10 @@ await p.getByText("Buscando no PJe…").waitFor({ timeout: 5000 });
 /* ⚠️ Recarrega DEPOIS do 202: o "Buscando" aparece no clique, antes da resposta,
    e uma recarga antes dela não tem id nenhum para retomar. */
 const t202 = Date.now();
-await p.waitForFunction(() => Object.keys(sessionStorage).some((k) => k.startsWith("argos:busca-por-oab:")), null, { timeout: 30_000 });
+await p.waitForFunction(() => sessionStorage.getItem("argos:importacao-por-oab") !== null, null, { timeout: 30_000 });
 console.log(`       (o 202 com o id chegou ${Date.now() - t202} ms depois do "Buscando")`);
 await p.reload();
-await p.getByRole("button", { name: /Importar por OAB/i }).click();
+/* O painel REABRE sozinho: a aba tem a importação guardada. */
 const t1 = Date.now();
 while (!(await naPrevia()) && Date.now() - t1 < 120_000) await p.waitForTimeout(250);
 conferir(await naPrevia(), "recarregada no meio, a tela reaberta volta ao resultado", `${Date.now() - t1} ms depois de reabrir`);

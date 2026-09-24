@@ -28,10 +28,16 @@ import {
   ESTADO_DO_ALVO_SEM_ACESSO,
   LEITURA_LIDOS,
   LEITURA_NAO_LIDOS,
+  MENSAGEM_SUBSTITUIDA,
   STATUS_EM_ANDAMENTO,
   STATUS_FECHADO,
+  TIPO_DA_PAGINA_DA_BUSCA,
+  TIPO_DE_PROGRESSO,
+  TIPO_DO_FIM_DA_BUSCA,
+  TIPO_DO_FIM_DA_GRAVACAO,
   TIPO_ENVIO_LEMBRETE,
   TIPO_ENVIO_MOVIMENTACAO,
+  TRABALHO_NA_FILA,
 } from "./constants";
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
@@ -48,6 +54,12 @@ const VOCABULARIO: Record<string, string> = {
   [LEITURA_LIDOS]: "LEITURA_LIDOS (constants/historico)",
   [ESTADO_DO_ALVO_EXCLUIDO]: "ESTADO_DO_ALVO_EXCLUIDO (constants/notificacoes)",
   [ESTADO_DO_ALVO_SEM_ACESSO]: "ESTADO_DO_ALVO_SEM_ACESSO (constants/notificacoes)",
+  [TIPO_DA_PAGINA_DA_BUSCA]: "TIPO_DA_PAGINA_DA_BUSCA (constants/importacao)",
+  [TIPO_DO_FIM_DA_BUSCA]: "TIPO_DO_FIM_DA_BUSCA (constants/importacao)",
+  [TIPO_DO_FIM_DA_GRAVACAO]: "TIPO_DO_FIM_DA_GRAVACAO (constants/importacao)",
+  [TIPO_DE_PROGRESSO]: "TIPO_DE_PROGRESSO (constants/importacao)",
+  [TRABALHO_NA_FILA]: "TRABALHO_NA_FILA (constants/importacao)",
+  [MENSAGEM_SUBSTITUIDA]: "MENSAGEM_SUBSTITUIDA (constants/importacao)",
 };
 
 /** `arquivo|valor` -> por que aquele literal PODE ficar.
@@ -63,6 +75,12 @@ const ISENCOES: Record<string, string> = {
   "constants/historico.ts|lidos": "é a declaração da constante",
   "constants/notificacoes.ts|excluido": "é a declaração da constante",
   "constants/notificacoes.ts|sem_acesso": "é a declaração da constante",
+  "constants/importacao.ts|importacao_busca": "é a declaração da constante",
+  "constants/importacao.ts|importacao_busca_fim": "é a declaração da constante",
+  "constants/importacao.ts|importacao_fim": "é a declaração da constante",
+  "constants/importacao.ts|importacao_progresso": "é a declaração da constante",
+  "constants/importacao.ts|na_fila": "é a declaração da constante",
+  "constants/importacao.ts|Esta busca foi substituída por uma mais nova da mesma OAB.": "é a declaração da constante",
   "constants/notificacoes.ts|lembrete":
     "TIPO_LEMBRETE é o vocabulário do SINO, outro domínio com a mesma palavra",
   "types/processo.ts|movimentacao": "union type não aceita variável, como o Literal do Python",

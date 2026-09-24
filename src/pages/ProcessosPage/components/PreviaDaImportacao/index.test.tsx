@@ -1,4 +1,5 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -362,5 +363,28 @@ describe("a dica do campo de responsável", () => {
     expect(
       screen.getByText(/precisa escolher quem responde entre os membros dele/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("o responsável padrão", () => {
+  it("⚠️ acompanha a consulta de membros que chega DEPOIS de a prévia montar", async () => {
+    const onImportar = vi.fn();
+    let virarMembro: () => void = () => {};
+    function Casca() {
+      const [souMembro, setSouMembro] = useState(false);
+      virarMembro = () => setSouMembro(true);
+      return (
+        <PreviaDaImportacao
+          previa={{ id: "b-1", total_encontrado: OS_QUATRO.length, atingiu_o_teto: false, processos: OS_QUATRO }}
+          subgrupoId="sg-1" meuEmail="eu@x.com" souMembro={souMembro} importando={false}
+          progresso={null} onImportar={onImportar} onVoltar={vi.fn()}
+        />
+      );
+    }
+    renderComProviders(<Casca />);
+    act(() => virarMembro());
+
+    await userEvent.click(screen.getByRole("button", { name: /Importar/ }));
+    expect(onImportar).toHaveBeenCalledWith(expect.any(Array), ["eu@x.com"]);
   });
 });

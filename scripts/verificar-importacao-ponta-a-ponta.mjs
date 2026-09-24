@@ -52,6 +52,10 @@ await p.keyboard.press("Enter");
 
 const t0 = Date.now();
 await p.getByRole("button", { name: "Buscar processos" }).click();
+/* ⚠️ A prévia se enche DURANTE a busca: "marcados" aparece logo no começo, com o que já
+   chegou. A prévia final é quando o "Buscando no PJe…" some. */
+await p.getByText("Buscando no PJe…").waitFor({ timeout: 10_000 }).catch(() => {});
+await p.getByText("Buscando no PJe…").waitFor({ state: "hidden", timeout: 120_000 });
 await p.getByText(/marcados$/).waitFor({ timeout: 60_000 });
 const marcados = (await p.getByText(/marcados$/).textContent()).trim();
 const n = Number(marcados.match(/^(\d+)/)[1]);

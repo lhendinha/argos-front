@@ -14,7 +14,7 @@ import FormularioDeOab from "./index";
  */
 function montar(props: Partial<Parameters<typeof FormularioDeOab>[0]> = {}) {
   return renderComProviders(
-    <FormularioDeOab buscando={false} onBuscar={vi.fn()} onCancelar={vi.fn()} {...props} />,
+    <FormularioDeOab onBuscar={vi.fn()} onCancelar={vi.fn()} {...props} />,
   );
 }
 

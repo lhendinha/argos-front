@@ -9,11 +9,17 @@ const api = vi.hoisted(() => ({
   lerBusca: vi.fn(),
   lerGravacao: vi.fn(),
 }));
-vi.mock("../services/api", () => api);
+/* ⚠️ O `ApiError` de verdade: a espera classifica o erro por ele. */
+vi.mock("../services/api", async (original) => ({ ...(await original<object>()), ...api }));
 
 import { useImportacaoPorOab } from "./useImportacaoPorOab";
+import { CHAVE_DA_IMPORTACAO_GUARDADA, MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO } from "../constants";
+import { ApiError } from "../services/api";
 import { limparOuvintesDoCanal, publicarNoCanal } from "../utils/canalDeTempoReal";
+import { guardarImportacao } from "../utils/importacaoGuardada";
 import type { MensagemDoCanal } from "../types";
+
+const EU = "eu@escritorio.com";
 
 const ACHADO = {
   numero_processo: "50062528720248210001",
@@ -35,7 +41,7 @@ beforeEach(() => {
 describe("as duas etapas", () => {
   it("busca leva à prévia", async () => {
     api.buscarProcessosPorOab.mockResolvedValue(previa());
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
 
     await act(() => result.current.buscar("123456", "RS"));
 
@@ -48,7 +54,7 @@ describe("as duas etapas", () => {
        fora do ar. Misturá-los mandaria a pessoa corrigir um número que está
        certo -- ou tentar de novo o que nunca vai funcionar. */
     api.buscarProcessosPorOab.mockResolvedValue(previa([]));
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
 
     return act(() => result.current.buscar("999999", "SC")).then(() => {
       expect(result.current.etapa).toBe("vazio");
@@ -58,7 +64,7 @@ describe("as duas etapas", () => {
 
   it("falha da API é `erro`, com a mensagem dela", async () => {
     api.buscarProcessosPorOab.mockRejectedValue(new Error("O PJe está limitando"));
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
 
     await act(() => result.current.buscar("123456", "RS"));
 
@@ -71,7 +77,7 @@ describe("as duas etapas", () => {
     api.importarProcessos.mockResolvedValue({
       cadastrados: 1, ja_existiam: 0, falharam: [],
     });
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     await act(() => result.current.buscar("123456", "RS"));
 
     await act(() => result.current.importar([ACHADO.numero_processo], ["eu@x.com"]));
@@ -93,7 +99,7 @@ describe("a resposta velha não pode ganhar da nova", () => {
       .mockImplementationOnce(() => new Promise((r) => (resolverPrimeira = r)))
       .mockResolvedValueOnce(previa([{ ...ACHADO, apelido: "A CERTA" }]));
 
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     act(() => void result.current.buscar("111111", "RS"));
     await act(() => result.current.buscar("222222", "RS"));
 
@@ -105,7 +111,7 @@ describe("a resposta velha não pode ganhar da nova", () => {
   it("recomeçar descarta a busca em curso", async () => {
     let resolver: (v: unknown) => void = () => {};
     api.buscarProcessosPorOab.mockImplementation(() => new Promise((r) => (resolver = r)));
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     act(() => void result.current.buscar("123456", "RS"));
 
     act(() => result.current.recomecar());
@@ -117,12 +123,22 @@ describe("a resposta velha não pode ganhar da nova", () => {
 });
 
 describe("a barra de progresso", () => {
-  it("acompanha o canal", async () => {
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+  async function gravando(id = "g-1") {
+    api.buscarProcessosPorOab.mockResolvedValue(previa());
+    api.importarProcessos.mockResolvedValue({ trabalho_id: id });
+    api.lerGravacao.mockResolvedValue({ trabalho_id: id, estado: "na_fila" });
+    const hook = renderHook(() => useImportacaoPorOab("sub", EU));
+    await act(() => hook.result.current.buscar("123456", "RS"));
+    return hook;
+  }
+
+  it("acompanha o canal, pela gravação desta tela", async () => {
+    const { result } = await gravando();
+    await act(() => result.current.importar(["a"], []));
 
     act(() => {
       publicarNoCanal({
-        tipo: "importacao_progresso", feitos: 25, total: 100,
+        tipo: "importacao_progresso", trabalho_id: "g-1", feitos: 25, total: 100,
       } as unknown as MensagemDoCanal);
     });
 
@@ -130,19 +146,19 @@ describe("a barra de progresso", () => {
   });
 
   it("🔴 ouve o canal ANTES de a importação começar", async () => {
-    /* A primeira mensagem (`feitos: 0`) sai antes de o `await` devolver o
-       controle. Assinar ao clicar em "Importar" perderia justamente ela -- a
-       barra começaria do segundo pulso, ou de lugar nenhum numa importação
-       curta. */
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
-
+    /* A primeira mensagem (`feitos: 0`) pode sair antes de o `202` devolver o
+       id. Assinar ao clicar em "Importar" perderia justamente ela -- a barra
+       começaria do segundo pulso, ou de lugar nenhum numa importação curta. */
+    const { result } = await gravando();
     act(() => {
       publicarNoCanal({
-        tipo: "importacao_progresso", feitos: 0, total: 3,
+        tipo: "importacao_progresso", trabalho_id: "g-1", feitos: 2, total: 3,
       } as unknown as MensagemDoCanal);
     });
 
-    await waitFor(() => expect(result.current.progresso).toEqual({ feitos: 0, total: 3 }));
+    await act(() => result.current.importar(["a", "b", "c"], []));
+
+    await waitFor(() => expect(result.current.progresso).toEqual({ feitos: 2, total: 3 }));
   });
 
   it("nasce em zero ao importar, para a barra existir sem o canal", async () => {
@@ -150,7 +166,7 @@ describe("a barra de progresso", () => {
        precisa aparecer mesmo assim, indeterminada, em vez de sumir. */
     api.buscarProcessosPorOab.mockResolvedValue(previa());
     api.importarProcessos.mockImplementation(() => new Promise(() => {}));
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     await act(() => result.current.buscar("123456", "RS"));
 
     act(() => void result.current.importar(["a", "b"], []));
@@ -159,7 +175,7 @@ describe("a barra de progresso", () => {
   });
 
   it("para de ouvir ao desmontar", () => {
-    const { result, unmount } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result, unmount } = renderHook(() => useImportacaoPorOab("sub", EU));
     unmount();
 
     publicarNoCanal({
@@ -176,7 +192,7 @@ describe("a interrupção no meio", () => {
        falhou" mandaria a pessoa procurar o que já está lá. */
     api.buscarProcessosPorOab.mockResolvedValue(previa());
     api.importarProcessos.mockRejectedValue({});
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     await act(() => result.current.buscar("123456", "RS"));
 
     await act(() => result.current.importar(["a"], []));
@@ -203,7 +219,7 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
   }
 
   it("fica em `buscando` e FUNDE as páginas pelo número (substitui, não acrescenta)", async () => {
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     await buscarComId(result);
 
     act(() => publicarNoCanal(pagina("t-1", [{ ...ACHADO, comunicacoes: 3 }])));
@@ -217,7 +233,7 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
   });
 
   it("⚠️ página de OUTRA busca é descartada", async () => {
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     await buscarComId(result);
 
     act(() => publicarNoCanal(pagina("t-velha", [ACHADO])));
@@ -232,7 +248,7 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
       trabalho_id: "t-1", estado: "concluido", id: "bloco", total_encontrado: 2,
       atingiu_o_teto: true, processos: [ACHADO, OUTRO],
     });
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     await buscarComId(result);
     await waitFor(() => expect(api.lerBusca).toHaveBeenCalledTimes(1));
     act(() => publicarNoCanal(pagina("t-1", [ACHADO])));
@@ -249,14 +265,24 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
   });
 
   it("fim sem nada encontrado é `vazio`, e o PJe fora é `erro` com a mensagem", async () => {
-    api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [] });
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    /* ⚠️ A leitura imediata responde "na fila" nas DUAS metades: sem isto o
+       resultado chegava por ela, e o teste passava com o canal quebrado. */
+    api.lerBusca
+      .mockResolvedValueOnce({ trabalho_id: "t-1", estado: "na_fila" })
+      .mockResolvedValueOnce({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [] });
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     await buscarComId(result);
+    await waitFor(() => expect(api.lerBusca).toHaveBeenCalledTimes(1));
+    expect(result.current.etapa).toBe("buscando");
     await act(async () => publicarNoCanal(fim("t-1")));
     await waitFor(() => expect(result.current.etapa).toBe("vazio"));
 
-    api.lerBusca.mockResolvedValueOnce({ trabalho_id: "t-2", estado: "falhou", erro: "O PJe está limitando" });
+    api.lerBusca
+      .mockResolvedValueOnce({ trabalho_id: "t-2", estado: "na_fila" })
+      .mockResolvedValueOnce({ trabalho_id: "t-2", estado: "falhou", erro: "O PJe está limitando" });
     await buscarComId(result, "t-2");
+    await waitFor(() => expect(api.lerBusca).toHaveBeenCalledTimes(3));
+    expect(result.current.etapa).toBe("buscando");
     await act(async () => publicarNoCanal(fim("t-2", { erro: "O PJe está limitando" })));
     await waitFor(() => expect(result.current.etapa).toBe("erro"));
     expect(result.current.erro).toBe("O PJe está limitando");
@@ -268,7 +294,7 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
       api.lerBusca
         .mockResolvedValueOnce({ trabalho_id: "t-1", estado: "na_fila" })
         .mockResolvedValue({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [ACHADO] });
-      const { result } = renderHook(() => useImportacaoPorOab("sub"));
+      const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
       await buscarComId(result);
 
       await act(async () => vi.advanceTimersByTime(0));
@@ -281,22 +307,9 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
     }
   });
 
-  it("a tela reaberta volta à busca guardada, e recomeçar a esquece", async () => {
-    sessionStorage.setItem("argos:busca-por-oab:sub", "t-9");
-    api.lerBusca.mockResolvedValue({ trabalho_id: "t-9", estado: "concluido", id: "b", processos: [ACHADO] });
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
-
-    await waitFor(() => expect(result.current.etapa).toBe("previa"));
-    expect(sessionStorage.getItem("argos:busca-por-oab:sub")).toBeNull();
-
-    sessionStorage.setItem("argos:busca-por-oab:sub", "t-10");
-    act(() => result.current.recomecar());
-    expect(sessionStorage.getItem("argos:busca-por-oab:sub")).toBeNull();
-  });
-
   it("o par negativo: a resposta ANTIGA (a prévia inteira) continua funcionando", async () => {
     api.buscarProcessosPorOab.mockResolvedValue(previa());
-    const { result } = renderHook(() => useImportacaoPorOab("sub"));
+    const { result } = renderHook(() => useImportacaoPorOab("sub", EU));
     await act(() => result.current.buscar("123456", "RS"));
 
     expect(result.current.etapa).toBe("previa");
@@ -307,7 +320,7 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
 
 describe("sem subgrupo", () => {
   it("🔴 não manda o pedido, e diz o que falta", async () => {
-    const { result } = renderHook(() => useImportacaoPorOab(""));
+    const { result } = renderHook(() => useImportacaoPorOab("", EU));
 
     await act(() => result.current.buscar("123456", "RS"));
 
@@ -325,19 +338,21 @@ describe("🔴 a gravação em segundo plano (API da Fase 4: 202 e o canal)", ()
   async function importarComId(id = "g-1") {
     api.buscarProcessosPorOab.mockResolvedValue(previa());
     api.importarProcessos.mockResolvedValue({ trabalho_id: id });
-    const hook = renderHook(() => useImportacaoPorOab("sub"));
+    const hook = renderHook(() => useImportacaoPorOab("sub", EU));
     await act(() => hook.result.current.buscar("123456", "RS"));
     await act(() => hook.result.current.importar([ACHADO.numero_processo], []));
     return hook;
   }
 
   it("fica em `importando`, com a barra, até o fim; o fim relê os TRÊS números pelo GET", async () => {
-    api.lerGravacao.mockResolvedValue({
+    /* A primeira leitura sai logo e ainda está na fila: o resultado só pode vir pelo fim. */
+    api.lerGravacao.mockResolvedValueOnce({ trabalho_id: "g-1", estado: "na_fila" }).mockResolvedValue({
       trabalho_id: "g-1", estado: "concluido", cadastrados: 1, ja_existiam: 0, falharam: [],
     });
     const { result } = await importarComId();
+    await waitFor(() => expect(api.lerGravacao).toHaveBeenCalledTimes(1));
     expect(result.current.etapa).toBe("importando");
-    act(() => publicarNoCanal({ tipo: "importacao_progresso", feitos: 1, total: 1 } as unknown as MensagemDoCanal));
+    act(() => publicarNoCanal({ tipo: "importacao_progresso", trabalho_id: "g-1", feitos: 1, total: 1 } as unknown as MensagemDoCanal));
     expect(result.current.progresso).toEqual({ feitos: 1, total: 1 });
 
     await act(async () => publicarNoCanal(FIM("g-1")));
@@ -348,22 +363,26 @@ describe("🔴 a gravação em segundo plano (API da Fase 4: 202 e o canal)", ()
   });
 
   it("a gravação que caiu no meio é `erro`, com a mensagem de que PARTE pode estar gravada", async () => {
-    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-1", estado: "falhou", erro: "A importação foi interrompida" });
+    api.lerGravacao
+      .mockResolvedValueOnce({ trabalho_id: "g-1", estado: "na_fila" })
+      .mockResolvedValue({ trabalho_id: "g-1", estado: "falhou", erro: "A importação foi interrompida" });
     const { result } = await importarComId();
+    await waitFor(() => expect(api.lerGravacao).toHaveBeenCalledTimes(1));
     await act(async () => publicarNoCanal(FIM("g-1")));
     await waitFor(() => expect(result.current.etapa).toBe("erro"));
     expect(result.current.erro).toBe("A importação foi interrompida");
   });
 
   it("⚠️ o fim de OUTRA gravação é descartado, e recomeçar esquece a que estava em curso", async () => {
-    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-1", estado: "concluido", cadastrados: 1, ja_existiam: 0, falharam: [] });
+    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-1", estado: "na_fila" });
     const { result } = await importarComId();
+    await waitFor(() => expect(api.lerGravacao).toHaveBeenCalledTimes(1));
     await act(async () => publicarNoCanal(FIM("g-velha")));
-    expect(api.lerGravacao).not.toHaveBeenCalled();
+    expect(api.lerGravacao).toHaveBeenCalledTimes(1);
 
     act(() => result.current.recomecar());
     await act(async () => publicarNoCanal(FIM("g-1")));
-    expect(api.lerGravacao).not.toHaveBeenCalled();
+    expect(api.lerGravacao).toHaveBeenCalledTimes(1);
     expect(result.current.etapa).toBe("formulario");
   });
 
@@ -375,7 +394,7 @@ describe("🔴 a gravação em segundo plano (API da Fase 4: 202 e o canal)", ()
         .mockResolvedValue({ trabalho_id: "g-1", estado: "concluido", cadastrados: 1, ja_existiam: 0, falharam: [] });
       const { result } = await importarComId();
 
-      await act(async () => vi.advanceTimersByTime(5000));
+      await act(async () => vi.advanceTimersByTime(0));
       expect(result.current.etapa).toBe("importando");
       await act(async () => vi.advanceTimersByTime(5000));
 
@@ -383,5 +402,144 @@ describe("🔴 a gravação em segundo plano (API da Fase 4: 202 e o canal)", ()
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("as funções do hook", () => {
+  it("⚠️ `importar` e `recomecar` são as MESMAS entre renders", () => {
+    /* Quem garante é o React Compiler (`vite.config.ts`): o retorno de
+       `useGravacaoEmSegundoPlano` é um objeto literal, e sem o compilador as duas,
+       que dependem dele, seriam recriadas a cada render. Um `useMemo` à mão ali
+       não mudou nada -- a mutação que o tirava sobrevivia. */
+    const { result, rerender } = renderHook(() => useImportacaoPorOab("sub", EU));
+    const antes = result.current;
+    rerender();
+    expect(result.current.importar).toBe(antes.importar);
+    expect(result.current.recomecar).toBe(antes.recomecar);
+  });
+});
+
+describe("🔴 a importação guardada na aba, e o subgrupo travado (itens 10 e 11)", () => {
+  const guardada = () => JSON.parse(sessionStorage.getItem(CHAVE_DA_IMPORTACAO_GUARDADA) ?? "null");
+  const progresso = (trabalho_id: string | undefined, feitos: number, total: number) =>
+    ({ tipo: "importacao_progresso", trabalho_id, feitos, total }) as unknown as MensagemDoCanal;
+
+  it("volta à busca no subgrupo DELA, e não no do seletor -- e a prévia continua guardada", async () => {
+    guardarImportacao({ email: EU, subgrupoId: "s-criminal", busca: "t-9" });
+    api.lerBusca.mockResolvedValue({ trabalho_id: "t-9", estado: "concluido", id: "b", processos: [ACHADO] });
+    const { result } = renderHook(() => useImportacaoPorOab("s-civel", EU));
+
+    await waitFor(() => expect(result.current.etapa).toBe("previa"));
+    expect(api.lerBusca).toHaveBeenCalledWith("s-criminal", "t-9");
+    expect(result.current.subgrupoId).toBe("s-criminal");
+    expect(result.current.importacaoEmCurso).toBe(true);
+    expect(guardada()).toEqual({ email: EU, subgrupoId: "s-criminal", busca: "t-9" });
+  });
+
+  it("⚠️ a de OUTRA pessoa na mesma aba não é retomada", async () => {
+    guardarImportacao({ email: "outra@escritorio.com", subgrupoId: "s-criminal", busca: "t-9" });
+    const { result } = renderHook(() => useImportacaoPorOab("s-civel", EU));
+    await act(async () => {});
+    expect(result.current.etapa).toBe("formulario");
+    expect(result.current.subgrupoId).toBe("s-civel");
+    expect(api.lerBusca).not.toHaveBeenCalled();
+  });
+
+  it("buscar fixa o subgrupo da importação e a guarda; recomeçar esquece e solta", async () => {
+    api.buscarProcessosPorOab.mockResolvedValue({ trabalho_id: "t-1" });
+    api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "na_fila" });
+    const { result } = renderHook(() => useImportacaoPorOab("s-civel", EU));
+    await act(() => result.current.buscar("123456", "RS"));
+
+    expect(result.current.importacaoEmCurso).toBe(true);
+    expect(guardada()).toEqual({ email: EU, subgrupoId: "s-civel", busca: "t-1" });
+
+    act(() => result.current.recomecar());
+    expect(result.current.importacaoEmCurso).toBe(false);
+    expect(guardada()).toBeNull();
+  });
+
+  it("o par: a busca que acha NADA solta o subgrupo e não deixa nada guardado", async () => {
+    api.buscarProcessosPorOab.mockResolvedValue({ trabalho_id: "t-1" });
+    api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [] });
+    const { result } = renderHook(() => useImportacaoPorOab("s-civel", EU));
+    await act(() => result.current.buscar("123456", "RS"));
+    await waitFor(() => expect(result.current.etapa).toBe("vazio"));
+    expect(result.current.importacaoEmCurso).toBe(false);
+    expect(guardada()).toBeNull();
+  });
+
+  it("importar guarda a gravação junto, e a tela recarregada volta a ela", async () => {
+    guardarImportacao({ email: EU, subgrupoId: "s-criminal", busca: "t-9" });
+    api.lerBusca.mockResolvedValue({ trabalho_id: "t-9", estado: "concluido", id: "b", processos: [ACHADO] });
+    api.importarProcessos.mockResolvedValue({ trabalho_id: "g-9" });
+    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-9", estado: "na_fila" });
+    const primeira = renderHook(() => useImportacaoPorOab("s-civel", EU));
+    await waitFor(() => expect(primeira.result.current.etapa).toBe("previa"));
+    await act(() => primeira.result.current.importar([ACHADO.numero_processo], []));
+    expect(api.importarProcessos).toHaveBeenCalledWith("s-criminal", "b", [ACHADO.numero_processo], []);
+    expect(guardada()).toEqual({ email: EU, subgrupoId: "s-criminal", busca: "t-9", gravacao: "g-9" });
+    primeira.unmount();
+
+    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-9", estado: "concluido", cadastrados: 1, ja_existiam: 0, falharam: [] });
+    const recarregada = renderHook(() => useImportacaoPorOab("s-civel", EU));
+    expect(recarregada.result.current.etapa).toBe("importando");
+    await waitFor(() => expect(recarregada.result.current.etapa).toBe("concluido"));
+    expect(api.lerGravacao).toHaveBeenLastCalledWith("s-criminal", "g-9");
+  });
+
+  it("🔴 a barra mostra só a SUA gravação, só avança, e aproveita o pulso que chegou antes do 202", async () => {
+    api.buscarProcessosPorOab.mockResolvedValue(previa());
+    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-1", estado: "na_fila" });
+    let responder: (v: { trabalho_id: string }) => void = () => {};
+    api.importarProcessos.mockReturnValue(new Promise((r) => (responder = r)));
+    const { result } = renderHook(() => useImportacaoPorOab("s-civel", EU));
+    await act(() => result.current.buscar("123456", "RS"));
+
+    let pedido: Promise<void> = Promise.resolve();
+    act(() => {
+      pedido = result.current.importar([ACHADO.numero_processo], []);
+    });
+    expect(result.current.progresso).toEqual({ feitos: 0, total: 1 });
+    act(() => publicarNoCanal(progresso("g-1", 3, 10)));
+    await act(async () => {
+      responder({ trabalho_id: "g-1" });
+      await pedido;
+    });
+    expect(result.current.progresso).toEqual({ feitos: 3, total: 10 });
+
+    act(() => publicarNoCanal(progresso("g-outra", 9, 9)));
+    act(() => publicarNoCanal(progresso(undefined, 8, 8)));
+    act(() => publicarNoCanal(progresso("g-1", 2, 10)));
+    expect(result.current.progresso).toEqual({ feitos: 3, total: 10 });
+    act(() => publicarNoCanal(progresso("g-1", 7, 10)));
+    expect(result.current.progresso).toEqual({ feitos: 7, total: 10 });
+  });
+});
+
+describe("🔴 o fim da gravação solta a importação da aba", () => {
+  const guardada = () => JSON.parse(sessionStorage.getItem(CHAVE_DA_IMPORTACAO_GUARDADA) ?? "null");
+
+  async function gravandoGuardada() {
+    guardarImportacao({ email: EU, subgrupoId: "s-civel", busca: "t-9", gravacao: "g-9" });
+    const hook = renderHook(() => useImportacaoPorOab("s-civel", EU));
+    expect(guardada()).not.toBeNull();
+    return hook;
+  }
+
+  it("concluída: o resultado fica na tela, e a aba não guarda mais nada (a recarga não reabre)", async () => {
+    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-9", estado: "concluido", cadastrados: 2, ja_existiam: 0, falharam: [] });
+    const { result } = await gravandoGuardada();
+    await waitFor(() => expect(result.current.etapa).toBe("concluido"));
+    expect(result.current.resultado?.cadastrados).toBe(2);
+    expect(guardada()).toBeNull();
+  });
+
+  it("⚠️ a gravação que SUMIU (404, expirada) vira erro com a frase da interrupção -- e também solta", async () => {
+    api.lerGravacao.mockRejectedValue(new ApiError("Importação não encontrada", 404));
+    const { result } = await gravandoGuardada();
+    await waitFor(() => expect(result.current.etapa).toBe("erro"));
+    expect(result.current.erro).toBe(MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO);
+    expect(guardada()).toBeNull();
   });
 });

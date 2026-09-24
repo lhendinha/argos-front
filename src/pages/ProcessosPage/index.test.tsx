@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderComProviders } from "../../test/queryTestUtils";
 
 const mocks = vi.hoisted(() => ({
@@ -66,6 +66,34 @@ beforeEach(() => {
     membros: [{ email: "colega@x.com", apelido: "Colega" }],
   });
   mocks.papelAtende.mockReturnValue(true);
+});
+
+describe("🔴 a importação guardada na aba reabre o painel (item 10)", () => {
+  /* A tela recarregada no meio da importação volta a ela -- mas só para quem a fez. */
+  function guardarComo(dono: string) {
+    localStorage.setItem("pje-monitor-email", "eu@x.com");
+    sessionStorage.setItem(
+      "argos:importacao-por-oab",
+      JSON.stringify({ email: dono, subgrupoId: "sub-1", busca: "t-1" }),
+    );
+  }
+  afterEach(() => {
+    sessionStorage.clear();
+    localStorage.removeItem("pje-monitor-email");
+  });
+
+  it("a importação desta pessoa: o painel já nasce aberto", async () => {
+    guardarComo("eu@x.com");
+    renderComProviders(<MemoryRouter><ProcessosPage /></MemoryRouter>);
+    expect(await screen.findByText("Onde os processos vão ficar.")).toBeInTheDocument();
+  });
+
+  it("o par: a de OUTRA pessoa na mesma aba não abre nada", async () => {
+    guardarComo("outra@x.com");
+    renderComProviders(<MemoryRouter><ProcessosPage /></MemoryRouter>);
+    await screen.findByText("Meu processo");
+    expect(screen.queryByText("Onde os processos vão ficar.")).toBeNull();
+  });
 });
 
 describe("ProcessosPage", () => {

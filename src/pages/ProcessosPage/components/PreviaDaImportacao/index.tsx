@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Box, Flex, Progress, Text } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 
 import {
   Botao,
@@ -20,9 +20,11 @@ import {
 import { LARGURA_MINIMA_DA_TABELA, TAMANHO_PAGINA_PADRAO } from "../../../../constants";
 import { useLarguraEstreita } from "../../../../hooks/useLarguraEstreita";
 import { COLUNAS_DA_PREVIA, ESTILO_DE_LINK } from "../../constants";
+import AvisoDaBusca from "../AvisoDaBusca";
 import AvisoDaImportacao from "../AvisoDaImportacao";
 import ItemDaPrevia from "../ItemDaPrevia";
 import LinhaDaPrevia from "../LinhaDaPrevia";
+import ProgressoDaGravacao from "../ProgressoDaGravacao";
 import ResumoDaPrevia from "../ResumoDaPrevia";
 import type { PreviaDaImportacaoProps } from "./types";
 
@@ -37,10 +39,14 @@ export default function PreviaDaImportacao({
   meuEmail,
   souMembro,
   importando,
+  buscando = false,
   progresso,
   onImportar,
   onVoltar,
 }: PreviaDaImportacaoProps) {
+  /* ⚠️ Trava durante a gravação E durante a busca: a lista ainda muda, e marcar
+     agora seria marcar uma linha que a página seguinte pode reescrever. */
+  const travada = importando || buscando;
   const [medir, estreita] = useLarguraEstreita(LARGURA_MINIMA_DA_TABELA.previaDaImportacao);
   const disponiveis = useMemo(() => selecionaveis(previa.processos), [previa.processos]);
   /* 🔴 Abre marcando tudo que dá para importar, MENOS o que este subgrupo já
@@ -52,10 +58,22 @@ export default function PreviaDaImportacao({
      ⚠️ `disponiveis` continua sendo o que PODE ser marcado, e é ele que
      alimenta o "Marcar todos" e o total do "N de M". A marca não trava
      nada: só muda o estado inicial. */
-  const [marcados, setMarcados] = useState<Set<string>>(
+  const [marcadosAoFim, setMarcados] = useState<Set<string>>(
     () => new Set(preSelecionados(previa.processos)),
   );
-  const [responsaveis, setResponsaveis] = useState<string[]>(souMembro ? [meuEmail] : []);
+  /* 🔴 Enquanto busca, a marca é a que a prévia final terá, recalculada a cada
+     página -- a mesma regra de `preSelecionados`. Assim nada muda de estado no
+     último segundo; e a prévia final nasce de novo (outra `key`) com a lista inteira. */
+  const previstos = useMemo(
+    () => (buscando ? new Set(preSelecionados(previa.processos)) : null),
+    [buscando, previa.processos],
+  );
+  const marcados = previstos ?? marcadosAoFim;
+  /* ⚠️ Enquanto a pessoa não mexe, o padrão ACOMPANHA `souMembro`: a consulta de
+     membros pode chegar depois de a prévia montar, e o padrão calculado uma vez só
+     deixava o campo vazio -- visto no Chrome, na prévia que se enche. */
+  const [responsaveisEscolhidos, setResponsaveis] = useState<string[] | null>(null);
+  const responsaveis = responsaveisEscolhidos ?? (souMembro ? [meuEmail] : []);
 
   const [pagina, setPagina] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState(TAMANHO_PAGINA_PADRAO);
@@ -88,6 +106,7 @@ export default function PreviaDaImportacao({
 
   return (
     <Box>
+      {buscando && <AvisoDaBusca encontrados={previa.processos.length} />}
       <ResumoDaPrevia
         encontrados={previa.processos.length}
         marcados={marcados.size}
@@ -146,6 +165,8 @@ export default function PreviaDaImportacao({
         histórico completo.
       </Text>
 
+      {/* ⚠️ Trava na busca: a prévia final nasce de novo, e a escolha se perderia. */}
+      <Box opacity={buscando ? 0.55 : 1} pointerEvents={buscando ? "none" : "auto"}>
       <Campo
         rotulo={rotuloDeResponsavel(marcados.size)}
         para="responsaveis-importacao"
@@ -175,6 +196,7 @@ export default function PreviaDaImportacao({
           onMudar={setResponsaveis}
         />
       </Campo>
+      </Box>
 
       {/* ⚠️ Trava junto com a lista, e pelo mesmo motivo: mudar a seleção no
           meio da gravação mexeria no contador sem mexer no que já está sendo
@@ -191,8 +213,8 @@ export default function PreviaDaImportacao({
         mb="10px"
         mt="12px"
         flexWrap="wrap"
-        opacity={importando ? 0.55 : 1}
-        pointerEvents={importando ? "none" : "auto"}
+        opacity={travada ? 0.55 : 1}
+        pointerEvents={travada ? "none" : "auto"}
       >
         <Text fontSize="12.5px" fontWeight="500" color="fg.muted">
           <Text as="strong" color="fg" fontWeight="700">
@@ -215,7 +237,7 @@ export default function PreviaDaImportacao({
 
       {/* ⚠️ Durante a gravação a tabela inteira trava: desmarcar no meio
           mudaria o contador sem mudar o que está sendo gravado. */}
-      <Box opacity={importando ? 0.55 : 1} pointerEvents={importando ? "none" : "auto"}>
+      <Box opacity={travada ? 0.55 : 1} pointerEvents={travada ? "none" : "auto"}>
         <Box ref={medir}>
           {estreita ? (
             <Box px="6px">
@@ -258,31 +280,17 @@ export default function PreviaDaImportacao({
         />
       </Box>
 
-      {progresso && importando && (
-        <Box mt="14px">
-          <Progress.Root
-            value={progresso.total ? (progresso.feitos / progresso.total) * 100 : null}
-            size="sm"
-          >
-            <Progress.Track>
-              <Progress.Range />
-            </Progress.Track>
-          </Progress.Root>
-          <Text fontSize="12px" color="fg.muted" mt="6px">
-            {progresso.feitos} de {progresso.total} cadastrados
-          </Text>
-        </Box>
-      )}
+      {importando && <ProgressoDaGravacao progresso={progresso} />}
 
       <Flex gap="9px" mt="16px" flexWrap="wrap">
         <Botao
           loading={importando}
-          disabled={marcados.size === 0}
+          disabled={buscando || marcados.size === 0}
           onClick={() => onImportar([...marcados], responsaveis)}
         >
           {rotuloDeImportar(marcados.size)}
         </Botao>
-        <Botao variante="ghost" onClick={onVoltar} disabled={importando}>
+        <Botao variante="ghost" onClick={onVoltar} disabled={travada}>
           Voltar
         </Botao>
       </Flex>

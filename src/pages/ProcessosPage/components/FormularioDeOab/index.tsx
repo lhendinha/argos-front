@@ -23,7 +23,6 @@ import type { FormularioDeOabProps } from "./types";
  * a busca esbarra no limite e a saída passa a ser justamente ele.
  */
 export default function FormularioDeOab({
-  buscando,
   onBuscar,
   onCancelar,
   periodoAberto = false,
@@ -202,10 +201,10 @@ export default function FormularioDeOab({
       )}
 
       <Box display="flex" gap="9px" alignItems="center" flexWrap="wrap">
-        <Botao type="submit" loading={buscando}>
+        <Botao type="submit">
           Buscar processos
         </Botao>
-        <Botao variante="ghost" onClick={onCancelar} disabled={buscando}>
+        <Botao variante="ghost" onClick={onCancelar}>
           Cancelar
         </Botao>
         <Text fontSize="13px" color="fg.muted">

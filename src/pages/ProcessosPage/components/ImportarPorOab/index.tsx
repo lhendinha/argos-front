@@ -1,15 +1,17 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Box, Text } from "@chakra-ui/react";
 
-import { Botao, Campo, Cartao, Select } from "../../../../components";
+import { Botao, BotaoNu, Campo, Cartao, Select } from "../../../../components";
 import { useImportacaoPorOab } from "../../../../hooks/useImportacaoPorOab";
 import { listarMembrosDoSubgrupo } from "../../../../services/api";
 import { getEmail } from "../../../../services/auth";
 import { qk } from "../../../../services/queryKeys";
+import { ESTILO_DE_LINK } from "../../constants";
 import { resumoDaImportacao } from "../../../../utils/importacao";
+import { MENSAGEM_SUBSTITUIDA } from "../../../../constants";
 import AvisoDaImportacao from "../AvisoDaImportacao";
-import BuscaEmAndamento from "../BuscaEmAndamento";
+import ProgressoDaGravacao from "../ProgressoDaGravacao";
 import FormularioDeOab from "../FormularioDeOab";
 import PreviaDaImportacao from "../PreviaDaImportacao";
 import type { ImportarPorOabProps } from "./types";
@@ -31,11 +33,35 @@ export default function ImportarPorOab({
      DEPOIS de o modal abrir. Guardar `subgrupos[0]` no `useState` congelava o
      vazio: com a lista ainda carregando, a busca ia para `/subgrupos//...` e a
      tela mostrava "Not Found" (visto no Chrome, com o offline recém-subido). */
-  const subgrupoId = escolhido || (subgrupos[0]?.subgrupo_id ?? "");
-  const { etapa, previa, parcial, resultado, erro, progresso, buscar, importar, recomecar } =
-    useImportacaoPorOab(subgrupoId);
-
+  const subgrupoEscolhido = escolhido || (subgrupos[0]?.subgrupo_id ?? "");
   const meuEmail = getEmail() ?? "";
+  const {
+    etapa, previa, parcial, resultado, erro, progresso, semContato, subgrupoId, importacaoEmCurso,
+    buscar, importar, recomecar, descartar,
+  } = useImportacaoPorOab(subgrupoEscolhido, meuEmail);
+
+  /* ⚠️ A importação guardada num subgrupo que foi apagado não tem para onde ir.
+     Decidido só DEPOIS de a lista chegar: vazia, ela ainda está carregando. */
+  const subgrupoSumiu = subgrupos.length > 0 && !subgrupos.some((s) => s.subgrupo_id === subgrupoId);
+  useEffect(() => {
+    if (importacaoEmCurso && subgrupoSumiu) {
+      descartar("O subgrupo desta importação não existe mais. Escolha outro e busque de novo.");
+    }
+  }, [importacaoEmCurso, subgrupoSumiu, descartar]);
+
+  /* ⚠️ Sem contato não é erro: o trabalho segue no servidor, e a tela tenta de novo
+     sozinha. É a ÚNICA saída durante a espera -- sem ela, uma API fora do ar prenderia
+     a aba, que reabre a importação a cada recarga. Parar solta a aba, não o trabalho. */
+  const avisoDeContato = semContato && (
+    <Box role="status" aria-live="polite">
+      <AvisoDaImportacao titulo="Sem contato com o servidor">
+        O trabalho continua lá; esta tela tenta de novo sozinha.{" "}
+        <BotaoNu {...ESTILO_DE_LINK} color="status.warn.text" textDecoration="underline" onClick={recomecar}>
+          Parar de acompanhar
+        </BotaoNu>
+      </AvisoDaImportacao>
+    </Box>
+  );
 
   /* 🔴 Preciso saber se quem importa é MEMBRO do subgrupo escolhido.
    *
@@ -58,11 +84,32 @@ export default function ImportarPorOab({
     [membrosQuery.data, meuEmail],
   );
 
-  if (etapa === "previa" || etapa === "importando") {
+  /* A tela recarregada no meio da gravação: a prévia não voltou, mas a gravação sim. */
+  if (etapa === "importando" && !previa) {
     return (
       <Cartao>
+        {avisoDeContato}
+        <Text fontSize="16px" fontWeight="800">
+          Gravando os processos escolhidos
+        </Text>
+        <ProgressoDaGravacao progresso={progresso} />
+      </Cartao>
+    );
+  }
+
+  /* 🔴 A busca abre DIRETO na prévia, que vai se enchendo (pedido do usuário): a
+     mesma tabela, na mesma ordem da prévia final -- a do servidor, sem reordenar --
+     para as linhas não pularem no fim. A `key` troca na passagem para a prévia final:
+     ela nasce de novo, e a marcação sai da lista inteira. */
+  if (etapa === "buscando" || etapa === "previa" || etapa === "importando") {
+    const buscando = etapa === "buscando";
+    return (
+      <Cartao>
+        {avisoDeContato}
         <PreviaDaImportacao
-          previa={previa!}
+          key={buscando ? "busca" : "previa"}
+          buscando={buscando}
+          previa={buscando ? { id: "", total_encontrado: parcial.length, atingiu_o_teto: false, processos: parcial } : previa!}
           subgrupoId={subgrupoId}
           meuEmail={meuEmail}
           souMembro={souMembro}
@@ -92,6 +139,8 @@ export default function ImportarPorOab({
         <Box display="flex" gap="9px" mt="12px" flexWrap="wrap">
           <Botao
             onClick={() => {
+              /* Encerra a importação da aba: senão a página recarregada a reabriria. */
+              recomecar();
               onImportou();
               onFechar();
             }}
@@ -108,6 +157,7 @@ export default function ImportarPorOab({
 
   return (
     <Cartao>
+      {avisoDeContato}
       {etapa === "vazio" && (
         <AvisoDaImportacao titulo={`Nenhum processo encontrado.`}>
           Isso acontece quando o número ou a UF estão trocados, ou quando a OAB
@@ -119,7 +169,13 @@ export default function ImportarPorOab({
         /* 🔴 Erro é diferente de "nada encontrado": aqui a mensagem vem do
            servidor, que distingue PJe fora do ar de recusa por excesso -- e
            as duas pedem espera diferente. */
-        <AvisoDaImportacao titulo="Não deu para concluir">{erro}</AvisoDaImportacao>
+        erro === MENSAGEM_SUBSTITUIDA ? (
+          <AvisoDaImportacao titulo="Busca substituída">
+            Você começou outra busca desta OAB, em outra aba ou aparelho. Acompanhe por lá.
+          </AvisoDaImportacao>
+        ) : (
+          <AvisoDaImportacao titulo="Não deu para concluir">{erro}</AvisoDaImportacao>
+        )
       )}
 
       <Campo
@@ -141,7 +197,6 @@ export default function ImportarPorOab({
       </Campo>
 
       <FormularioDeOab
-        buscando={etapa === "buscando"}
         onBuscar={(numeroOab, ufOab, periodo) => buscar(numeroOab, ufOab, periodo)}
         onCancelar={onFechar}
         /* Depois de um resultado vazio, o período é a primeira coisa que a
@@ -150,7 +205,6 @@ export default function ImportarPorOab({
         periodoAberto={etapa === "vazio"}
       />
 
-      {etapa === "buscando" && <BuscaEmAndamento processos={parcial} />}
     </Cartao>
   );
 }

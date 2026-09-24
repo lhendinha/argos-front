@@ -1,67 +1,62 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
-  INTERVALO_DE_RELEITURA_DA_BUSCA_MS,
   MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO,
+  TIPO_DE_PROGRESSO,
   TIPO_DO_FIM_DA_GRAVACAO,
   TRABALHO_FALHOU,
-  TRABALHO_NA_FILA,
 } from "../constants";
 import { lerGravacao } from "../services/api";
 import { assinarCanal } from "../utils/canalDeTempoReal";
-import type { FimDaGravacao, GravacaoLida } from "../types";
+import { useReleituraDoTrabalho } from "./useReleituraDoTrabalho";
+import type { ContagemDaImportacao, GravacaoLida, ProgressoDaImportacao } from "../types";
 
-/** A espera da gravação em segundo plano: o fim pelo canal, e a releitura pelo `GET`.
+/** A espera da gravação em segundo plano, e o progresso DELA -- não o de qualquer gravação da pessoa.
  *
- * 🔴 O `GET` é a fonte: o fim no canal só dispara a releitura, e enquanto grava a
- * tela relê a cada intervalo -- o canal pode ter caído, e o fim viria só por ele.
- * ⚠️ Fim de OUTRA gravação (uma que a pessoa abandonou) é descartado.
+ * 🔴 O progresso é guardado por gravação, desde a montagem: o primeiro pulso sai
+ * antes de o `202` devolver o id, e só assim ele não se perde. A barra só avança.
+ * ⚠️ Desistir (a gravação sumiu, ou perdeu o acesso) vira "falhou" com a frase da
+ * interrupção: parte pode ter sido cadastrada, e a frase manda buscar de novo.
  */
 export function useGravacaoEmSegundoPlano(
   subgrupoId: string,
-  gravando: boolean,
   aoTerminar: (lida: GravacaoLida) => void,
+  retomada: string | null = null,
 ) {
-  const gravacaoAtual = useRef<string | null>(null);
-
-  const reler = useCallback(
-    async (trabalhoId: string) => {
-      let lida: GravacaoLida;
-      try {
-        lida = await lerGravacao(subgrupoId, trabalhoId);
-      } catch {
-        lida = { trabalho_id: trabalhoId, estado: TRABALHO_FALHOU, erro: MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO };
-      }
-      if (trabalhoId !== gravacaoAtual.current || lida.estado === TRABALHO_NA_FILA) return;
-      gravacaoAtual.current = null;
-      aoTerminar(lida);
-    },
-    [subgrupoId, aoTerminar],
-  );
+  const [esperada, setEsperada] = useState<string | null>(retomada);
+  const [progressos, setProgressos] = useState<Record<string, ContagemDaImportacao>>({});
 
   useEffect(
     () =>
-      assinarCanal(TIPO_DO_FIM_DA_GRAVACAO, (mensagem) => {
-        const fim = mensagem as unknown as FimDaGravacao;
-        if (fim.trabalho_id === gravacaoAtual.current) void reler(fim.trabalho_id);
+      assinarCanal(TIPO_DE_PROGRESSO, (mensagem) => {
+        const { trabalho_id, feitos, total } = mensagem as unknown as ProgressoDaImportacao;
+        /* ⚠️ Guardado pelo DONO: o sem dono (ou de outra aba) nunca é o esperado, e não aparece. */
+        setProgressos((atual) => ({
+          ...atual,
+          [trabalho_id]: { feitos: Math.max(feitos, atual[trabalho_id]?.feitos ?? 0), total },
+        }));
       }),
-    [reler],
+    [],
   );
 
-  useEffect(() => {
-    if (!gravando) return;
-    const intervalo = setInterval(() => {
-      if (gravacaoAtual.current) void reler(gravacaoAtual.current);
-    }, INTERVALO_DE_RELEITURA_DA_BUSCA_MS);
-    return () => clearInterval(intervalo);
-  }, [gravando, reler]);
+  const semContato = useReleituraDoTrabalho<GravacaoLida>({
+    trabalhoId: esperada,
+    ler: (id) => lerGravacao(subgrupoId, id),
+    tipoDoFim: TIPO_DO_FIM_DA_GRAVACAO,
+    aoTerminar: (lida) => {
+      setEsperada(null);
+      aoTerminar(lida);
+    },
+    aoDesistir: () => {
+      const id = esperada ?? "";
+      setEsperada(null);
+      aoTerminar({ trabalho_id: id, estado: TRABALHO_FALHOU, erro: MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO });
+    },
+  });
 
-  const esperar = useCallback((trabalhoId: string) => {
-    gravacaoAtual.current = trabalhoId;
-  }, []);
-  const esquecer = useCallback(() => {
-    gravacaoAtual.current = null;
-  }, []);
+  const esperar = useCallback((trabalhoId: string) => setEsperada(trabalhoId), []);
+  const esquecer = useCallback(() => setEsperada(null), []);
+  const progresso = esperada ? (progressos[esperada] ?? null) : null;
 
-  return { esperar, esquecer };
+  return { esperar, esquecer, semContato, progresso };
 }

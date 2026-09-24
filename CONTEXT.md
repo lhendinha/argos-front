@@ -419,15 +419,16 @@ respondem **202 com um id**, e o resto vem pelo canal WebSocket:
 | gravação | `importacao_progresso` (a barra) e `importacao_fim` | `lerGravacao` |
 
 - 🔴 **O `GET` é a fonte, e o canal é aviso.** O fim só dispara a releitura, e enquanto
-  o trabalho anda a tela relê a cada `INTERVALO_DE_RELEITURA_DA_BUSCA_MS` -- o canal pode
+  o trabalho anda a tela relê a cada `INTERVALO_DE_RELEITURA_DO_TRABALHO_MS` -- o canal pode
   ter caído (aba sem conexão), e o fim chegaria só por ele.
 - 🔴 **A tela SUBSTITUI a linha pelo número** (`fundirPagina`), nunca acrescenta: a
   paginação do PJe é por comunicação, e o mesmo processo volta em várias páginas.
 - ⚠️ **Mensagem de outro trabalho é descartada** (o id que a tela espera mora num `ref`):
   sem isso, a busca abandonada misturaria a lista da OAB errada.
-- ⚠️ **A busca em andamento é guardada na sessão** (`utils/buscaGuardada`): a tela
-  reaberta ou recarregada volta ao resultado. Conveniência -- sem armazenamento, só não
-  volta sozinha.
+- ⚠️ **A importação em andamento é guardada na sessão, uma por aba**
+  (`utils/importacaoGuardada`), com o e-mail e o subgrupo: a tela recarregada volta à
+  busca, à prévia ou à gravação, no subgrupo DELA -- que fica travado até recomeçar.
+  Conveniência -- sem armazenamento, só não volta sozinha.
 - ⚠️ **O front subiu ANTES da API nas duas fases** e aceita as duas respostas (a antiga,
   com a lista ou os números; a nova, com o id). Na ordem inversa a tela leria campos que
   não vêm.
