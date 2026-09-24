@@ -1032,7 +1032,10 @@ O fluxo tem três etapas, com uma decisão humana no meio:
    demais para uma busca só.
 2. **Conferir** — quatro cartões (encontrados, seriam cadastrados neste
    subgrupo, já estão neste subgrupo, também em outros) e a tabela com uma **Situação** por linha.
-   A lista é **paginada**, como as outras do sistema.
+   A lista é **paginada**, como as outras do sistema. A prévia aparece **desde o
+   clique em Buscar** e vai se enchendo enquanto o PJe responde ("Buscando no PJe… N
+   encontrados até agora"); marcar, escolher o responsável, Importar e Voltar ficam
+   travados até a busca terminar.
 3. **Importar** — grava os selecionados com o histórico que a busca já trouxe,
    e a barra de progresso anda pelo canal em tempo real.
 

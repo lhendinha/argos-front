@@ -87,7 +87,9 @@ tipo novo não tratado **não compila**. Com `string`, o caso novo cairia no
 
 🔴 **Do lado da API há um guarda que lê ESTE repositório**:
 `tests/test_tipos_de_notificacao_batem_com_o_front.py` compara as duas
-listas e falha dizendo o que falta onde. ⚠️ Ele pula quando o front não está
+listas e falha dizendo o que falta onde. (O mesmo vale para a importação por
+OAB: `tests/test_contrato_da_importacao_bate_com_o_front.py` confere
+`constants/importacao.ts`.) ⚠️ Ele pula quando o front não está
 ao lado.
 
 ## O padrão de prosa

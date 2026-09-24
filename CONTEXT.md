@@ -92,8 +92,8 @@ e deixar a suíte verde sem ter conferido nada.
 ### A API agora roda local, fora da AWS (25/08/2026)
 
 Na pasta `api`, `yarn offline` sobe o sistema inteiro na máquina: DynamoDB
-Local em docker, as seis lambdas com os handlers Python de verdade, o cron e
-o canal WebSocket. Para apontar o front pra lá:
+Local em docker, as filas no ElasticMQ, as lambdas com os handlers Python de
+verdade, o agendamento do enfileirador e do despachante, e o canal WebSocket. Para apontar o front pra lá:
 
 ```bash
 VITE_API_URL=http://localhost:8099 VITE_WS_URL=ws://localhost:8098 \
@@ -423,12 +423,25 @@ respondem **202 com um id**, e o resto vem pelo canal WebSocket:
   ter caído (aba sem conexão), e o fim chegaria só por ele.
 - 🔴 **A tela SUBSTITUI a linha pelo número** (`fundirPagina`), nunca acrescenta: a
   paginação do PJe é por comunicação, e o mesmo processo volta em várias páginas.
-- ⚠️ **Mensagem de outro trabalho é descartada** (o id que a tela espera mora num `ref`):
-  sem isso, a busca abandonada misturaria a lista da OAB errada.
+- ⚠️ **Mensagem de outro trabalho é descartada** (a tela sabe o id que espera): sem
+  isso, a busca abandonada misturaria a lista da OAB errada. O progresso da gravação
+  vem com o `trabalho_id`, e a barra mostra só o da SUA gravação -- e só avança.
+- 🔴 **A espera não desiste numa piscada** (`useReleituraDoTrabalho`, a mesma para a
+  busca e a gravação): só 404 (o trabalho sumiu, expirou, ou é de outra pessoa) e 403
+  encerram; rede, 5xx, 429 e o 401 com a sessão viva tentam de novo. Uma leitura por
+  vez. Aos 30 s de falhas seguidas (ou de leitura presa), o aviso "Sem contato com o
+  servidor", com "Parar de acompanhar" -- a única saída durante a espera.
+- 🔴 **A busca abre DIRETO na prévia, que vai se enchendo** (pedido do usuário): as
+  páginas entram na mesma tabela, na ordem do servidor (a da prévia final), com
+  marcação, responsáveis, "Importar" e "Voltar" travados até o fim.
+- ⚠️ **A busca substituída** por outra da mesma OAB (a API encerra a anterior) mostra
+  "Busca substituída", e não "Não deu para concluir" -- reconhecida pelo texto do erro,
+  que a API confere contra este repositório.
 - ⚠️ **A importação em andamento é guardada na sessão, uma por aba**
   (`utils/importacaoGuardada`), com o e-mail e o subgrupo: a tela recarregada volta à
-  busca, à prévia ou à gravação, no subgrupo DELA -- que fica travado até recomeçar.
-  Conveniência -- sem armazenamento, só não volta sozinha.
+  busca, à prévia ou à gravação, no subgrupo DELA, que vale até recomeçar; a página de
+  processos reabre o painel sozinha. O fim da gravação solta a aba. Conveniência --
+  sem armazenamento, só não volta sozinha.
 - ⚠️ **O front subiu ANTES da API nas duas fases** e aceita as duas respostas (a antiga,
   com a lista ou os números; a nova, com o id). Na ordem inversa a tela leria campos que
   não vêm.
