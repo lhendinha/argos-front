@@ -38,7 +38,7 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    hook não declara tipo. A fase 6 trouxe `VinculoDoDocumento`: a lista de
    documentos passou a ter duas formas, e a função que resolve o vínculo saiu
    de dentro da linha para `utils/` -- o tipo do retorno dela foi junto. A
-   Fase 3b do balde trouxe cinco: `BuscaPedida`, `EstadoDaBusca`,
+   Fase 3b do balde trouxe cinco: `BuscaPedida`, `EstadoDoTrabalho`,
    `PaginaDaBusca`, `FimDaBusca` e `BuscaLida` -- a busca por OAB passou a
    responder 202 e mandar a lista pelo canal. A Fase 4 trouxe três --
    `GravacaoPedida`, `FimDaGravacao` e `GravacaoLida` -- a gravação da

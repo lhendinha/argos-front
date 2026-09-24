@@ -249,14 +249,24 @@ describe("🔴 a busca em segundo plano (API da Fase 3b: 202 e o canal)", () => 
   });
 
   it("fim sem nada encontrado é `vazio`, e o PJe fora é `erro` com a mensagem", async () => {
-    api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [] });
+    /* ⚠️ A leitura imediata responde "na fila" nas DUAS metades: sem isto o
+       resultado chegava por ela, e o teste passava com o canal quebrado. */
+    api.lerBusca
+      .mockResolvedValueOnce({ trabalho_id: "t-1", estado: "na_fila" })
+      .mockResolvedValueOnce({ trabalho_id: "t-1", estado: "concluido", id: "b", processos: [] });
     const { result } = renderHook(() => useImportacaoPorOab("sub"));
     await buscarComId(result);
+    await waitFor(() => expect(api.lerBusca).toHaveBeenCalledTimes(1));
+    expect(result.current.etapa).toBe("buscando");
     await act(async () => publicarNoCanal(fim("t-1")));
     await waitFor(() => expect(result.current.etapa).toBe("vazio"));
 
-    api.lerBusca.mockResolvedValueOnce({ trabalho_id: "t-2", estado: "falhou", erro: "O PJe está limitando" });
+    api.lerBusca
+      .mockResolvedValueOnce({ trabalho_id: "t-2", estado: "na_fila" })
+      .mockResolvedValueOnce({ trabalho_id: "t-2", estado: "falhou", erro: "O PJe está limitando" });
     await buscarComId(result, "t-2");
+    await waitFor(() => expect(api.lerBusca).toHaveBeenCalledTimes(3));
+    expect(result.current.etapa).toBe("buscando");
     await act(async () => publicarNoCanal(fim("t-2", { erro: "O PJe está limitando" })));
     await waitFor(() => expect(result.current.etapa).toBe("erro"));
     expect(result.current.erro).toBe("O PJe está limitando");
@@ -383,5 +393,19 @@ describe("🔴 a gravação em segundo plano (API da Fase 4: 202 e o canal)", ()
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("as funções do hook", () => {
+  it("⚠️ `importar` e `recomecar` são as MESMAS entre renders", () => {
+    /* Quem garante é o React Compiler (`vite.config.ts`): o retorno de
+       `useGravacaoEmSegundoPlano` é um objeto literal, e sem o compilador as duas,
+       que dependem dele, seriam recriadas a cada render. Um `useMemo` à mão ali
+       não mudou nada -- a mutação que o tirava sobrevivia. */
+    const { result, rerender } = renderHook(() => useImportacaoPorOab("sub"));
+    const antes = result.current;
+    rerender();
+    expect(result.current.importar).toBe(antes.importar);
+    expect(result.current.recomecar).toBe(antes.recomecar);
   });
 });

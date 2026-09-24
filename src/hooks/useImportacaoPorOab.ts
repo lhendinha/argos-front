@@ -3,9 +3,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   TRABALHO_CONCLUIDO,
   TRABALHO_FALHOU,
-  INTERVALO_DE_RELEITURA_DA_BUSCA_MS,
+  INTERVALO_DE_RELEITURA_DO_TRABALHO_MS,
   MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO,
   TIPO_DA_PAGINA_DA_BUSCA,
+  TIPO_DE_PROGRESSO,
   TIPO_DO_FIM_DA_BUSCA,
 } from "../constants";
 import { buscarProcessosPorOab, importarProcessos, lerBusca } from "../services/api";
@@ -49,7 +50,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
    */
   useEffect(
     () =>
-      assinarCanal("importacao_progresso", (mensagem) => {
+      assinarCanal(TIPO_DE_PROGRESSO, (mensagem) => {
         const { feitos, total } = mensagem as unknown as ProgressoDaImportacao;
         setProgresso({ feitos, total });
       }),
@@ -126,7 +127,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
       if (trabalhoAtual.current) void reler(trabalhoAtual.current);
     };
     const primeira = setTimeout(relerAtual, 0);
-    const intervalo = setInterval(relerAtual, INTERVALO_DE_RELEITURA_DA_BUSCA_MS);
+    const intervalo = setInterval(relerAtual, INTERVALO_DE_RELEITURA_DO_TRABALHO_MS);
     return () => {
       clearTimeout(primeira);
       clearInterval(intervalo);

@@ -1,4 +1,11 @@
 /** Processo, comunicação, opções, filtros e a importação por OAB. */
+import type {
+  ESTADOS_DO_TRABALHO,
+  TIPO_DA_PAGINA_DA_BUSCA,
+  TIPO_DE_PROGRESSO,
+  TIPO_DO_FIM_DA_BUSCA,
+  TIPO_DO_FIM_DA_GRAVACAO,
+} from "../constants/importacao";
 
 export interface Processo {
   subgrupo_id: string;
@@ -152,7 +159,7 @@ export interface ResultadoDaImportacao {
  * com sucesso ficaria parada numa importação com falhas, sugerindo
  * travamento. */
 export interface ProgressoDaImportacao extends ContagemDaImportacao {
-  tipo: "importacao_progresso";
+  tipo: typeof TIPO_DE_PROGRESSO;
 }
 
 /** `POST .../buscar-por-oab` depois da Fase 3b do balde: o pedido aceito (202).
@@ -161,12 +168,13 @@ export interface BuscaPedida {
   trabalho_id: string;
 }
 
-export type EstadoDaBusca = "na_fila" | "concluido" | "falhou";
+/** O estado de um trabalho em segundo plano -- busca ou gravação -- tirado da lista de constantes. */
+export type EstadoDoTrabalho = (typeof ESTADOS_DO_TRABALHO)[number];
 
 /** Uma página da busca pelo canal: as linhas ATUALIZADAS dos processos que ela
  * tocou -- recalculadas no servidor sobre o acumulado ordenado por data. */
 export interface PaginaDaBusca {
-  tipo: "importacao_busca";
+  tipo: typeof TIPO_DA_PAGINA_DA_BUSCA;
   trabalho_id: string;
   processos: ProcessoEncontrado[];
 }
@@ -174,7 +182,7 @@ export interface PaginaDaBusca {
 /** O fim da busca pelo canal. ⚠️ Só o resumo: a lista inteira a tela relê pelo
  * `GET`, que é a fonte -- uma página perdida no canal não some da prévia. */
 export interface FimDaBusca {
-  tipo: "importacao_busca_fim";
+  tipo: typeof TIPO_DO_FIM_DA_BUSCA;
   trabalho_id: string;
   erro?: string;
 }
@@ -186,14 +194,14 @@ export interface GravacaoPedida {
 
 /** O fim da gravação pelo canal. ⚠️ Só o gatilho: os números a tela relê pelo `GET`. */
 export interface FimDaGravacao {
-  tipo: "importacao_fim";
+  tipo: typeof TIPO_DO_FIM_DA_GRAVACAO;
   trabalho_id: string;
 }
 
 /** `GET .../processos/importacoes/{id}`: o estado, e os três números quando terminou. */
 export interface GravacaoLida {
   trabalho_id: string;
-  estado: EstadoDaBusca;
+  estado: EstadoDoTrabalho;
   cadastrados?: number;
   ja_existiam?: number;
   falharam?: string[];
@@ -203,7 +211,7 @@ export interface GravacaoLida {
 /** `GET .../processos/buscas/{id}`: o estado, e a prévia quando terminou. */
 export interface BuscaLida {
   trabalho_id: string;
-  estado: EstadoDaBusca;
+  estado: EstadoDoTrabalho;
   id?: string;
   total_encontrado?: number;
   atingiu_o_teto?: boolean;

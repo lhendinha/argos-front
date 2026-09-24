@@ -419,7 +419,7 @@ respondem **202 com um id**, e o resto vem pelo canal WebSocket:
 | gravação | `importacao_progresso` (a barra) e `importacao_fim` | `lerGravacao` |
 
 - 🔴 **O `GET` é a fonte, e o canal é aviso.** O fim só dispara a releitura, e enquanto
-  o trabalho anda a tela relê a cada `INTERVALO_DE_RELEITURA_DA_BUSCA_MS` -- o canal pode
+  o trabalho anda a tela relê a cada `INTERVALO_DE_RELEITURA_DO_TRABALHO_MS` -- o canal pode
   ter caído (aba sem conexão), e o fim chegaria só por ele.
 - 🔴 **A tela SUBSTITUI a linha pelo número** (`fundirPagina`), nunca acrescenta: a
   paginação do PJe é por comunicação, e o mesmo processo volta em várias páginas.

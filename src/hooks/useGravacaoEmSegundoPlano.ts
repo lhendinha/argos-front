@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import {
-  INTERVALO_DE_RELEITURA_DA_BUSCA_MS,
+  INTERVALO_DE_RELEITURA_DO_TRABALHO_MS,
   MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO,
   TIPO_DO_FIM_DA_GRAVACAO,
   TRABALHO_FALHOU,
@@ -52,7 +52,7 @@ export function useGravacaoEmSegundoPlano(
     if (!gravando) return;
     const intervalo = setInterval(() => {
       if (gravacaoAtual.current) void reler(gravacaoAtual.current);
-    }, INTERVALO_DE_RELEITURA_DA_BUSCA_MS);
+    }, INTERVALO_DE_RELEITURA_DO_TRABALHO_MS);
     return () => clearInterval(intervalo);
   }, [gravando, reler]);
 

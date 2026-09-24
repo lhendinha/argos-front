@@ -8,6 +8,7 @@ import { listarMembrosDoSubgrupo } from "../../../../services/api";
 import { getEmail } from "../../../../services/auth";
 import { qk } from "../../../../services/queryKeys";
 import { resumoDaImportacao } from "../../../../utils/importacao";
+import { MENSAGEM_SUBSTITUIDA } from "../../../../constants";
 import AvisoDaImportacao from "../AvisoDaImportacao";
 import BuscaEmAndamento from "../BuscaEmAndamento";
 import FormularioDeOab from "../FormularioDeOab";
@@ -119,7 +120,13 @@ export default function ImportarPorOab({
         /* 🔴 Erro é diferente de "nada encontrado": aqui a mensagem vem do
            servidor, que distingue PJe fora do ar de recusa por excesso -- e
            as duas pedem espera diferente. */
-        <AvisoDaImportacao titulo="Não deu para concluir">{erro}</AvisoDaImportacao>
+        erro === MENSAGEM_SUBSTITUIDA ? (
+          <AvisoDaImportacao titulo="Busca substituída">
+            Você começou outra busca desta OAB, em outra aba ou aparelho. Acompanhe por lá.
+          </AvisoDaImportacao>
+        ) : (
+          <AvisoDaImportacao titulo="Não deu para concluir">{erro}</AvisoDaImportacao>
+        )
       )}
 
       <Campo

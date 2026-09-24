@@ -1,14 +1,16 @@
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../../../../services/api", () => ({
+const api = vi.hoisted(() => ({
   listarMembrosDoSubgrupo: vi.fn().mockResolvedValue({ membros: [] }),
   buscarProcessosPorOab: vi.fn(),
   importarProcessos: vi.fn(),
   lerBusca: vi.fn(),
 }));
+vi.mock("../../../../services/api", () => api);
 
+import { MENSAGEM_SUBSTITUIDA, PREFIXO_DA_BUSCA_GUARDADA } from "../../../../constants";
 import { renderComProviders } from "../../../../test/queryTestUtils";
 import ImportarPorOab from "./index";
 
@@ -30,5 +32,28 @@ describe("ImportarPorOab", () => {
     act(() => chegar([CIVEL]));
 
     expect(screen.getByText("Cível")).toBeTruthy();
+  });
+});
+
+describe("a busca que terminou em erro", () => {
+  function comBuscaGuardadaQueFalhou(erro: string) {
+    sessionStorage.clear();
+    sessionStorage.setItem(PREFIXO_DA_BUSCA_GUARDADA + CIVEL.subgrupo_id, "t-1");
+    api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "falhou", erro });
+    renderComProviders(<ImportarPorOab subgrupos={[CIVEL]} onFechar={() => {}} onImportou={() => {}} />);
+  }
+
+  it("a SUBSTITUÍDA por outra da mesma OAB diz o que houve, e não que falhou", async () => {
+    comBuscaGuardadaQueFalhou(MENSAGEM_SUBSTITUIDA);
+    await waitFor(() => expect(screen.getByText("Busca substituída")).toBeTruthy());
+    expect(screen.getByText(/Você começou outra busca desta OAB/)).toBeTruthy();
+    expect(screen.queryByText("Não deu para concluir")).toBeNull();
+  });
+
+  it("o par: outro erro continua sendo \"Não deu para concluir\", com a mensagem do servidor", async () => {
+    comBuscaGuardadaQueFalhou("O PJe está limitando");
+    await waitFor(() => expect(screen.getByText("Não deu para concluir")).toBeTruthy());
+    expect(screen.getByText("O PJe está limitando")).toBeTruthy();
+    expect(screen.queryByText("Busca substituída")).toBeNull();
   });
 });
