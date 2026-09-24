@@ -74,7 +74,10 @@ describe("🔴 a importação guardada na aba reabre o painel (item 10)", () => 
     localStorage.setItem("pje-monitor-email", "eu@x.com");
     sessionStorage.setItem(
       "argos:importacao-por-oab",
-      JSON.stringify({ email: dono, subgrupoId: "sub-1", busca: "t-1" }),
+      /* Um subgrupo que EXISTE na lista simulada: o painel nasce na busca retomada, sem
+         depender de a lista chegar -- um subgrupo inexistente o faria descartar e voltar
+         ao formulário, e o teste passaria por esse caminho, contra o relógio. */
+      JSON.stringify({ email: dono, subgrupoId: "sg1", busca: "t-1" }),
     );
   }
   afterEach(() => {
@@ -85,13 +88,14 @@ describe("🔴 a importação guardada na aba reabre o painel (item 10)", () => 
   it("a importação desta pessoa: o painel já nasce aberto", async () => {
     guardarComo("eu@x.com");
     renderComProviders(<MemoryRouter><ProcessosPage /></MemoryRouter>);
-    expect(await screen.findByText("Onde os processos vão ficar.")).toBeInTheDocument();
+    expect(screen.getByText("Buscando no PJe…")).toBeInTheDocument();
   });
 
   it("o par: a de OUTRA pessoa na mesma aba não abre nada", async () => {
     guardarComo("outra@x.com");
     renderComProviders(<MemoryRouter><ProcessosPage /></MemoryRouter>);
     await screen.findByText("Meu processo");
+    expect(screen.queryByText("Buscando no PJe…")).toBeNull();
     expect(screen.queryByText("Onde os processos vão ficar.")).toBeNull();
   });
 });

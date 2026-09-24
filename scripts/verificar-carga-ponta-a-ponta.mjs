@@ -145,7 +145,7 @@ for (let tentativa = 0; tentativa < 60 && !linha; tentativa++) {
   if (eventos.length) linha = JSON.parse(eventos[eventos.length - 1].message);
   else await new Promise((r) => setTimeout(r, 15000));
 }
-conferir(linha !== null, "o despachante concluiu a carga", "sem a linha em 15 minutos");
+conferir(linha !== null, "o despachante concluiu a carga", linha ? "" : "sem a linha em 15 minutos");
 writeFileSync("/tmp/carga-e2e.json", JSON.stringify(linha ?? {}));
 const carga = JSON.parse(readFileSync("/tmp/carga-e2e.json", "utf8"));
 console.log("       carga:", JSON.stringify(carga));
