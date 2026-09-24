@@ -8,9 +8,10 @@ const api = vi.hoisted(() => ({
   importarProcessos: vi.fn(),
   lerBusca: vi.fn(),
 }));
-vi.mock("../../../../services/api", () => api);
+/* ⚠️ O `ApiError` de verdade: a espera classifica o erro por ele. */
+vi.mock("../../../../services/api", async (original) => ({ ...(await original<object>()), ...api }));
 
-import { MENSAGEM_SUBSTITUIDA, PREFIXO_DA_BUSCA_GUARDADA } from "../../../../constants";
+import { LIMIAR_SEM_CONTATO_MS, MENSAGEM_SUBSTITUIDA, PREFIXO_DA_BUSCA_GUARDADA } from "../../../../constants";
 import { renderComProviders } from "../../../../test/queryTestUtils";
 import ImportarPorOab from "./index";
 
@@ -55,5 +56,28 @@ describe("a busca que terminou em erro", () => {
     await waitFor(() => expect(screen.getByText("Não deu para concluir")).toBeTruthy());
     expect(screen.getByText("O PJe está limitando")).toBeTruthy();
     expect(screen.queryByText("Busca substituída")).toBeNull();
+  });
+});
+
+describe("⚠️ sem contato com o servidor durante a busca", () => {
+  it("avisa depois do limiar, sem desistir, e o aviso some quando o servidor volta", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      sessionStorage.clear();
+      sessionStorage.setItem(PREFIXO_DA_BUSCA_GUARDADA + CIVEL.subgrupo_id, "t-1");
+      api.lerBusca.mockReset();
+      api.lerBusca.mockRejectedValue(new TypeError("Failed to fetch"));
+      renderComProviders(<ImportarPorOab subgrupos={[CIVEL]} onFechar={() => {}} onImportou={() => {}} />);
+
+      await act(async () => vi.advanceTimersByTimeAsync(LIMIAR_SEM_CONTATO_MS + 5000));
+      expect(screen.getByText("Sem contato com o servidor")).toBeTruthy();
+      expect(screen.queryByText("Não deu para concluir")).toBeNull();
+
+      api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "na_fila" });
+      await act(async () => vi.advanceTimersByTimeAsync(5000));
+      expect(screen.queryByText("Sem contato com o servidor")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

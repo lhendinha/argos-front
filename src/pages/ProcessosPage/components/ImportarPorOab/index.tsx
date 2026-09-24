@@ -33,8 +33,15 @@ export default function ImportarPorOab({
      vazio: com a lista ainda carregando, a busca ia para `/subgrupos//...` e a
      tela mostrava "Not Found" (visto no Chrome, com o offline recém-subido). */
   const subgrupoId = escolhido || (subgrupos[0]?.subgrupo_id ?? "");
-  const { etapa, previa, parcial, resultado, erro, progresso, buscar, importar, recomecar } =
+  const { etapa, previa, parcial, resultado, erro, progresso, semContato, buscar, importar, recomecar } =
     useImportacaoPorOab(subgrupoId);
+
+  /* ⚠️ Sem contato não é erro: o trabalho segue no servidor, e a tela tenta de novo sozinha. */
+  const avisoDeContato = semContato && (
+    <AvisoDaImportacao titulo="Sem contato com o servidor">
+      O trabalho continua lá; esta tela tenta de novo sozinha.
+    </AvisoDaImportacao>
+  );
 
   const meuEmail = getEmail() ?? "";
 
@@ -62,6 +69,7 @@ export default function ImportarPorOab({
   if (etapa === "previa" || etapa === "importando") {
     return (
       <Cartao>
+        {avisoDeContato}
         <PreviaDaImportacao
           previa={previa!}
           subgrupoId={subgrupoId}
@@ -109,6 +117,7 @@ export default function ImportarPorOab({
 
   return (
     <Cartao>
+      {avisoDeContato}
       {etapa === "vazio" && (
         <AvisoDaImportacao titulo={`Nenhum processo encontrado.`}>
           Isso acontece quando o número ou a UF estão trocados, ou quando a OAB

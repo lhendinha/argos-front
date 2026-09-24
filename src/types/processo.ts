@@ -171,6 +171,25 @@ export interface BuscaPedida {
 /** O estado de um trabalho em segundo plano -- busca ou gravação -- tirado da lista de constantes. */
 export type EstadoDoTrabalho = (typeof ESTADOS_DO_TRABALHO)[number];
 
+/** O que a espera lê de qualquer trabalho em segundo plano -- a busca e a gravação têm os dois. */
+export interface TrabalhoLido {
+  trabalho_id: string;
+  estado: EstadoDoTrabalho;
+}
+
+/** A espera de um trabalho (`useReleituraDoTrabalho`). */
+export interface OpcoesDaReleitura<T extends TrabalhoLido> {
+  /** O trabalho esperado; `null` é nada a esperar. */
+  trabalhoId: string | null;
+  ler: (trabalhoId: string) => Promise<T>;
+  /** O tipo da mensagem do canal que anuncia o fim -- ela só dispara a releitura. */
+  tipoDoFim: string;
+  /** Saiu da fila: concluído ou falhou. */
+  aoTerminar: (lida: T) => void;
+  /** Erro definitivo ao ler (404, 403): o trabalho não pode mais ser acompanhado. */
+  aoDesistir: (erro: unknown) => void;
+}
+
 /** Uma página da busca pelo canal: as linhas ATUALIZADAS dos processos que ela
  * tocou -- recalculadas no servidor sobre o acumulado ordenado por data. */
 export interface PaginaDaBusca {

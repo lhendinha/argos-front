@@ -1,67 +1,35 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useState } from "react";
 
-import {
-  INTERVALO_DE_RELEITURA_DO_TRABALHO_MS,
-  MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO,
-  TIPO_DO_FIM_DA_GRAVACAO,
-  TRABALHO_FALHOU,
-  TRABALHO_NA_FILA,
-} from "../constants";
+import { MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO, TIPO_DO_FIM_DA_GRAVACAO, TRABALHO_FALHOU } from "../constants";
 import { lerGravacao } from "../services/api";
-import { assinarCanal } from "../utils/canalDeTempoReal";
-import type { FimDaGravacao, GravacaoLida } from "../types";
+import { useReleituraDoTrabalho } from "./useReleituraDoTrabalho";
+import type { GravacaoLida } from "../types";
 
-/** A espera da gravação em segundo plano: o fim pelo canal, e a releitura pelo `GET`.
+/** A espera da gravação em segundo plano: a espera única do trabalho, com o subgrupo da importação.
  *
- * 🔴 O `GET` é a fonte: o fim no canal só dispara a releitura, e enquanto grava a
- * tela relê a cada intervalo -- o canal pode ter caído, e o fim viria só por ele.
- * ⚠️ Fim de OUTRA gravação (uma que a pessoa abandonou) é descartado.
+ * ⚠️ Desistir (a gravação sumiu, ou perdeu o acesso) vira "falhou" com a frase da
+ * interrupção: parte pode ter sido cadastrada, e a frase manda buscar de novo.
  */
-export function useGravacaoEmSegundoPlano(
-  subgrupoId: string,
-  gravando: boolean,
-  aoTerminar: (lida: GravacaoLida) => void,
-) {
-  const gravacaoAtual = useRef<string | null>(null);
+export function useGravacaoEmSegundoPlano(subgrupoId: string, aoTerminar: (lida: GravacaoLida) => void) {
+  const [esperada, setEsperada] = useState<string | null>(null);
 
-  const reler = useCallback(
-    async (trabalhoId: string) => {
-      let lida: GravacaoLida;
-      try {
-        lida = await lerGravacao(subgrupoId, trabalhoId);
-      } catch {
-        lida = { trabalho_id: trabalhoId, estado: TRABALHO_FALHOU, erro: MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO };
-      }
-      if (trabalhoId !== gravacaoAtual.current || lida.estado === TRABALHO_NA_FILA) return;
-      gravacaoAtual.current = null;
+  const semContato = useReleituraDoTrabalho<GravacaoLida>({
+    trabalhoId: esperada,
+    ler: (id) => lerGravacao(subgrupoId, id),
+    tipoDoFim: TIPO_DO_FIM_DA_GRAVACAO,
+    aoTerminar: (lida) => {
+      setEsperada(null);
       aoTerminar(lida);
     },
-    [subgrupoId, aoTerminar],
-  );
+    aoDesistir: () => {
+      const id = esperada ?? "";
+      setEsperada(null);
+      aoTerminar({ trabalho_id: id, estado: TRABALHO_FALHOU, erro: MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO });
+    },
+  });
 
-  useEffect(
-    () =>
-      assinarCanal(TIPO_DO_FIM_DA_GRAVACAO, (mensagem) => {
-        const fim = mensagem as unknown as FimDaGravacao;
-        if (fim.trabalho_id === gravacaoAtual.current) void reler(fim.trabalho_id);
-      }),
-    [reler],
-  );
+  const esperar = useCallback((trabalhoId: string) => setEsperada(trabalhoId), []);
+  const esquecer = useCallback(() => setEsperada(null), []);
 
-  useEffect(() => {
-    if (!gravando) return;
-    const intervalo = setInterval(() => {
-      if (gravacaoAtual.current) void reler(gravacaoAtual.current);
-    }, INTERVALO_DE_RELEITURA_DO_TRABALHO_MS);
-    return () => clearInterval(intervalo);
-  }, [gravando, reler]);
-
-  const esperar = useCallback((trabalhoId: string) => {
-    gravacaoAtual.current = trabalhoId;
-  }, []);
-  const esquecer = useCallback(() => {
-    gravacaoAtual.current = null;
-  }, []);
-
-  return { esperar, esquecer };
+  return { esperar, esquecer, semContato };
 }

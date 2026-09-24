@@ -2,8 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   TRABALHO_CONCLUIDO,
-  TRABALHO_FALHOU,
-  INTERVALO_DE_RELEITURA_DO_TRABALHO_MS,
   MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO,
   TIPO_DA_PAGINA_DA_BUSCA,
   TIPO_DE_PROGRESSO,
@@ -14,9 +12,9 @@ import { esquecerBusca, guardarBusca, lerBuscaGuardada } from "../utils/buscaGua
 import { assinarCanal } from "../utils/canalDeTempoReal";
 import { fundirPagina } from "../utils/importacao";
 import { useGravacaoEmSegundoPlano } from "./useGravacaoEmSegundoPlano";
+import { useReleituraDoTrabalho } from "./useReleituraDoTrabalho";
 import type {
   BuscaLida,
-  FimDaBusca,
   GravacaoLida,
   PaginaDaBusca,
   PreviaDaImportacao,
@@ -39,7 +37,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
   const [parcial, setParcial] = useState<ProcessoEncontrado[]>([]);
   /** 🔴 A busca que esta tela espera. Mensagem de OUTRA busca (uma anterior, que
    * a pessoa abandonou) é descartada -- senão a lista misturaria duas OABs. */
-  const trabalhoAtual = useRef<string | null>(guardadaAoAbrir);
+  const [buscaEsperada, setBuscaEsperada] = useState<string | null>(guardadaAoAbrir);
 
   /** 🔴 A barra ouve o canal SEMPRE, não só durante a gravação.
    *
@@ -57,13 +55,12 @@ export function useImportacaoPorOab(subgrupoId: string) {
     [],
   );
 
-  /** Aplica o que o `GET` leu: a prévia no fim, o erro do PJe, ou nada (ainda na fila). */
-  const aplicar = useCallback(
+  /** Aplica o que o `GET` leu no fim da busca: a prévia, ou o erro do PJe. */
+  const aoTerminarBusca = useCallback(
     (lida: BuscaLida) => {
-      if (lida.trabalho_id !== trabalhoAtual.current) return;
+      setBuscaEsperada(null);
+      esquecerBusca(subgrupoId);
       if (lida.estado === TRABALHO_CONCLUIDO) {
-        trabalhoAtual.current = null;
-        esquecerBusca(subgrupoId);
         const processos = lida.processos ?? [];
         setPrevia({
           id: lida.id ?? "",
@@ -72,9 +69,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
           processos,
         });
         setEtapa(processos.length === 0 ? "vazio" : "previa");
-      } else if (lida.estado === TRABALHO_FALHOU) {
-        trabalhoAtual.current = null;
-        esquecerBusca(subgrupoId);
+      } else {
         setErro(lida.erro ?? "Não foi possível buscar agora.");
         setEtapa("erro");
       }
@@ -82,57 +77,34 @@ export function useImportacaoPorOab(subgrupoId: string) {
     [subgrupoId],
   );
 
-  /** Relê a busca pelo `GET` -- no fim anunciado pelo canal, e periodicamente,
-   * porque o canal pode ter caído e o fim chegaria só por ele. */
-  const reler = useCallback(
-    async (trabalhoId: string) => {
-      try {
-        aplicar(await lerBusca(subgrupoId, trabalhoId));
-      } catch (e) {
-        if (trabalhoId !== trabalhoAtual.current) return;
-        trabalhoAtual.current = null;
-        esquecerBusca(subgrupoId);
-        setErro(e instanceof Error ? e.message : "Não foi possível buscar agora.");
-        setEtapa("erro");
-      }
+  /** A busca sumiu (expirou, ou é de outra pessoa) ou a pessoa perdeu o acesso. */
+  const aoDesistirDaBusca = useCallback(
+    (e: unknown) => {
+      setBuscaEsperada(null);
+      esquecerBusca(subgrupoId);
+      setErro(e instanceof Error ? e.message : "Não foi possível buscar agora.");
+      setEtapa("erro");
     },
-    [aplicar, subgrupoId],
+    [subgrupoId],
   );
+
+  const semContatoNaBusca = useReleituraDoTrabalho<BuscaLida>({
+    trabalhoId: buscaEsperada,
+    ler: (id) => lerBusca(subgrupoId, id),
+    tipoDoFim: TIPO_DO_FIM_DA_BUSCA,
+    aoTerminar: aoTerminarBusca,
+    aoDesistir: aoDesistirDaBusca,
+  });
 
   useEffect(
     () =>
       assinarCanal(TIPO_DA_PAGINA_DA_BUSCA, (mensagem) => {
         const pagina = mensagem as unknown as PaginaDaBusca;
-        if (pagina.trabalho_id !== trabalhoAtual.current) return;
+        if (!buscaEsperada || pagina.trabalho_id !== buscaEsperada) return;
         setParcial((atual) => fundirPagina(atual, pagina.processos));
       }),
-    [],
+    [buscaEsperada],
   );
-
-  useEffect(
-    () =>
-      assinarCanal(TIPO_DO_FIM_DA_BUSCA, (mensagem) => {
-        const fim = mensagem as unknown as FimDaBusca;
-        if (fim.trabalho_id === trabalhoAtual.current) void reler(fim.trabalho_id);
-      }),
-    [reler],
-  );
-
-  /* ⚠️ A releitura periódica só existe enquanto há busca em voo. A primeira volta
-     sai JÁ: a tela reaberta com uma busca guardada que terminou mostra a prévia
-     sem esperar o intervalo. Numa busca nova ela não faz nada -- o id ainda não veio. */
-  useEffect(() => {
-    if (etapa !== "buscando") return;
-    const relerAtual = () => {
-      if (trabalhoAtual.current) void reler(trabalhoAtual.current);
-    };
-    const primeira = setTimeout(relerAtual, 0);
-    const intervalo = setInterval(relerAtual, INTERVALO_DE_RELEITURA_DO_TRABALHO_MS);
-    return () => {
-      clearTimeout(primeira);
-      clearInterval(intervalo);
-    };
-  }, [etapa, reler]);
 
   /** ⚠️ Evita que uma resposta de busca antiga sobrescreva a nova.
    *
@@ -156,13 +128,13 @@ export function useImportacaoPorOab(subgrupoId: string) {
       setErro("");
       setProgresso(null);
       setParcial([]);
-      trabalhoAtual.current = null;
+      setBuscaEsperada(null);
       try {
         const resposta = await buscarProcessosPorOab(subgrupoId, numeroOab, ufOab, periodo);
         if (minha !== buscaAtual.current) return;
         if ("trabalho_id" in resposta) {
           /* A API em segundo plano: a lista vem pelo canal, e o fim pelo `GET`. */
-          trabalhoAtual.current = resposta.trabalho_id;
+          setBuscaEsperada(resposta.trabalho_id);
           guardarBusca(subgrupoId, resposta.trabalho_id);
           return;
         }
@@ -191,7 +163,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
       setEtapa("erro");
     }
   }, []);
-  const gravacao = useGravacaoEmSegundoPlano(subgrupoId, etapa === "importando", aoTerminarGravacao);
+  const gravacao = useGravacaoEmSegundoPlano(subgrupoId, aoTerminarGravacao);
 
   const importar = useCallback(
     async (numeros: string[], responsaveis: string[]) => {
@@ -222,7 +194,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
   const recomecar = useCallback(() => {
     buscaAtual.current++;
     gravacao.esquecer();
-    trabalhoAtual.current = null;
+    setBuscaEsperada(null);
     esquecerBusca(subgrupoId);
     setParcial([]);
     setEtapa("formulario");
@@ -232,5 +204,8 @@ export function useImportacaoPorOab(subgrupoId: string) {
     setProgresso(null);
   }, [subgrupoId, gravacao]);
 
-  return { etapa, previa, parcial, resultado, erro, progresso, buscar, importar, recomecar };
+  /** 🔴 Sem contato com o servidor enquanto espera: a tela avisa, e continua tentando. */
+  const semContato = semContatoNaBusca || gravacao.semContato;
+
+  return { etapa, previa, parcial, resultado, erro, progresso, semContato, buscar, importar, recomecar };
 }

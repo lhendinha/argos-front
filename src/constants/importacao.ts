@@ -28,6 +28,11 @@ export const TIPO_DE_PROGRESSO = "importacao_progresso";
  * o canal pode ter caído (aba sem conexão, rede do escritório), e o fim chegaria só por ele. */
 export const INTERVALO_DE_RELEITURA_DO_TRABALHO_MS = 5000;
 
+/** Quanto tempo seguido sem conseguir ler o trabalho antes de a tela avisar "sem
+ * contato". ⚠️ Contado da PRIMEIRA falha seguida (ou da leitura presa), e não do
+ * último sucesso: um notebook que dormiu acusaria falha ao acordar. */
+export const LIMIAR_SEM_CONTATO_MS = 30_000;
+
 /** Onde a tela guarda o id da busca em andamento, por subgrupo -- é o que a faz
  * voltar ao resultado depois de recarregar. */
 export const PREFIXO_DA_BUSCA_GUARDADA = "argos:busca-por-oab:";
