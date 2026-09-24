@@ -25,7 +25,7 @@
  * afirmação.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
 /* 🔴 Nenhum erro sobe cru: o log de falha do Playwright imprime o nome
@@ -114,22 +114,39 @@ await navegador.close();
    rodaria para TODOS os grupos, inclusive os de cliente. Ele existe exatamente
    para isto -- rodar a execução mais cara do sistema em produção, contida a um
    grupo descartável. */
-console.log("\ndisparando a carga para o grupo de teste…");
+console.log("\npedindo a carga do grupo de teste ao despachante…");
+/* A lambda `carga` saiu na revisão do balde: a carga é um trabalho da fila baixa, e
+   quem o pede é o `enfileirador` -- o mesmo caminho do agendamento. */
+const pedidaEm = Date.now();
 const bruto = execFileSync("aws", [
   "lambda", "invoke",
-  "--function-name", "pje-monitor-prod-carga",
+  "--function-name", "pje-monitor-prod-enfileirador",
   "--profile", PERFIL, "--region", "sa-east-1",
-  "--payload", JSON.stringify({ grupo_id: GRUPO }),
+  "--payload", JSON.stringify({ tipo: "carga", grupo_id: GRUPO }),
   "--cli-binary-format", "raw-in-base64-out",
-  "/tmp/carga-e2e.json",
+  "/tmp/carga-e2e-pedido.json",
 ], { encoding: "utf8" });
 const invocacao = JSON.parse(bruto);
-conferir(invocacao.StatusCode === 200, "a Lambda respondeu 200", `StatusCode=${invocacao.StatusCode}`);
-/* ⚠️ `FunctionError` é o campo que separa "a Lambda rodou" de "a Lambda rodou
-   e a função levantou". Sem ele, um traceback devolvido com StatusCode 200
-   passaria por sucesso -- que é como um erro de carga chega. */
-conferir(!invocacao.FunctionError, "e a função não levantou", invocacao.FunctionError || "");
+conferir(invocacao.StatusCode === 200 && !invocacao.FunctionError, "o enfileirador aceitou o pedido",
+  invocacao.FunctionError || `StatusCode=${invocacao.StatusCode}`);
 
+/* 🔴 O resultado agora mora no LOG do despachante ("Carga histórica concluída", com o
+   grupo_id). A fila baixa espera o ciclo, então a espera é de minutos -- e pelo
+   CloudWatch, nunca em laço contra a tela. */
+let linha = null;
+for (let tentativa = 0; tentativa < 60 && !linha; tentativa++) {
+  const eventos = JSON.parse(execFileSync("aws", [
+    "logs", "filter-log-events",
+    "--log-group-name", "/aws/lambda/pje-monitor-prod-despachante",
+    "--start-time", String(pedidaEm),
+    "--filter-pattern", `"Carga histórica concluída" "${GRUPO}"`,
+    "--profile", PERFIL, "--region", "sa-east-1", "--output", "json",
+  ], { encoding: "utf8" })).events;
+  if (eventos.length) linha = JSON.parse(eventos[eventos.length - 1].message);
+  else await new Promise((r) => setTimeout(r, 15000));
+}
+conferir(linha !== null, "o despachante concluiu a carga", "sem a linha em 15 minutos");
+writeFileSync("/tmp/carga-e2e.json", JSON.stringify(linha ?? {}));
 const carga = JSON.parse(readFileSync("/tmp/carga-e2e.json", "utf8"));
 console.log("       carga:", JSON.stringify(carga));
 conferir(
