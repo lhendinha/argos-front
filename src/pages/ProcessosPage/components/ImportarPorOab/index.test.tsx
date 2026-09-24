@@ -194,3 +194,39 @@ describe("🔴 a busca abre DIRETO na prévia, que vai se enchendo (pedido do us
     expect(screen.getByText(/de 3 marcados/).parentElement?.textContent).toContain("2 de 3 marcados");
   });
 });
+
+describe("as bordas da importação guardada", () => {
+  it("⚠️ a lista de subgrupos ainda VAZIA (carregando) não descarta a importação", async () => {
+    sessionStorage.clear();
+    comoEu();
+    guardarImportacao({ email: EU, subgrupoId: CRIMINAL.subgrupo_id, busca: "t-1" });
+    api.lerBusca.mockReset();
+    api.lerBusca.mockResolvedValue({ trabalho_id: "t-1", estado: "na_fila" });
+    renderComProviders(<ImportarPorOab subgrupos={[]} onFechar={() => {}} onImportou={() => {}} />);
+    await waitFor(() => expect(api.lerBusca).toHaveBeenCalledWith(CRIMINAL.subgrupo_id, "t-1"));
+    expect(screen.queryByText(/não existe mais/)).toBeNull();
+    expect(sessionStorage.length).toBe(1);
+  });
+
+  it("sem contato, \"Parar de acompanhar\" solta a aba (o trabalho segue no servidor) -- e o aviso é anunciado", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      sessionStorage.clear();
+      comoEu();
+      guardarImportacao({ email: EU, subgrupoId: CIVEL.subgrupo_id, busca: "t-1" });
+      api.lerBusca.mockReset();
+      api.lerBusca.mockRejectedValue(new TypeError("Failed to fetch"));
+      renderComProviders(<ImportarPorOab subgrupos={[CIVEL]} onFechar={() => {}} onImportou={() => {}} />);
+      await act(async () => vi.advanceTimersByTimeAsync(LIMIAR_SEM_CONTATO_MS + 5000));
+
+      const aviso = screen.getByText("Sem contato com o servidor").closest("[role=status]");
+      expect(aviso?.getAttribute("aria-live")).toBe("polite");
+      act(() => screen.getByRole("button", { name: "Parar de acompanhar" }).click());
+
+      expect(sessionStorage.length).toBe(0);
+      expect(document.getElementById("subgrupo-importacao")).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

@@ -13,7 +13,8 @@ const api = vi.hoisted(() => ({
 vi.mock("../services/api", async (original) => ({ ...(await original<object>()), ...api }));
 
 import { useImportacaoPorOab } from "./useImportacaoPorOab";
-import { CHAVE_DA_IMPORTACAO_GUARDADA } from "../constants";
+import { CHAVE_DA_IMPORTACAO_GUARDADA, MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO } from "../constants";
+import { ApiError } from "../services/api";
 import { limparOuvintesDoCanal, publicarNoCanal } from "../utils/canalDeTempoReal";
 import { guardarImportacao } from "../utils/importacaoGuardada";
 import type { MensagemDoCanal } from "../types";
@@ -513,5 +514,32 @@ describe("🔴 a importação guardada na aba, e o subgrupo travado (itens 10 e 
     expect(result.current.progresso).toEqual({ feitos: 3, total: 10 });
     act(() => publicarNoCanal(progresso("g-1", 7, 10)));
     expect(result.current.progresso).toEqual({ feitos: 7, total: 10 });
+  });
+});
+
+describe("🔴 o fim da gravação solta a importação da aba", () => {
+  const guardada = () => JSON.parse(sessionStorage.getItem(CHAVE_DA_IMPORTACAO_GUARDADA) ?? "null");
+
+  async function gravandoGuardada() {
+    guardarImportacao({ email: EU, subgrupoId: "s-civel", busca: "t-9", gravacao: "g-9" });
+    const hook = renderHook(() => useImportacaoPorOab("s-civel", EU));
+    expect(guardada()).not.toBeNull();
+    return hook;
+  }
+
+  it("concluída: o resultado fica na tela, e a aba não guarda mais nada (a recarga não reabre)", async () => {
+    api.lerGravacao.mockResolvedValue({ trabalho_id: "g-9", estado: "concluido", cadastrados: 2, ja_existiam: 0, falharam: [] });
+    const { result } = await gravandoGuardada();
+    await waitFor(() => expect(result.current.etapa).toBe("concluido"));
+    expect(result.current.resultado?.cadastrados).toBe(2);
+    expect(guardada()).toBeNull();
+  });
+
+  it("⚠️ a gravação que SUMIU (404, expirada) vira erro com a frase da interrupção -- e também solta", async () => {
+    api.lerGravacao.mockRejectedValue(new ApiError("Importação não encontrada", 404));
+    const { result } = await gravandoGuardada();
+    await waitFor(() => expect(result.current.etapa).toBe("erro"));
+    expect(result.current.erro).toBe(MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO);
+    expect(guardada()).toBeNull();
   });
 });

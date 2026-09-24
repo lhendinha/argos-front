@@ -15,11 +15,14 @@ import type { OpcoesDaReleitura, TrabalhoLido } from "../types";
  * ⚠️ Uma leitura por vez: o fim pelo canal que chega durante uma leitura a repete
  * no fim dela. Duas em paralelo deixavam a que falhou apagar o sucesso da outra.
  * ⚠️ Sessão encerrada (o servidor recusou a renovação) leva ao login, como o resto.
+ * ⚠️ Lacuna conhecida: a leitura presa segura as seguintes até o `fetch` cair
+ * (`chamar` não aceita `signal`) -- o aviso aparece, e a pessoa pode parar de acompanhar.
  */
 export function useReleituraDoTrabalho<T extends TrabalhoLido>({
   trabalhoId, ler, tipoDoFim, aoTerminar, aoDesistir,
 }: OpcoesDaReleitura<T>): boolean {
-  const [semContato, setSemContato] = useState(false);
+  /** De QUAL trabalho a tela está sem contato: trocar de trabalho não herda o aviso. */
+  const [semContatoCom, setSemContatoCom] = useState<string | null>(null);
   const atual = useRef(trabalhoId);
   const chamadas = useRef({ ler, aoTerminar, aoDesistir });
   /** Desde quando a leitura em voo espera resposta; `null` é nenhuma. */
@@ -42,7 +45,7 @@ export function useReleituraDoTrabalho<T extends TrabalhoLido>({
       const lida = await chamadas.current.ler(id);
       if (id !== atual.current) return;
       primeiraFalha.current = null;
-      setSemContato(false);
+      setSemContatoCom(null);
       if (lida.estado !== TRABALHO_NA_FILA) chamadas.current.aoTerminar(lida);
     } catch (erro) {
       if (id !== atual.current) return;
@@ -52,7 +55,7 @@ export function useReleituraDoTrabalho<T extends TrabalhoLido>({
         chamadas.current.aoDesistir(erro);
       } else {
         primeiraFalha.current ??= Date.now();
-        if (Date.now() - primeiraFalha.current >= LIMIAR_SEM_CONTATO_MS) setSemContato(true);
+        if (Date.now() - primeiraFalha.current >= LIMIAR_SEM_CONTATO_MS) setSemContatoCom(id);
       }
     } finally {
       emVoo.current = null;
@@ -80,7 +83,7 @@ export function useReleituraDoTrabalho<T extends TrabalhoLido>({
     const primeira = setTimeout(() => void reler(trabalhoId), 0);
     const intervalo = setInterval(() => {
       /* ⚠️ Leitura PRESA também é falta de contato: o `fetch` sem resposta não falha. */
-      if (emVoo.current !== null && Date.now() - emVoo.current >= LIMIAR_SEM_CONTATO_MS) setSemContato(true);
+      if (emVoo.current !== null && Date.now() - emVoo.current >= LIMIAR_SEM_CONTATO_MS) setSemContatoCom(trabalhoId);
       void reler(trabalhoId);
     }, INTERVALO_DE_RELEITURA_DO_TRABALHO_MS);
     return () => {
@@ -89,5 +92,5 @@ export function useReleituraDoTrabalho<T extends TrabalhoLido>({
     };
   }, [trabalhoId, reler]);
 
-  return semContato && trabalhoId !== null;
+  return trabalhoId !== null && semContatoCom === trabalhoId;
 }

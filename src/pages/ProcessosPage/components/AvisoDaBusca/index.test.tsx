@@ -20,3 +20,9 @@ describe("AvisoDaBusca", () => {
     expect(screen.getByText("120 processos encontrados até agora")).toBeTruthy();
   });
 });
+
+it("🔴 é anunciado ao leitor de tela (role=status, polite)", () => {
+  renderComProviders(<AvisoDaBusca encontrados={3} />);
+  const aviso = screen.getByText("3 processos encontrados até agora").closest("[role=status]");
+  expect(aviso?.getAttribute("aria-live")).toBe("polite");
+});

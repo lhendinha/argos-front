@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Box, Text } from "@chakra-ui/react";
 
-import { Botao, Campo, Cartao, Select } from "../../../../components";
+import { Botao, BotaoNu, Campo, Cartao, Select } from "../../../../components";
 import { useImportacaoPorOab } from "../../../../hooks/useImportacaoPorOab";
 import { listarMembrosDoSubgrupo } from "../../../../services/api";
 import { getEmail } from "../../../../services/auth";
 import { qk } from "../../../../services/queryKeys";
+import { ESTILO_DE_LINK } from "../../constants";
 import { resumoDaImportacao } from "../../../../utils/importacao";
 import { MENSAGEM_SUBSTITUIDA } from "../../../../constants";
 import AvisoDaImportacao from "../AvisoDaImportacao";
@@ -48,11 +49,18 @@ export default function ImportarPorOab({
     }
   }, [importacaoEmCurso, subgrupoSumiu, descartar]);
 
-  /* ⚠️ Sem contato não é erro: o trabalho segue no servidor, e a tela tenta de novo sozinha. */
+  /* ⚠️ Sem contato não é erro: o trabalho segue no servidor, e a tela tenta de novo
+     sozinha. É a ÚNICA saída durante a espera -- sem ela, uma API fora do ar prenderia
+     a aba, que reabre a importação a cada recarga. Parar solta a aba, não o trabalho. */
   const avisoDeContato = semContato && (
-    <AvisoDaImportacao titulo="Sem contato com o servidor">
-      O trabalho continua lá; esta tela tenta de novo sozinha.
-    </AvisoDaImportacao>
+    <Box role="status" aria-live="polite">
+      <AvisoDaImportacao titulo="Sem contato com o servidor">
+        O trabalho continua lá; esta tela tenta de novo sozinha.{" "}
+        <BotaoNu {...ESTILO_DE_LINK} color="status.warn.text" textDecoration="underline" onClick={recomecar}>
+          Parar de acompanhar
+        </BotaoNu>
+      </AvisoDaImportacao>
+    </Box>
   );
 
   /* 🔴 Preciso saber se quem importa é MEMBRO do subgrupo escolhido.

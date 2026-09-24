@@ -161,3 +161,39 @@ describe("⚠️ uma leitura por vez", () => {
     expect(ler).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("⚠️ a troca de trabalho", () => {
+  function comTroca(ler: (id: string) => Promise<TrabalhoLido>) {
+    const aoTerminar = vi.fn();
+    const hook = renderHook(
+      ({ id }: { id: string }) =>
+        useReleituraDoTrabalho({ trabalhoId: id, ler, tipoDoFim: TIPO_DO_FIM_DA_GRAVACAO, aoTerminar, aoDesistir: vi.fn() }),
+      { initialProps: { id: "t-1" } },
+    );
+    return { ...hook, aoTerminar };
+  }
+
+  it("a leitura do trabalho ANTIGO, que volta depois da troca, é ignorada", async () => {
+    let responderAntigo: (v: TrabalhoLido) => void = () => {};
+    const ler = vi.fn((id: string) =>
+      id === "t-1" ? new Promise<TrabalhoLido>((r) => (responderAntigo = r)) : Promise.resolve({ trabalho_id: "t-2", estado: "na_fila" as const }));
+    const { rerender, aoTerminar } = comTroca(ler);
+    await passar(0);
+    rerender({ id: "t-2" });
+    await act(async () => responderAntigo(CONCLUIDO));
+    await passar(0);
+    expect(aoTerminar).not.toHaveBeenCalled();
+  });
+
+  it("o aviso de sem contato é do trabalho: o seguinte não o herda", async () => {
+    const ler = vi.fn(async (id: string) => {
+      if (id === "t-1") throw new TypeError("Failed to fetch");
+      return { trabalho_id: id, estado: "na_fila" as const };
+    });
+    const { result, rerender } = comTroca(ler);
+    await passar(LIMIAR_SEM_CONTATO_MS + 5000);
+    expect(result.current).toBe(true);
+    rerender({ id: "t-2" });
+    expect(result.current).toBe(false);
+  });
+});

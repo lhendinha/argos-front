@@ -162,6 +162,9 @@ export function useImportacaoPorOab(subgrupoEscolhido: string, email: string) {
 
   /** O fim da gravação em segundo plano: os três números, ou o erro de quem caiu. */
   const aoTerminarGravacao = useCallback((lida: GravacaoLida) => {
+    /* 🔴 Terminou: a aba solta a importação. Guardada, a página a reabriria a cada
+       visita -- e, expirada (6 h), a releitura daria "interrompida" para o que concluiu. */
+    encerrar();
     if (lida.estado === TRABALHO_CONCLUIDO) {
       setResultado({
         cadastrados: lida.cadastrados ?? 0,
@@ -173,7 +176,7 @@ export function useImportacaoPorOab(subgrupoEscolhido: string, email: string) {
       setErro(lida.erro ?? MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO);
       setEtapa("erro");
     }
-  }, []);
+  }, [encerrar]);
   const gravacao = useGravacaoEmSegundoPlano(subgrupoId, aoTerminarGravacao, guardada?.gravacao ?? null);
 
   const importar = useCallback(

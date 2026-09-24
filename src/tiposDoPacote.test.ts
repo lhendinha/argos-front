@@ -42,7 +42,7 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    `PaginaDaBusca`, `FimDaBusca` e `BuscaLida` -- a busca por OAB passou a
    responder 202 e mandar a lista pelo canal. A Fase 4 trouxe três --
    `GravacaoPedida`, `FimDaGravacao` e `GravacaoLida` -- a gravação da
-   importação, pelo mesmo caminho. A revisão do balde trouxe dois -- `TrabalhoLido` e
+   importação, pelo mesmo caminho. A revisão do balde trouxe três -- `TrabalhoLido` e
    `OpcoesDaReleitura` -- a espera única dos dois trabalhos -- e `ImportacaoGuardada`, uma por aba. O número é o guarda: tipo novo sem pensar
    não passa. */
 const TIPOS_NO_PACOTE = 149;
