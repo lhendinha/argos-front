@@ -4,11 +4,10 @@ import {
   TRABALHO_CONCLUIDO,
   MENSAGEM_DE_INTERRUPCAO_DA_IMPORTACAO,
   TIPO_DA_PAGINA_DA_BUSCA,
-  TIPO_DE_PROGRESSO,
   TIPO_DO_FIM_DA_BUSCA,
 } from "../constants";
 import { buscarProcessosPorOab, importarProcessos, lerBusca } from "../services/api";
-import { esquecerBusca, guardarBusca, lerBuscaGuardada } from "../utils/buscaGuardada";
+import { esquecerImportacao, guardarImportacao, lerImportacaoGuardada } from "../utils/importacaoGuardada";
 import { assinarCanal } from "../utils/canalDeTempoReal";
 import { fundirPagina } from "../utils/importacao";
 import { useGravacaoEmSegundoPlano } from "./useGravacaoEmSegundoPlano";
@@ -19,47 +18,53 @@ import type {
   PaginaDaBusca,
   PreviaDaImportacao,
   ProcessoEncontrado,
-  ProgressoDaImportacao,
   ResultadoDaImportacao,
   EtapaDaImportacao,
   ContagemDaImportacao,
 } from "../types";
 
-export function useImportacaoPorOab(subgrupoId: string) {
-  /* A tela reaberta (ou recarregada) nasce na busca que estava em andamento. */
-  const [guardadaAoAbrir] = useState(() => lerBuscaGuardada(subgrupoId));
-  const [etapa, setEtapa] = useState<EtapaDaImportacao>(guardadaAoAbrir ? "buscando" : "formulario");
+/** A importação por OAB inteira: a busca, a prévia e a gravação, no subgrupo da busca.
+ *
+ * 🔴 O subgrupo TRAVA da busca até recomeçar: a prévia é montada para ele ("já está
+ * aqui"), e a gravação entra nele -- trocá-lo no meio gravava a prévia de um
+ * subgrupo em outro.
+ * ⚠️ A aba guarda a importação (`importacaoGuardada`), e a tela recarregada volta à
+ * busca, à prévia ou à gravação -- no subgrupo guardado, e não no do seletor.
+ */
+export function useImportacaoPorOab(subgrupoEscolhido: string, email: string) {
+  const [guardada] = useState(() => lerImportacaoGuardada(email));
+  /** O subgrupo da importação em curso; `null` é nenhuma, e vale o do seletor. */
+  const [subgrupoDaImportacao, setSubgrupoDaImportacao] = useState<string | null>(guardada?.subgrupoId ?? null);
+  const subgrupoId = subgrupoDaImportacao ?? subgrupoEscolhido;
+  const [etapa, setEtapa] = useState<EtapaDaImportacao>(
+    guardada?.gravacao ? "importando" : guardada ? "buscando" : "formulario",
+  );
   const [previa, setPrevia] = useState<PreviaDaImportacao | null>(null);
   const [resultado, setResultado] = useState<ResultadoDaImportacao | null>(null);
   const [erro, setErro] = useState("");
-  const [progresso, setProgresso] = useState<ContagemDaImportacao | null>(null);
+  /** O total pedido, para a barra nascer em zero antes do primeiro pulso. */
+  const [pedidos, setPedidos] = useState<ContagemDaImportacao | null>(null);
   /** O que a busca em segundo plano já achou, fundido página a página. */
   const [parcial, setParcial] = useState<ProcessoEncontrado[]>([]);
   /** 🔴 A busca que esta tela espera. Mensagem de OUTRA busca (uma anterior, que
    * a pessoa abandonou) é descartada -- senão a lista misturaria duas OABs. */
-  const [buscaEsperada, setBuscaEsperada] = useState<string | null>(guardadaAoAbrir);
-
-  /** 🔴 A barra ouve o canal SEMPRE, não só durante a gravação.
-   *
-   * Assinar ao clicar em "Importar" abriria uma janela: a primeira mensagem
-   * (`feitos: 0`) sai antes de o `await` sequer devolver o controle, e um
-   * assinante registrado depois a perderia -- a barra começaria do segundo
-   * pulso, ou de lugar nenhum numa importação curta.
-   */
-  useEffect(
-    () =>
-      assinarCanal(TIPO_DE_PROGRESSO, (mensagem) => {
-        const { feitos, total } = mensagem as unknown as ProgressoDaImportacao;
-        setProgresso({ feitos, total });
-      }),
-    [],
+  const [buscaEsperada, setBuscaEsperada] = useState<string | null>(
+    guardada && !guardada.gravacao ? guardada.busca : null,
   );
+  /** A busca da importação em curso -- guardada junto com a gravação. */
+  const [buscaDaImportacao, setBuscaDaImportacao] = useState<string | null>(guardada?.busca ?? null);
+
+  /** Encerra a importação desta aba: o seletor volta a valer, e a recarga não volta a ela. */
+  const encerrar = useCallback(() => {
+    esquecerImportacao();
+    setSubgrupoDaImportacao(null);
+    setBuscaDaImportacao(null);
+  }, []);
 
   /** Aplica o que o `GET` leu no fim da busca: a prévia, ou o erro do PJe. */
   const aoTerminarBusca = useCallback(
     (lida: BuscaLida) => {
       setBuscaEsperada(null);
-      esquecerBusca(subgrupoId);
       if (lida.estado === TRABALHO_CONCLUIDO) {
         const processos = lida.processos ?? [];
         setPrevia({
@@ -68,24 +73,27 @@ export function useImportacaoPorOab(subgrupoId: string) {
           atingiu_o_teto: Boolean(lida.atingiu_o_teto),
           processos,
         });
+        /* ⚠️ A prévia fica guardada (a recarga volta a ela); o vazio não tem a que voltar. */
+        if (processos.length === 0) encerrar();
         setEtapa(processos.length === 0 ? "vazio" : "previa");
       } else {
+        encerrar();
         setErro(lida.erro ?? "Não foi possível buscar agora.");
         setEtapa("erro");
       }
     },
-    [subgrupoId],
+    [encerrar],
   );
 
   /** A busca sumiu (expirou, ou é de outra pessoa) ou a pessoa perdeu o acesso. */
   const aoDesistirDaBusca = useCallback(
     (e: unknown) => {
       setBuscaEsperada(null);
-      esquecerBusca(subgrupoId);
+      encerrar();
       setErro(e instanceof Error ? e.message : "Não foi possível buscar agora.");
       setEtapa("erro");
     },
-    [subgrupoId],
+    [encerrar],
   );
 
   const semContatoNaBusca = useReleituraDoTrabalho<BuscaLida>({
@@ -126,27 +134,30 @@ export function useImportacaoPorOab(subgrupoId: string) {
       }
       setEtapa("buscando");
       setErro("");
-      setProgresso(null);
+      setPedidos(null);
       setParcial([]);
       setBuscaEsperada(null);
+      setSubgrupoDaImportacao(subgrupoId);
       try {
         const resposta = await buscarProcessosPorOab(subgrupoId, numeroOab, ufOab, periodo);
         if (minha !== buscaAtual.current) return;
         if ("trabalho_id" in resposta) {
           /* A API em segundo plano: a lista vem pelo canal, e o fim pelo `GET`. */
           setBuscaEsperada(resposta.trabalho_id);
-          guardarBusca(subgrupoId, resposta.trabalho_id);
+          setBuscaDaImportacao(resposta.trabalho_id);
+          guardarImportacao({ email, subgrupoId, busca: resposta.trabalho_id });
           return;
         }
         setPrevia(resposta);
         setEtapa(resposta.processos.length === 0 ? "vazio" : "previa");
       } catch (e) {
         if (minha !== buscaAtual.current) return;
+        encerrar();
         setErro(e instanceof Error ? e.message : "Não foi possível buscar agora.");
         setEtapa("erro");
       }
     },
-    [subgrupoId],
+    [subgrupoId, email, encerrar],
   );
 
   /** O fim da gravação em segundo plano: os três números, ou o erro de quem caiu. */
@@ -163,7 +174,7 @@ export function useImportacaoPorOab(subgrupoId: string) {
       setEtapa("erro");
     }
   }, []);
-  const gravacao = useGravacaoEmSegundoPlano(subgrupoId, aoTerminarGravacao);
+  const gravacao = useGravacaoEmSegundoPlano(subgrupoId, aoTerminarGravacao, guardada?.gravacao ?? null);
 
   const importar = useCallback(
     async (numeros: string[], responsaveis: string[]) => {
@@ -172,12 +183,15 @@ export function useImportacaoPorOab(subgrupoId: string) {
       setErro("");
       /* Nasce em zero para a barra existir antes do primeiro pulso do canal
          -- se ele não chegar, ela fica indeterminada em vez de ausente. */
-      setProgresso({ feitos: 0, total: numeros.length });
+      setPedidos({ feitos: 0, total: numeros.length });
       try {
         const resposta = await importarProcessos(subgrupoId, previa.id, numeros, responsaveis);
         if ("trabalho_id" in resposta) {
           /* A API em segundo plano: o progresso segue pelo canal, e o fim também. */
           gravacao.esperar(resposta.trabalho_id);
+          if (buscaDaImportacao) {
+            guardarImportacao({ email, subgrupoId, busca: buscaDaImportacao, gravacao: resposta.trabalho_id });
+          }
           return;
         }
         setResultado(resposta);
@@ -188,24 +202,42 @@ export function useImportacaoPorOab(subgrupoId: string) {
         setEtapa("erro");
       }
     },
-    [previa, subgrupoId, gravacao],
+    [previa, subgrupoId, gravacao, buscaDaImportacao, email],
   );
 
   const recomecar = useCallback(() => {
     buscaAtual.current++;
     gravacao.esquecer();
     setBuscaEsperada(null);
-    esquecerBusca(subgrupoId);
+    encerrar();
     setParcial([]);
     setEtapa("formulario");
     setPrevia(null);
     setResultado(null);
     setErro("");
-    setProgresso(null);
-  }, [subgrupoId, gravacao]);
+    setPedidos(null);
+  }, [gravacao, encerrar]);
+
+  /** A importação guardada não vale mais (o subgrupo dela foi apagado): encerra, com o motivo. */
+  const descartar = useCallback(
+    (motivo: string) => {
+      recomecar();
+      setErro(motivo);
+      setEtapa("erro");
+    },
+    [recomecar],
+  );
 
   /** 🔴 Sem contato com o servidor enquanto espera: a tela avisa, e continua tentando. */
   const semContato = semContatoNaBusca || gravacao.semContato;
 
-  return { etapa, previa, parcial, resultado, erro, progresso, semContato, buscar, importar, recomecar };
+  /** A barra: o progresso da SUA gravação, ou o zero do pedido até o primeiro pulso. */
+  const progresso = etapa === "importando" ? (gravacao.progresso ?? pedidos) : null;
+  /** 🔴 O seletor trava enquanto há importação -- ver o docstring. */
+  const subgrupoTravado = subgrupoDaImportacao !== null && ["buscando", "previa", "importando"].includes(etapa);
+
+  return {
+    etapa, previa, parcial, resultado, erro, progresso, semContato, subgrupoId, subgrupoTravado,
+    buscar, importar, recomecar, descartar,
+  };
 }

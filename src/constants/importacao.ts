@@ -33,9 +33,9 @@ export const INTERVALO_DE_RELEITURA_DO_TRABALHO_MS = 5000;
  * último sucesso: um notebook que dormiu acusaria falha ao acordar. */
 export const LIMIAR_SEM_CONTATO_MS = 30_000;
 
-/** Onde a tela guarda o id da busca em andamento, por subgrupo -- é o que a faz
- * voltar ao resultado depois de recarregar. */
-export const PREFIXO_DA_BUSCA_GUARDADA = "argos:busca-por-oab:";
+/** Onde a aba guarda a importação em andamento -- UMA por aba, com o e-mail e o
+ * subgrupo dela: é o que faz a tela recarregada voltar à busca, à prévia ou à gravação. */
+export const CHAVE_DA_IMPORTACAO_GUARDADA = "argos:importacao-por-oab";
 
 /** O erro com que a API encerra a busca que outra, da mesma pessoa e da mesma OAB,
  * substituiu. ⚠️ O MESMO texto de `busca_em_segundo_plano.MENSAGEM_SUBSTITUIDA`: é

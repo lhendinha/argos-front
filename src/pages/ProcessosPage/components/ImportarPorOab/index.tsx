@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Box, Text } from "@chakra-ui/react";
 
@@ -10,6 +10,7 @@ import { qk } from "../../../../services/queryKeys";
 import { resumoDaImportacao } from "../../../../utils/importacao";
 import { MENSAGEM_SUBSTITUIDA } from "../../../../constants";
 import AvisoDaImportacao from "../AvisoDaImportacao";
+import ProgressoDaGravacao from "../ProgressoDaGravacao";
 import BuscaEmAndamento from "../BuscaEmAndamento";
 import FormularioDeOab from "../FormularioDeOab";
 import PreviaDaImportacao from "../PreviaDaImportacao";
@@ -32,9 +33,21 @@ export default function ImportarPorOab({
      DEPOIS de o modal abrir. Guardar `subgrupos[0]` no `useState` congelava o
      vazio: com a lista ainda carregando, a busca ia para `/subgrupos//...` e a
      tela mostrava "Not Found" (visto no Chrome, com o offline recém-subido). */
-  const subgrupoId = escolhido || (subgrupos[0]?.subgrupo_id ?? "");
-  const { etapa, previa, parcial, resultado, erro, progresso, semContato, buscar, importar, recomecar } =
-    useImportacaoPorOab(subgrupoId);
+  const subgrupoEscolhido = escolhido || (subgrupos[0]?.subgrupo_id ?? "");
+  const meuEmail = getEmail() ?? "";
+  const {
+    etapa, previa, parcial, resultado, erro, progresso, semContato, subgrupoId, subgrupoTravado,
+    buscar, importar, recomecar, descartar,
+  } = useImportacaoPorOab(subgrupoEscolhido, meuEmail);
+
+  /* ⚠️ A importação guardada num subgrupo que foi apagado não tem para onde ir.
+     Decidido só DEPOIS de a lista chegar: vazia, ela ainda está carregando. */
+  const subgrupoSumiu = subgrupos.length > 0 && !subgrupos.some((s) => s.subgrupo_id === subgrupoId);
+  useEffect(() => {
+    if (subgrupoTravado && subgrupoSumiu) {
+      descartar("O subgrupo desta importação não existe mais. Escolha outro e busque de novo.");
+    }
+  }, [subgrupoTravado, subgrupoSumiu, descartar]);
 
   /* ⚠️ Sem contato não é erro: o trabalho segue no servidor, e a tela tenta de novo sozinha. */
   const avisoDeContato = semContato && (
@@ -42,8 +55,6 @@ export default function ImportarPorOab({
       O trabalho continua lá; esta tela tenta de novo sozinha.
     </AvisoDaImportacao>
   );
-
-  const meuEmail = getEmail() ?? "";
 
   /* 🔴 Preciso saber se quem importa é MEMBRO do subgrupo escolhido.
    *
@@ -65,6 +76,19 @@ export default function ImportarPorOab({
       ),
     [membrosQuery.data, meuEmail],
   );
+
+  /* A tela recarregada no meio da gravação: a prévia não voltou, mas a gravação sim. */
+  if (etapa === "importando" && !previa) {
+    return (
+      <Cartao>
+        {avisoDeContato}
+        <Text fontSize="16px" fontWeight="800">
+          Gravando os processos escolhidos
+        </Text>
+        <ProgressoDaGravacao progresso={progresso} />
+      </Cartao>
+    );
+  }
 
   if (etapa === "previa" || etapa === "importando") {
     return (
@@ -101,6 +125,8 @@ export default function ImportarPorOab({
         <Box display="flex" gap="9px" mt="12px" flexWrap="wrap">
           <Botao
             onClick={() => {
+              /* Encerra a importação da aba: senão a página recarregada a reabriria. */
+              recomecar();
               onImportou();
               onFechar();
             }}
@@ -148,6 +174,8 @@ export default function ImportarPorOab({
           id="subgrupo-importacao"
           opcoes={subgrupos.map((s) => ({ value: s.subgrupo_id, label: s.nome }))}
           valor={subgrupoId}
+          /* 🔴 Travado enquanto há importação: a prévia é do subgrupo da busca. */
+          desabilitado={subgrupoTravado}
           /* ⚠️ Trocar de subgrupo REVALIDA quem pode ser responsável: um
              `manager` pode ser membro de Cível e não de Trabalhista, e a
              pré-seleção precisa acompanhar. A consulta de membros tem o

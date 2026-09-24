@@ -160,6 +160,18 @@ export interface ResultadoDaImportacao {
  * travamento. */
 export interface ProgressoDaImportacao extends ContagemDaImportacao {
   tipo: typeof TIPO_DE_PROGRESSO;
+  /** De qual gravação -- a tela mostra só o da sua. */
+  trabalho_id: string;
+}
+
+/** A importação desta aba, guardada na sessão para a tela recarregada voltar a ela. */
+export interface ImportacaoGuardada {
+  /** De quem é: outra pessoa entrando na mesma aba não a vê. */
+  email: string;
+  /** 🔴 O subgrupo da BUSCA: a prévia foi montada para ele, e é nele que a gravação entra. */
+  subgrupoId: string;
+  busca: string;
+  gravacao?: string;
 }
 
 /** `POST .../buscar-por-oab` depois da Fase 3b do balde: o pedido aceito (202).

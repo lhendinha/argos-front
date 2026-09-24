@@ -6,7 +6,8 @@ import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-quer
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { listarProcessos } from "../../services";
-import { papelAtende } from "../../services/auth";
+import { getEmail, papelAtende } from "../../services/auth";
+import { lerImportacaoGuardada } from "../../utils/importacaoGuardada";
 import { useToastOnQueryError } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
 import {
@@ -47,7 +48,8 @@ export default function ProcessosPage() {
    * Ela tem três etapas, uma lista de até mil linhas e uma espera de dezenas
    * de segundos -- um modal viraria uma caixa com rolagem própria dentro da
    * página, e fechar por engano (Escape, clique fora) perderia a busca. */
-  const [importando, setImportando] = useState(false);
+  /* ⚠️ Nasce aberta se a aba tem uma importação guardada: a tela recarregada volta a ela. */
+  const [importando, setImportando] = useState(() => lerImportacaoGuardada(getEmail() ?? "") !== null);
   const navegar = useNavigate();
   /** A Área de trabalho abre esta tela já filtrada -- clicar em "A verificar
    * até hoje" tem que mostrar exatamente os processos que geraram aquele

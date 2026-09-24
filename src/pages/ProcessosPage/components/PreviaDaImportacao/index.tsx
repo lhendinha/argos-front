@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Box, Flex, Progress, Text } from "@chakra-ui/react";
+import { Box, Flex, Text } from "@chakra-ui/react";
 
 import {
   Botao,
@@ -23,6 +23,7 @@ import { COLUNAS_DA_PREVIA, ESTILO_DE_LINK } from "../../constants";
 import AvisoDaImportacao from "../AvisoDaImportacao";
 import ItemDaPrevia from "../ItemDaPrevia";
 import LinhaDaPrevia from "../LinhaDaPrevia";
+import ProgressoDaGravacao from "../ProgressoDaGravacao";
 import ResumoDaPrevia from "../ResumoDaPrevia";
 import type { PreviaDaImportacaoProps } from "./types";
 
@@ -258,21 +259,7 @@ export default function PreviaDaImportacao({
         />
       </Box>
 
-      {progresso && importando && (
-        <Box mt="14px">
-          <Progress.Root
-            value={progresso.total ? (progresso.feitos / progresso.total) * 100 : null}
-            size="sm"
-          >
-            <Progress.Track>
-              <Progress.Range />
-            </Progress.Track>
-          </Progress.Root>
-          <Text fontSize="12px" color="fg.muted" mt="6px">
-            {progresso.feitos} de {progresso.total} cadastrados
-          </Text>
-        </Box>
-      )}
+      {importando && <ProgressoDaGravacao progresso={progresso} />}
 
       <Flex gap="9px" mt="16px" flexWrap="wrap">
         <Botao
