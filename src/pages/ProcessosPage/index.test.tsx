@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -162,6 +162,30 @@ describe("ProcessosPage", () => {
     );
   });
 
+
+  it("🔴 o 'verificado até' vem do servidor, e o atraso só na linha atrasada", async () => {
+    /* O par na MESMA página: uma linha atrasada e outra em dia. Sem a segunda, um "(atrasado)" aceso em
+       toda linha passaria. E a hora da última consulta não aparece mais: depois da virada ela envelhece
+       sem que nada tenha parado. */
+    mocks.listarProcessos.mockResolvedValue({
+      processos: [
+        { ...PROCESSO, apelido: "Atrasado", ultima_verificacao: "2026-09-20T15:00:00Z",
+          verificado_ate: "2026-09-20", verificacao_atrasada: true },
+        { ...PROCESSO, numero_processo: "00002676720218130559", apelido: "Em dia",
+          verificado_ate: "2026-09-27", verificacao_atrasada: false },
+      ],
+      total: 2,
+      total_paginas: 1,
+    });
+    renderComProviders(<MemoryRouter><ProcessosPage /></MemoryRouter>);
+    const atrasada = (await screen.findByText("Atrasado")).closest("tr")!;
+    const emDia = screen.getByText("Em dia").closest("tr")!;
+    expect(within(atrasada).getByText(/verificado até 20\/09/)).toBeInTheDocument();
+    expect(within(atrasada).getByText("(atrasado)")).toBeInTheDocument();
+    expect(within(emDia).getByText(/verificado até 27\/09/)).toBeInTheDocument();
+    expect(within(emDia).queryByText("(atrasado)")).not.toBeInTheDocument();
+    expect(screen.queryByText(/verificado 20\/09\/2026/)).not.toBeInTheDocument();
+  });
 
   it("mostra 'Nenhum processo cadastrado ainda.' quando a lista vem vazia", async () => {
     mocks.listarProcessos.mockResolvedValue({ processos: [], total: 0, total_paginas: 0 });

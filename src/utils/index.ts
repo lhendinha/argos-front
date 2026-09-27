@@ -30,3 +30,4 @@ export * from "./texto";
 export * from "./selecao";
 export * from "./documentos";
 export * from "./clientes";
+export * from "./verificacao";

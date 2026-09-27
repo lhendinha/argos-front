@@ -45,7 +45,7 @@ const FORA_DO_INDICE = new Set(["index.ts", "respostas.ts", "requisicoes.ts"]);
    importação, pelo mesmo caminho. A revisão do balde trouxe três -- `TrabalhoLido` e
    `OpcoesDaReleitura` -- a espera única dos dois trabalhos -- e `ImportacaoGuardada`, uma por aba. O número é o guarda: tipo novo sem pensar
    não passa. */
-const TIPOS_NO_PACOTE = 149;
+const TIPOS_NO_PACOTE = 150;
 
 const dominios = readdirSync(PASTA)
   .filter((a) => a.endsWith(".ts") && !FORA_DO_INDICE.has(a))

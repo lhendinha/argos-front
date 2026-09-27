@@ -76,3 +76,4 @@ export { default as PainelDePessoasDoLote } from "./PainelDePessoasDoLote";
 export { default as PainelDeStatusDoLote } from "./PainelDeStatusDoLote";
 export { default as ConfirmacoesDoLote } from "./ConfirmacoesDoLote";
 export { default as ListaDoLote } from "./ListaDoLote";
+export { default as VerificacaoDoProcesso } from "./VerificacaoDoProcesso";
