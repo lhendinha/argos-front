@@ -48,6 +48,7 @@ const PROCESSO = {
   ultima_mov_tipo: "Conclusos para sentença",
   ultima_mov_data: "2026-08-18",
   ultima_verificacao: "2026-08-21T21:42:08Z",
+  verificado_ate: "2026-08-21",
 };
 
 /** Revela o endereço atual -- a aba e a movimentação abertas moram nele. */
@@ -391,16 +392,17 @@ describe("as três abas", () => {
     expect(await screen.findByLabelText("Apelido")).toHaveValue("Rascunho não salvo");
   });
 
-  it("'Verificado em' fica FORA das abas -- some se ficar dentro de uma", async () => {
-    /* Antes morava no cabeçalho do cartão de Movimentações. Dentro da aba,
-       só veria quem entrasse nela -- e é justamente o que distingue "o
-       processo não teve novidade" de "o robô não conseguiu olhar". */
+  it("'Verificado até' fica FORA das abas -- some se ficar dentro de uma", async () => {
+    /* Dentro da aba, só veria quem entrasse nela -- e é justamente o que
+       distingue "o processo não teve novidade" de "o sistema não conseguiu
+       olhar". O dia vem do servidor, e não da hora da última consulta. */
     montar();
 
-    expect(await screen.findByText(/Verificado em/)).toBeVisible();
+    expect(await screen.findByText(/Verificado até 21\/08/)).toBeVisible();
+    expect(screen.queryByText(/Verificado em/)).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Tarefas" }));
-    expect(screen.getByText(/Verificado em/)).toBeVisible();
+    expect(screen.getByText(/Verificado até 21\/08/)).toBeVisible();
   });
 });
 

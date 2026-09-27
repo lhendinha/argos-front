@@ -46,6 +46,20 @@ export interface Processo {
    * Vem `null` em processo que ainda não teve nenhuma comunicação. */
   ultima_mov_tipo?: string | null;
   ultima_mov_data?: string | null;
+  /** Até que DIA (Brasília, `aaaa-mm-dd`) o sistema garante ter visto tudo do processo -- derivado, calculado
+   * pelo servidor pela chave `regime` (na varredura, o dia da última consulta; depois da virada, a marca dos
+   * tribunais). ⚠️ É dia, e não instante: `formatarData`, nunca `formatarDataHoraAmPm`. */
+  verificado_ate?: string | null;
+  /** O servidor acha que a verificação parou: o dia ficou velho demais para o regime. */
+  verificacao_atrasada?: boolean;
+  /** O histórico do processo ainda está sendo carregado: não há dia a mostrar. */
+  historico_em_carga?: boolean;
+}
+
+/** O que a tela diz da verificação de um processo -- o mesmo texto na lista e no detalhe. */
+export interface RotuloDaVerificacao {
+  texto: string;
+  atrasada: boolean;
 }
 
 /** Uma linha da prévia: o que a busca por OAB achou, antes de gravar nada.

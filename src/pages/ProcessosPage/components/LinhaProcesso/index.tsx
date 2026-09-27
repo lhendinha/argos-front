@@ -1,7 +1,7 @@
 import { Table, Text } from "@chakra-ui/react";
 
-import { formatarData, formatarDataHoraAmPm, mascararNumeroProcesso } from "../../../../utils";
-import { CelulaComSub, EtiquetasDeSubgrupo } from "../../../../components";
+import { formatarData, mascararNumeroProcesso } from "../../../../utils";
+import { CelulaComSub, EtiquetasDeSubgrupo, VerificacaoDoProcesso } from "../../../../components";
 import type { Processo } from "../../../../types";
 import type { LinhaProcessoProps } from "./types";
 
@@ -82,16 +82,12 @@ export default function LinhaProcesso({
         principal={p.ultima_mov_tipo || "Sem movimentação"}
         sub={
           // Duas datas diferentes de propósito: quando o tribunal publicou e
-          // quando o robô olhou. Sem a segunda, não dá pra saber se o
+          // até quando o sistema viu. Sem a segunda, não dá pra saber se o
           // silêncio é do processo ou do sistema.
-          [
-            p.ultima_mov_data ? formatarData(p.ultima_mov_data) : null,
-            p.ultima_verificacao
-              ? `verificado ${formatarDataHoraAmPm(p.ultima_verificacao)}`
-              : "ainda não verificado",
-          ]
-            .filter(Boolean)
-            .join(" · ")
+          <>
+            {p.ultima_mov_data && `${formatarData(p.ultima_mov_data)} · `}
+            <VerificacaoDoProcesso processo={p} />
+          </>
         }
       />
       {/* Sem prazo, o traço vai DENTRO do mesmo `CelulaComSub`: uma

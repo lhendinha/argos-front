@@ -3,12 +3,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 
-import { Abas, BotaoDeTexto, Cartao, DocumentosVinculados, IconeSeta, Esqueleto, ModalDeConfirmacao, PainelDaAba } from "../../components";
+import {
+  Abas, BotaoDeTexto, Cartao, DocumentosVinculados, IconeSeta, Esqueleto, ModalDeConfirmacao, PainelDaAba,
+  VerificacaoDoProcesso,
+} from "../../components";
 import { useToast } from "../../contexts/ToastContext";
 import {
   abaValida,
   contar,
-  formatarDataHoraAmPm,
   mascararNumeroProcesso,
   PARAM_DA_ABA,
 } from "../../utils";
@@ -149,16 +151,13 @@ export default function ProcessoDetalhePage() {
           Voltar
         </BotaoDeTexto>
 
-        {/* 🔴 Quando o robô olhou pela última vez fica FORA das abas, e não
-            no cabeçalho do cartão de Movimentações como antes.
-            É o que diz se o silêncio é do processo ou do sistema: um
-            processo sem novidade e um que o robô não conseguiu verificar
-            têm a mesma cara -- lista curta, nada novo. Dentro da aba, só
-            veria quem entrasse nela; e a tela abre em "Detalhes". */}
+        {/* 🔴 Até quando o sistema viu fica FORA das abas: é o que diz se o
+            silêncio é do processo ou do sistema -- um processo sem novidade e
+            um que o sistema não conseguiu verificar têm a mesma cara. Dentro
+            de uma aba, só veria quem entrasse nela; e a tela abre em
+            "Detalhes". */}
         <Text fontSize="12px" color="fg.subtle">
-          {processo.ultima_verificacao
-            ? `Verificado em ${formatarDataHoraAmPm(processo.ultima_verificacao)}`
-            : "Ainda não verificado"}
+          <VerificacaoDoProcesso processo={processo} inicioDeFrase />
         </Text>
       </Flex>
 
