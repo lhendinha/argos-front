@@ -228,7 +228,7 @@ describe("🔴 a importação automática (30/08/2026)", () => {
 
   it("🔴 NUNCA põe autor na frase -- ninguém agiu", () => {
     /* É a diferença para `processos_atribuidos`, que mostra "Chefe: 201
-       processos...". Aqui a varredura encontrou e o sistema criou; pôr um
+       processos...". Aqui o caderno trouxe e o sistema criou; pôr um
        sujeito atribuiria a uma pessoa uma decisão que foi da máquina.
 
        ⚠️ O par testa com autor PREENCHIDO -- sem isso, um `${autor}: ` no

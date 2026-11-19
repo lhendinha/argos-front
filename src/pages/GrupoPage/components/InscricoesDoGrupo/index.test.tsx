@@ -355,6 +355,14 @@ it("mostra o contador do teto, e não só quando ele enche", async () => {
   expect(screen.getByText("1 de 50")).toBeInTheDocument();
 });
 
+it("a dica diz que a inscrição é conferida todo dia, e não por ciclo", async () => {
+  /* A OAB é casada no caderno do DJEN uma vez por dia; a consulta por ciclo, três vezes ao dia, saiu com a
+     varredura. O par: o texto antigo não volta. */
+  await montar();
+  expect(screen.getByText("Cada inscrição é conferida todo dia nas publicações dos tribunais.")).toBeInTheDocument();
+  expect(screen.queryByText(/três vezes ao dia/)).not.toBeInTheDocument();
+});
+
 it("lista o que veio do servidor", async () => {
   await montar();
   expect(screen.getByText("263/MG")).toBeInTheDocument();

@@ -1,7 +1,7 @@
 /** O rótulo do "verificado até" de um processo: o mesmo texto na lista e no detalhe.
  *
- * 🔴 O dia vem PRONTO do servidor (`verificado_ate`), calculado pelo regime: a tela não refaz a conta com
- * `ultima_verificacao`, que depois da virada envelhece sem que nada tenha parado.
+ * 🔴 O dia vem PRONTO do servidor (`verificado_ate`), calculado pela marca dos tribunais: a tela não refaz a
+ * conta com `ultima_verificacao`, que envelhece sem que nada tenha parado.
  * ➡️ `src/utils/verificacao.test.ts`.
  */
 import type { Processo, RotuloDaVerificacao } from "../types";

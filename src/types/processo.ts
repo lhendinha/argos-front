@@ -39,18 +39,16 @@ export interface Processo {
   observacoes?: string | null;
   fase_id?: string | null;
   situacao_id?: string | null;
-  /** Resumo da comunicação mais recente, gravado pela lambda `check` junto
-   * com `ultima_verificacao`. A coluna "Última movimentação" da tabela junta
-   * os três: o tipo em cima, e embaixo a data em que o TRIBUNAL publicou
-   * (`ultima_mov_data`) mais quando o ROBÔ olhou (`ultima_verificacao`).
+  /** Resumo da comunicação mais recente. A coluna "Última movimentação" da
+   * tabela mostra o tipo em cima, e embaixo a data em que o TRIBUNAL publicou
+   * (`ultima_mov_data`) mais o "verificado até" (`verificado_ate`).
    * Vem `null` em processo que ainda não teve nenhuma comunicação. */
   ultima_mov_tipo?: string | null;
   ultima_mov_data?: string | null;
   /** Até que DIA (Brasília, `aaaa-mm-dd`) o sistema garante ter visto tudo do processo -- derivado, calculado
-   * pelo servidor pela chave `regime` (na varredura, o dia da última consulta; depois da virada, a marca dos
-   * tribunais). ⚠️ É dia, e não instante: `formatarData`, nunca `formatarDataHoraAmPm`. */
+   * pelo servidor pela marca dos tribunais (até onde o caderno de cada um foi conferido). ⚠️ É dia, e não instante: `formatarData`, nunca `formatarDataHoraAmPm`. */
   verificado_ate?: string | null;
-  /** O servidor acha que a verificação parou: o dia ficou velho demais para o regime. */
+  /** O servidor acha que a verificação parou: a marca ficou velha demais. */
   verificacao_atrasada?: boolean;
   /** O histórico do processo ainda está sendo carregado: não há dia a mostrar. */
   historico_em_carga?: boolean;
