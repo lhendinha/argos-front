@@ -228,16 +228,17 @@ export default function InscricoesDoGrupo() {
               </Text>
               {/* 🔴 O contador é o teto TORNADO VISÍVEL, e é por isso que ele
                   aparece sempre -- e não só quando a lista enche. O limite de
-                  50 é carga contra um tribunal, não espaço: quem descobre que
+                  50 é carga, não espaço (cada inscrição é uma consulta ao
+                  tribunal no dia que o caderno não fecha): quem descobre que
                   ele existe só ao esbarrar nele já planejou errado. */}
               <Etiqueta cores={CORES_DO_CONTADOR_DE_INSCRICOES}>
                 {`${inscricoes.length} de ${maximo}`}
               </Etiqueta>
             </Flex>
-            {/* ⚠️ A dica diz o CUSTO, que é o que só ela diz: o que a inscrição
-                faz está no modal, junto do interruptor que decide. */}
+            {/* ⚠️ A dica diz QUANDO a inscrição é olhada: todo dia, no caderno do
+                DJEN. O que ela faz está no modal, junto do interruptor que decide. */}
             <Text fontSize="11.5px" color="fg.subtle">
-              Cada inscrição vira uma consulta ao tribunal por ciclo, três vezes ao dia.
+              Cada inscrição é conferida todo dia nas publicações dos tribunais.
             </Text>
             {cheia && (
               <Text mt="4px" fontSize="11.5px" color="fg.subtle">

@@ -108,12 +108,12 @@ describe("a data", () => {
     await escolher(/Conta de origem/, "Itaú");
     await escolher(/Conta de destino/, "Caixa do escritório");
     /* ⚠️ A data se escolhe no CALENDÁRIO -- `SeletorData` é um gatilho, não
-       um input de texto. Um mês à frente já é futuro em qualquer dia do
-       ano, o que evita um teste que só falha no fim do mês. */
+       um input de texto. O dia 15 do mês seguinte é futuro em qualquer dia do
+       ano. ⚠️ Nunca o último botão da grade: ela termina com dias do mês
+       SEGUINTE (em dezembro, 2 de janeiro), que o calendário não seleciona. */
     await userEvent.click(screen.getByLabelText(/^Data/));
     await userEvent.click(await screen.findByRole("button", { name: "Próximo mês" }));
-    const dias = screen.getAllByRole("button", { name: /^Escolher / });
-    await userEvent.click(dias[dias.length - 1]);
+    await userEvent.click(screen.getByRole("button", { name: /^Escolher .*, 15 de / }));
     await userEvent.type(screen.getByLabelText(/Descrição/), "Reforço do caixa");
     await userEvent.type(screen.getByLabelText(/^Valor/), "50000");
     await userEvent.click(screen.getByRole("button", { name: "Salvar" }));

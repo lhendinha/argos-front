@@ -180,8 +180,8 @@ export default function FormularioDaInscricao() {
           aba do processo, o cartão, o subtítulo do Histórico). "Publicações"
           ou "intimações" criariam um segundo nome para a mesma coisa.
 
-          ⚠️ E é verdade HOJE, não promessa: a varredura por OAB lê esta
-          inscrição e roda três vezes ao dia. */}
+          ⚠️ E é verdade HOJE, não promessa: a aplicação do caderno do DJEN
+          casa esta inscrição todo dia. */}
       <Box mt="-8px" fontSize="11.5px" color="fg.subtle">
         Com a inscrição cadastrada, o sistema acompanha as movimentações que o tribunal
         publicar para ela — o interruptor abaixo é outra coisa.

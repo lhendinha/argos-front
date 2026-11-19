@@ -92,7 +92,7 @@ export function frasePrincipal(n: Notificacao): string {
     /* 🔴 SEM autor, e não é o mesmo caso do `processos_atribuidos` acima.
      *
      * Ali existe alguém que agiu, e o nome dele explica de onde veio a
-     * atribuição. Aqui **ninguém agiu**: a varredura encontrou processos no
+     * atribuição. Aqui **ninguém agiu**: o caderno do DJEN trouxe processos no
      * tribunal e o sistema os criou. Pôr um sujeito nesta frase seria
      * atribuir a uma pessoa uma decisão que foi da máquina.
      *

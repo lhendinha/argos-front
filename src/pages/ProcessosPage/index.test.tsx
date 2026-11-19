@@ -165,7 +165,7 @@ describe("ProcessosPage", () => {
 
   it("🔴 o 'verificado até' vem do servidor, e o atraso só na linha atrasada", async () => {
     /* O par na MESMA página: uma linha atrasada e outra em dia. Sem a segunda, um "(atrasado)" aceso em
-       toda linha passaria. E a hora da última consulta não aparece mais: depois da virada ela envelhece
+       toda linha passaria. E a hora da última consulta não aparece mais: com o caderno ela envelhece
        sem que nada tenha parado. */
     mocks.listarProcessos.mockResolvedValue({
       processos: [
