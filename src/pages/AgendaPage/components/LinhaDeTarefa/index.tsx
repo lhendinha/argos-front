@@ -30,7 +30,6 @@ export default function LinhaDeTarefa({
   onAbrir,
   ultima,
   selecao,
-  semEtiqueta,
 }: LinhaDeTarefaProps) {
   const cor = CORES_DA_PRIORIDADE[tarefa.prioridade] ?? "fg.subtle";
 
@@ -96,7 +95,7 @@ export default function LinhaDeTarefa({
           etiqueta corta com reticências dentro do teto e guarda o nome
           inteiro no `title`. */}
       <Flex align="center" gap="8px" flexShrink="0" minW="0" maxW="60%">
-        {!semEtiqueta && <EtiquetasDeSubgrupo nomes={[subgrupoNome]} />}
+        <EtiquetasDeSubgrupo nomes={[subgrupoNome]} />
         {/* 🔴 `flexShrink="0"` nos DOIS, e o ponto é o que mais precisa. Ele
             era o único item sem trava dentro da caixa com teto de 60%, então
             era ele que cedia quando o nome do subgrupo era longo -- e um

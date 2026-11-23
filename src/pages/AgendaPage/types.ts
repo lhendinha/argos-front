@@ -1,5 +1,3 @@
-import type { IntervaloDeDatas, Tarefa } from "../../types";
-
 /** As quatro visões da Agenda, na ordem em que o artifact as lista. */
 export type VisaoDaAgenda = "lista" | "dia" | "semana" | "mes";
 
@@ -39,13 +37,3 @@ export interface FiltrosDaAgenda {
   periodo: PeriodoDaAgenda;
 }
 
-/** O que o cartão "Hoje" precisa saber da tela para decidir de onde lê. */
-export interface ParametrosDasTarefasDeHoje {
-  subgrupoIds: string[];
-  intervalo: IntervaloDeDatas;
-  atrasadas: boolean;
-  pessoa: string;
-  isoDeHoje: string;
-  /** As tarefas que a consulta da visão já trouxe. */
-  daVisao: Tarefa[];
-}

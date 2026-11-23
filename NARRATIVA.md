@@ -3974,3 +3974,41 @@ HTML, em vez da constante, também acusa.
 ⚠️ **Mas ele PULA quando os dois repositórios não estão lado a lado.** Trocar
 uma cor sem a API clonada não acusa nada. A regra está escrita também no topo
 de `theme/tokens.ts`, que é onde quem troca a cor está olhando.
+
+## A grade do mês com os títulos
+
+23/11/2026. Três mudanças na Agenda, na ordem em que apareceram.
+
+**1. O cartão "Hoje" mentia fora do mês corrente.** Ele lia as tarefas da
+consulta da visão, que só pede a janela navegada: em dezembro, as de 23/11 não
+vinham, e o cartão dizia "Nenhuma tarefa para hoje" havendo tarefa. Conferido
+em produção. O teste que dizia cobrir isso passava porque o mock devolvia a
+mesma lista para qualquer período -- o medidor errado. O mock passou a
+respeitar `dataDe`/`dataAte`, como o servidor. A primeira correção deu ao
+cartão uma consulta própria do dia de hoje; ela saiu no item 2, que tornou a
+consulta desnecessária.
+
+**2. O cartão virou o cartão DO DIA, e só no Mês.** Decidido com o dono: a
+grade mostrava só pontos, e era preciso clicar dia por dia para saber o que
+eram. O clique no mês passou a SELECIONAR o dia (borda azul; o cartão mostra
+aquele dia), e "Abrir dia" leva à visão "Por dia". Em Semana, Dia e Lista o
+cartão some: ali os títulos já estão na tela. Como o dia do cartão sai sempre
+da grade, a consulta da visão já o trouxe -- a consulta própria do item 1 foi
+apagada. Some junto a caixa de seleção do cartão (e a opção da linha de
+esconder a etiqueta, que existia só para ela): "Selecionar" já levava a tela
+para "Em lista".
+
+**3. Títulos dentro do dia, com altura fixa.** Até dois títulos por célula e
+"+N mais", no estilo da semana. Com altura livre as linhas ficavam de alturas
+diferentes; o dono pediu altura igual, e a célula fixou em 100px -- a do dia
+mais cheio. Numa tela de notebook a última semana fica abaixo da dobra, e foi
+aceito.
+
+⚠️ **A régua `TELA_SEM_ESPACO_PARA_O_MES` mudou de 899 para 500 de altura.**
+Ela nasceu só com `max-width: 640px`; a altura entrou depois, medida para o
+celular deitado: em 832x334 a célula ficava em 84px, porque 832 passa de 640,
+e 476px da grade iam para baixo da dobra. O 899 (e não 810) era a folga do
+cabeçalho e das abas: em 390x844 a grade alta terminaria em 897px, e em
+1440x900 terminava em 811. Com títulos na célula, 899 mandaria um notebook de
+800px de altura para os pontos -- justamente o desenho que o item 3 queria
+mostrar ali. 500 ainda cobre o celular deitado.

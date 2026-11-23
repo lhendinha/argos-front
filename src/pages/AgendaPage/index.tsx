@@ -20,10 +20,10 @@ import { hojeISO } from "../../utils";
 import { paraIso } from "../../utils/calendario";
 import AreaDaVisao from "./components/AreaDaVisao";
 import BarraDeDatas from "./components/BarraDeDatas";
-import CartaoDeHoje from "./components/CartaoDeHoje";
+import CartaoDoDia from "./components/CartaoDoDia";
 import FiltrosDaAgenda from "./components/FiltrosDaAgenda";
+import { useDiaDoCartao } from "./hooks/useDiaDoCartao";
 import { useTarefasDaAgenda } from "./hooks/useTarefasDaAgenda";
-import { useTarefasDeHoje } from "./hooks/useTarefasDeHoje";
 import { agruparPorDia, filtrarPorPessoa } from "./tarefasPorDia";
 import {
   dataPadraoDaNovaTarefa,
@@ -131,15 +131,7 @@ export default function AgendaPage() {
      um array NOVO, e o `useMemo` de `visiveis` logo abaixo recomputava a cada
      render -- era o que o lint apontava. */
   const tarefas = useMemo(() => tarefasQuery.data || [], [tarefasQuery.data]);
-  const deHoje = useTarefasDeHoje({
-    subgrupoIds: filtros.subgrupoIds,
-    intervalo,
-    atrasadas,
-    pessoa: filtros.pessoa,
-    isoDeHoje,
-    daVisao: tarefas,
-  });
-  const { assuntoDoAtendimento } = useAssuntosDasTarefas(deHoje.paraAssuntos);
+  const { assuntoDoAtendimento } = useAssuntosDasTarefas(tarefas);
   /* UMA vez na página, não uma por linha -- mesma razão do assunto acima. */
   const subgrupoNome = useNomeDeSubgrupo();
   const visiveis = useMemo(() => filtrarPorPessoa(tarefas, filtros.pessoa), [tarefas, filtros.pessoa]);
@@ -154,14 +146,8 @@ export default function AgendaPage() {
 
   const chavesVisiveis = visiveis.map(chaveDe);
 
-  /* 🔴 UMA função para as DUAS listas da tela. A pilha de dias e o cartão
-     "Hoje" mostram as MESMAS tarefas (`doDiaDeHoje` sai de `visiveis`), e a
-     primeira versão só deu caixa à pilha: a mesma tarefa aparecia
-     selecionável de um lado e como botão de abrir do outro. Marcá-la aqui
-     acende a caixa lá, porque a seleção guarda CHAVE, não posição.
-
-     ⚠️ A ordem do Shift é `chavesVisiveis` -- a do período inteiro, não a do
-     cartão. É o que faz o intervalo significar a mesma coisa nas duas. */
+  /* ⚠️ A ordem do Shift é `chavesVisiveis` -- a do período inteiro, não a
+     de um dia. É o que faz o intervalo atravessar os dias da lista. */
   const selecaoDaLinha = selecionando
     ? (t: Tarefa) => ({
         marcada: selecao.estaMarcada(t),
@@ -170,7 +156,15 @@ export default function AgendaPage() {
     : undefined;
 
   const porDia = useMemo(() => agruparPorDia(visiveis), [visiveis]);
-  const doDiaDeHoje = deHoje.foraDaVisao ? deHoje.tarefas : porDia.get(isoDeHoje) || [];
+
+  /* O cartão lateral só existe no mês -- em Semana, Dia e Lista o dia já está na tela. */
+  const comCartao = filtros.visao === "mes" && !atrasadas;
+  const {
+    iso: isoDoCartao,
+    selecionar: selecionarDia,
+    esquecer: esquecerDia,
+    cartaoRef,
+  } = useDiaDoCartao(dataVisivel, isoDeHoje, setDataVisivel);
 
   /* Em que subgrupo o modal ABRE: o da tarefa aberta, ou -- criando -- o
      primeiro exibido. Daí em diante quem manda é o seletor do próprio modal,
@@ -277,7 +271,10 @@ export default function AgendaPage() {
           logo abaixo não alcançava isso -- ele é do ITEM, e quem não cedia
           era a TRILHA. Mesmo idioma de `VisaoPorMes`. */}
       <Grid
-        templateColumns={{ base: "minmax(0, 1fr)", lg: "minmax(0, 1fr) 320px" }}
+        templateColumns={{
+          base: "minmax(0, 1fr)",
+          lg: comCartao ? "minmax(0, 1fr) 320px" : "minmax(0, 1fr)",
+        }}
         gap="20px"
         alignItems="start"
       >
@@ -296,7 +293,10 @@ export default function AgendaPage() {
             onNavegar={(passo) =>
               setDataVisivel((atual) => navegar(filtros.visao, atual, passo))
             }
-            onHoje={() => setDataVisivel(new Date())}
+            onHoje={() => {
+              setDataVisivel(new Date());
+              esquecerDia();
+            }}
           />
 
           {carregando ? (
@@ -319,21 +319,28 @@ export default function AgendaPage() {
               subgrupoNome={subgrupoNome}
               onAbrirTarefa={setTarefaAberta}
               onEscolherDia={abrirDia}
+              isoSelecionado={isoDoCartao}
+              onSelecionarDia={selecionarDia}
               selecaoDe={selecaoDaLinha}
             />
           )}
         </Box>
 
-        <CartaoDeHoje
-          hoje={hoje}
-          tarefas={doDiaDeHoje}
-          carregando={deHoje.foraDaVisao ? deHoje.carregando : carregando}
-          atrasadas={atrasadas}
-          subgrupoNome={subgrupoNome}
-          assuntoDoAtendimento={assuntoDoAtendimento}
-          onAbrir={setTarefaAberta}
-          selecaoDe={selecaoDaLinha}
-        />
+        {comCartao && (
+          /* A margem é a do cabeçalho fixo, que cobriria o título. */
+          <Box ref={cartaoRef} scrollMarginTop="76px">
+            <CartaoDoDia
+              dia={new Date(`${isoDoCartao}T00:00:00`)}
+              ehHoje={isoDoCartao === isoDeHoje}
+              tarefas={porDia.get(isoDoCartao) || []}
+              carregando={carregando}
+              subgrupoNome={subgrupoNome}
+              assuntoDoAtendimento={assuntoDoAtendimento}
+              onAbrir={setTarefaAberta}
+              onAbrirDia={() => abrirDia(isoDoCartao)}
+            />
+          </Box>
+        )}
       </Grid>
 
       {/* Irmão FIXO do conteúdo, como o `Modal` exige: dentro de um ramo

@@ -246,15 +246,26 @@ describe("navegação", () => {
     expect(await screen.findByText("Agosto de 2026")).toBeInTheDocument();
   });
 
-  it("clicar num dia da grade abre a visão daquele dia", async () => {
+  it("clicar num dia da grade SELECIONA, e 'Abrir dia' abre a visão daquele dia", async () => {
     comTarefas(tarefa({ titulo: "Audiência", data: "2026-08-25" }));
     await montar();
     await waitFor(() => expect(mocks.listarTarefas).toHaveBeenCalled());
 
     await userEvent.click(await screen.findByRole("button", { name: /^Dia 25/ }));
+    /* O par: o clique não troca de visão -- só o cartão muda. */
+    expect(pilulaDeVisao()).toHaveTextContent("Por mês");
+    expect(await screen.findByText("Terça-feira · 25/08/2026")).toBeInTheDocument();
 
+    await userEvent.click(screen.getByRole("button", { name: "Abrir dia" }));
     expect(pilulaDeVisao()).toHaveTextContent("Por dia");
     expect(await screen.findByText("Terça-feira, 25 de agosto")).toBeInTheDocument();
+  });
+
+  it("na SEMANA o clique no dia continua abrindo a visão do dia", async () => {
+    await montar();
+    await trocarVisao("Por semana");
+    await userEvent.click(screen.getByRole("button", { name: /^Qui, dia 20/ }));
+    expect(pilulaDeVisao()).toHaveTextContent("Por dia");
   });
 });
 
@@ -418,59 +429,120 @@ describe("coluna na linha", () => {
   });
 });
 
-describe("cartão de hoje", () => {
-  it("mostra as tarefas de HOJE mesmo navegando pra outro mês", async () => {
-    /* É o ponto de retorno de quem foi olhar outro mês -- se ele seguisse a
-     * navegação, seria só uma segunda cópia da visão principal.
-     *
-     * 🔴 O mock RESPEITA a janela pedida, como o servidor. Com `comTarefas`,
-     * que devolve a mesma lista para qualquer período, este teste passava
-     * enquanto produção dizia "Nenhuma tarefa para hoje" em setembro. */
+describe("cartão do dia", () => {
+  const titulo = (texto: string) => screen.findByRole("heading", { name: texto });
+
+  it("abre em HOJE, com as tarefas de hoje", async () => {
     comTarefasPorJanela(tarefa({ titulo: "Coisa de hoje", data: ISO_HOJE }));
     await montar();
-    await screen.findByText("Hoje · 19/08/2026");
-
-    await userEvent.click(screen.getByLabelText("Próximo período"));
-    await screen.findByText("Setembro de 2026");
-
-    expect(screen.getByText("Hoje · 19/08/2026")).toBeInTheDocument();
-    expect(screen.getAllByText("Coisa de hoje").length).toBeGreaterThan(0);
+    expect(await titulo("Hoje · 19/08/2026")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Coisa de hoje/ })).toBeInTheDocument();
   });
 
-  it("fora de hoje, pede SÓ o dia de hoje -- e com hoje à vista, não pede de novo", async () => {
-    comTarefasPorJanela(tarefa({ titulo: "Coisa de hoje", data: ISO_HOJE }));
+  it("clicar num dia troca o dia do cartão e marca a célula", async () => {
+    comTarefasPorJanela(
+      tarefa({ tarefa_id: "t1", titulo: "Coisa de hoje", data: ISO_HOJE }),
+      tarefa({ tarefa_id: "t2", titulo: "Coisa do dia 25", data: "2026-08-25" }),
+    );
     await montar();
-    await screen.findAllByText("Coisa de hoje");
-    const pediuSoHoje = () =>
-      mocks.listarTarefas.mock.calls.filter(
-        ([p]) => p.dataDe === ISO_HOJE && p.dataAte === ISO_HOJE,
-      ).length;
-    expect(pediuSoHoje()).toBe(0);
+    const dia25 = await screen.findByRole("button", { name: /^Dia 25/ });
+    expect(dia25).toHaveAttribute("aria-pressed", "false");
 
-    await userEvent.click(screen.getByLabelText("Próximo período"));
-    await screen.findByText("Setembro de 2026");
-    await waitFor(() => expect(pediuSoHoje()).toBe(1));
+    await userEvent.click(dia25);
+    expect(await titulo("Terça-feira · 25/08/2026")).toBeInTheDocument();
+    expect(dia25).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /Coisa do dia 25/ })).toBeInTheDocument();
+    /* O par: a de hoje sai do cartão (fica só o título dentro da grade). */
+    expect(screen.queryByRole("button", { name: /Coisa de hoje/ })).not.toBeInTheDocument();
   });
 
-  it("navegando, respeita o filtro de pessoa", async () => {
+  it("outro mês: o cartão mostra o dia 1, nunca um dia de fora da grade", async () => {
+    /* 🔴 O dia do cartão sai SEMPRE da grade -- é o que dispensa uma consulta
+       própria. Mostrar hoje com setembro à vista leria um dia que a consulta
+       da visão não trouxe, e diria "Nenhuma tarefa" havendo tarefa.
+       O mock RESPEITA a janela pedida, como o servidor: com `comTarefas`,
+       que devolve a mesma lista para qualquer período, esse defeito passou
+       verde em produção. */
+    comTarefasPorJanela(tarefa({ titulo: "Início de setembro", data: "2026-09-01" }));
+    await montar();
+    await userEvent.click(screen.getByLabelText("Próximo período"));
+    await screen.findByText("Setembro de 2026");
+    expect(await titulo("Terça-feira · 01/09/2026")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Início de setembro/ })).toBeInTheDocument();
+  });
+
+  it("dia CINZA leva a grade para o mês dele", async () => {
+    comTarefasPorJanela();
+    await montar();
+    /* Dois "Dia 1" na grade de agosto: 1º de agosto e 1º de setembro. */
+    const dias1 = await screen.findAllByRole("button", { name: /^Dia 1(,|$)/ });
+    await userEvent.click(dias1[dias1.length - 1]);
+    expect(await screen.findByText("Setembro de 2026")).toBeInTheDocument();
+    expect(await titulo("Terça-feira · 01/09/2026")).toBeInTheDocument();
+  });
+
+  it("'Hoje' volta a selecionar hoje", async () => {
+    comTarefasPorJanela();
+    await montar();
+    await userEvent.click(await screen.findByRole("button", { name: /^Dia 25/ }));
+    await titulo("Terça-feira · 25/08/2026");
+    await userEvent.click(screen.getByRole("button", { name: "Hoje" }));
+    expect(await titulo("Hoje · 19/08/2026")).toBeInTheDocument();
+  });
+
+  it("respeita o filtro de pessoa", async () => {
     comTarefasPorJanela(
       tarefa({ tarefa_id: "t1", titulo: "Da Ana", data: ISO_HOJE, responsavel_id: "ana@x.com" }),
       tarefa({ tarefa_id: "t2", titulo: "Sem dono", data: ISO_HOJE }),
     );
     await montar();
+    await screen.findByRole("button", { name: /Da Ana/ });
     await userEvent.click(screen.getByText("Todas as pessoas"));
     await userEvent.click(await screen.findByRole("option", { name: "Sem responsável" }));
-    await userEvent.click(screen.getByLabelText("Próximo período"));
-    await screen.findByText("Setembro de 2026");
 
-    expect(await screen.findByText("Sem dono")).toBeInTheDocument();
-    expect(screen.queryByText("Da Ana")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("button", { name: /Da Ana/ })).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: /Sem dono/ })).toBeInTheDocument();
   });
 
-  it("diz quando não há nada hoje", async () => {
+  it("diz quando não há nada hoje, e quando não há nada no dia", async () => {
     comTarefas(tarefa({ titulo: "Semana que vem", data: "2026-08-26" }));
     await montar();
     expect(await screen.findByText("Nenhuma tarefa para hoje.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Dia 24/ }));
+    expect(await screen.findByText("Nenhuma tarefa neste dia.")).toBeInTheDocument();
+  });
+
+  it.each(["Por semana", "Por dia", "Em lista"])("SOME em '%s' -- ali o dia já está na tela", async (visao) => {
+    await montar();
+    await screen.findByRole("button", { name: "Abrir dia" });
+    await trocarVisao(visao);
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Abrir dia" })).not.toBeInTheDocument(),
+    );
+  });
+});
+
+describe("títulos na grade do mês", () => {
+  it("até DOIS títulos por dia, e o resto vira '+N mais'", async () => {
+    comTarefas(
+      tarefa({ tarefa_id: "t1", titulo: "Primeira", data: "2026-08-25", prioridade: "Alta" }),
+      tarefa({ tarefa_id: "t2", titulo: "Segunda", data: "2026-08-25", prioridade: "Média" }),
+      tarefa({ tarefa_id: "t3", titulo: "Terceira", data: "2026-08-25", prioridade: "Baixa" }),
+    );
+    await montar();
+    const dia25 = await screen.findByRole("button", { name: /^Dia 25/ });
+    expect(within(dia25).getByText("Primeira")).toBeInTheDocument();
+    expect(within(dia25).getByText("Segunda")).toBeInTheDocument();
+    expect(within(dia25).queryByText("Terceira")).not.toBeInTheDocument();
+    expect(within(dia25).getByText("+1 mais")).toBeInTheDocument();
+  });
+
+  it("com até dois, não há '+N mais'", async () => {
+    comTarefas(tarefa({ titulo: "Sozinha", data: "2026-08-25" }));
+    await montar();
+    const dia25 = await screen.findByRole("button", { name: /^Dia 25/ });
+    expect(within(dia25).getByText("Sozinha")).toBeInTheDocument();
+    expect(within(dia25).queryByText(/mais$/)).not.toBeInTheDocument();
   });
 });
 
@@ -701,22 +773,17 @@ describe("modo Atrasadas: a pílula de visão não pode mentir", () => {
   });
 });
 
-describe("modo Atrasadas: o cartão 'Hoje' não pode afirmar o que não sabe", () => {
-  it("🔴 não diz 'Nenhuma tarefa para hoje' -- ele não perguntou por hoje", async () => {
-    /* Achado da segunda auditoria de 26/08/2026. A consulta do modo pede
-       `data_ate: ontem`, então as tarefas de hoje NUNCA chegam. O cartão
-       lateral montava a frase em cima desse conjunto e afirmava zero -- a
-       pessoa podia ter cinco vencendo hoje.
-
-       Lista vazia sem dizer por quê é justamente o que este projeto
-       persegue; aqui o porquê é o próprio filtro. */
+describe("modo Atrasadas: o cartão do dia não pode afirmar o que não sabe", () => {
+  it("🔴 o cartão SOME -- ele não diz 'Nenhuma tarefa para hoje'", async () => {
+    /* A consulta do modo pede `data_ate: ontem`, então as tarefas de hoje
+       NUNCA chegam: um cartão de hoje afirmaria zero havendo cinco. O modo é
+       uma lista, e na lista o cartão não existe. */
     comTarefas(tarefa({ titulo: "Atrasada", data: emDias(-2) }));
     await montar("atrasadas");
+    await screen.findAllByText("Atrasada");
 
     expect(screen.queryByText("Nenhuma tarefa para hoje.")).not.toBeInTheDocument();
-    expect(
-      await screen.findByText(/Em Atrasadas a lista traz só o passado/),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Abrir dia" })).not.toBeInTheDocument();
   });
 
   it("🔴 ESCONDE a lista de pessoas de quem é `user`, e mantém 'Sem responsável'", async () => {
@@ -763,7 +830,7 @@ describe("seleção em lote na Agenda (Fase 4 do PLANO_ACOES_EM_LOTE)", () => {
       tarefa({ tarefa_id: "c", titulo: "Ligar para o cliente", data: "2026-08-20" }),
     );
     montar();
-    await screen.findByText("Peticionar recurso");
+    await screen.findAllByText("Peticionar recurso");
     await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
     return usuario;
   }
@@ -780,7 +847,7 @@ describe("seleção em lote na Agenda (Fase 4 do PLANO_ACOES_EM_LOTE)", () => {
   it("o par: FORA do modo a visão volta a funcionar", async () => {
     comTarefas(tarefa({ titulo: "Peticionar recurso" }));
     montar();
-    await screen.findByText("Peticionar recurso");
+    await screen.findAllByText("Peticionar recurso");
     expect(screen.getByRole("button", { name: /Por mês/ })).toBeEnabled();
   });
 
@@ -801,61 +868,11 @@ describe("seleção em lote na Agenda (Fase 4 do PLANO_ACOES_EM_LOTE)", () => {
     /* Caixa dentro de `<button>` é conteúdo interativo aninhado: HTML
        inválido, e o clique fica ambíguo entre abrir e marcar. */
     await entrar();
-    /* DUAS: a da pilha de dias e a do cartão "Hoje". A primeira versão só
-       trocou a da pilha, e a mesma tarefa ficava selecionável de um lado e
-       botão de abrir do outro. */
+    /* UMA: em seleção a tela é lista, e na lista o cartão do dia não existe. */
     expect(
       await screen.findAllByRole("checkbox", { name: "Selecionar Peticionar recurso" }),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /Peticionar recurso/ })).not.toBeInTheDocument();
-  });
-
-  it("marcar no cartão \"Hoje\" acende a caixa na pilha de dias", async () => {
-    /* A seleção guarda CHAVE, não posição: a mesma tarefa listada duas vezes
-       é UMA marcada, e a contagem não pode dizer 2. */
-    const usuario = await entrar();
-    const caixas = await screen.findAllByRole("checkbox", {
-      name: "Selecionar Peticionar recurso",
-    });
-    /* A do cartão lateral é a última no DOM -- o cartão vem depois da pilha. */
-    await usuario.click(caixas[caixas.length - 1]);
-
-    /* `data-state` do Root, e não `toBeChecked()`: o Ark marca o input pelo
-       ATRIBUTO `checked`, que o jsdom não reflete na propriedade -- e é o
-       `data-state` que desenha o tique que a pessoa enxerga. */
-    for (const caixa of screen.getAllByRole("checkbox", {
-      name: "Selecionar Peticionar recurso",
-    })) {
-      expect(caixa.closest("[data-part='root']")).toHaveAttribute("data-state", "checked");
-    }
-    expect(screen.getByText("1 de 3 selecionadas")).toBeInTheDocument();
-  });
-
-  it("🔴 no cartão \"Hoje\" a caixa entra no lugar da ETIQUETA, não do título", async () => {
-    /* Medido em Chrome em 10/09/2026: naquela coluna de 320px a linha útil
-       tem 250, o bloco da direita comia 131 e a caixa levou o título de 99px
-       para 67 -- "Protocol…", que não identifica tarefa na hora de apagar.
-       Sem a etiqueta o título vai a 148, mais do que tinha antes.
-
-       ⚠️ O par: na PILHA de dias, larga, a etiqueta FICA. */
-    const usuario = userEvent.setup();
-    comTarefas(
-      tarefa({ tarefa_id: "a", titulo: "Peticionar recurso", data: ISO_HOJE }),
-      tarefa({ tarefa_id: "b", titulo: "Juntar procuração", data: ISO_HOJE }),
-      tarefa({ tarefa_id: "c", titulo: "Ligar para o cliente", data: "2026-08-20" }),
-    );
-    montar();
-    await screen.findByText("Peticionar recurso");
-
-    /* Em LISTA, para comparar igual com igual: a seleção também lista. */
-    await usuario.click(screen.getByRole("button", { name: /Por mês/ }));
-    await usuario.click(await screen.findByRole("button", { name: /^Em lista$/ }));
-    /* Cinco: três na pilha de dias e duas no cartão "Hoje". */
-    expect(screen.getAllByTitle("Cível")).toHaveLength(5);
-
-    await usuario.click(screen.getByRole("button", { name: "Selecionar" }));
-    /* Três: só as da pilha. As duas do cartão cederam o espaço ao título. */
-    expect(screen.getAllByTitle("Cível")).toHaveLength(3);
   });
 
   it("clicar na LINHA inteira marca -- ela é o rótulo da caixa", async () => {
@@ -901,7 +918,7 @@ describe("seleção em lote na Agenda (Fase 4 do PLANO_ACOES_EM_LOTE)", () => {
     mocks.papelAtende.mockReturnValue(false);
     comTarefas(tarefa({ titulo: "Peticionar recurso" }));
     montar();
-    await screen.findByText("Peticionar recurso");
+    await screen.findAllByText("Peticionar recurso");
     expect(screen.queryByRole("button", { name: "Selecionar" })).not.toBeInTheDocument();
   });
 });

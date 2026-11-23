@@ -1,11 +1,14 @@
-import { Box, Flex, Grid } from "@chakra-ui/react";
+import { Box, Flex, Grid, Text } from "@chakra-ui/react";
 
 import { BotaoNu } from "../../../../components";
 
-import { TELA_SEM_ESPACO_PARA_O_MES } from "../../../../constants";
+import { CORES_DA_PRIORIDADE, TELA_SEM_ESPACO_PARA_O_MES } from "../../../../constants";
 import { DIAS_DA_SEMANA_CURTOS, PONTOS_POR_CELULA } from "../../constants";
 import { gradeDoMes } from "../../../../utils/calendario";
 import type { VisaoPorMesProps } from "./types";
+
+/** Quantos títulos cabem numa célula antes do "+N mais". */
+const TITULOS_POR_CELULA = 2;
 
 /** A grade do mês (`.month-grid` do artifact): 7 colunas × 6 semanas.
  *
@@ -21,7 +24,13 @@ import type { VisaoPorMesProps } from "./types";
  * O fundo da grade é a própria borda: `gap: 1px` sobre `bg="border"` desenha
  * as divisórias sem 42 bordas que se somam em dobro nos encontros.
  */
-export default function VisaoPorMes({ data, isoDeHoje, porDia, onEscolherDia }: VisaoPorMesProps) {
+export default function VisaoPorMes({
+  data,
+  isoDeHoje,
+  isoSelecionado,
+  porDia,
+  onEscolherDia,
+}: VisaoPorMesProps) {
   const grade = gradeDoMes(data.getFullYear(), data.getMonth());
 
   return (
@@ -53,29 +62,34 @@ export default function VisaoPorMes({ data, isoDeHoje, porDia, onEscolherDia }: 
       {grade.map((celula) => {
         const tarefas = porDia.get(celula.iso) || [];
         const ehHoje = celula.iso === isoDeHoje;
+        const selecionado = celula.iso === isoSelecionado;
 
         return (
           <BotaoNu
             key={celula.iso}
             type="button"
             onClick={() => onEscolherDia(celula.iso)}
+            aria-pressed={selecionado}
             aria-label={`Dia ${celula.dia}${tarefas.length ? `, ${tarefas.length} tarefa(s)` : ""}`}
             minW="0"
             w="100%"
-            minH="84px"
+            /* Altura FIXA, a do dia mais cheio (dois títulos e o "+N mais"):
+               linhas de alturas diferentes deixam a grade irregular e a
+               fazem pular ao trocar de mês. Sem espaço, só pontos. */
+            h="100px"
+            overflow="hidden"
             p="6px"
-            /* Célula mais baixa onde a grade de seis semanas não cabe --
-               por largura OU por altura. A régua e a medida que a corrigiu
-               estão em `TELA_SEM_ESPACO_PARA_O_MES`. */
-            css={{
-              [`@media ${TELA_SEM_ESPACO_PARA_O_MES}`]: { minHeight: "52px", padding: "4px" },
-            }}
+            css={{ [`@media ${TELA_SEM_ESPACO_PARA_O_MES}`]: { height: "52px", padding: "4px" } }}
             display="flex"
             flexDirection="column"
             gap="5px"
             textAlign="left"
             bg={celula.doMes ? "bg.surface" : "bg.subtle"}
             _hover={{ bg: "bg.subtle" }}
+            /* Borda POR DENTRO: `outline` com recuo não empurra a grade. */
+            outline={selecionado ? "2px solid" : undefined}
+            outlineColor="fg.brand"
+            outlineOffset="-2px"
           >
             <Flex
               align="center"
@@ -92,8 +106,42 @@ export default function VisaoPorMes({ data, isoDeHoje, porDia, onEscolherDia }: 
               {celula.dia}
             </Flex>
 
+            {/* Títulos no computador; no celular a célula não tem largura
+                para texto, e ficam os pontos. */}
             {tarefas.length > 0 && (
-              <Flex gap="3px">
+              <Flex direction="column" gap="3px" minW="0" w="100%" css={{ [`@media ${TELA_SEM_ESPACO_PARA_O_MES}`]: { display: "none" } }}>
+                {tarefas.slice(0, TITULOS_POR_CELULA).map((tarefa) => {
+                  const concluida = tarefa.esta_concluida ?? false;
+                  const alta = tarefa.prioridade === "Alta";
+                  return (
+                    <Text
+                      key={`${tarefa.subgrupo_id}:${tarefa.tarefa_id}`}
+                      title={tarefa.titulo}
+                      truncate
+                      minW="0"
+                      fontSize="10.5px"
+                      fontWeight="700"
+                      borderRadius="5px"
+                      px="6px"
+                      py="2px"
+                      bg={alta ? "bg.bad.subtle" : "border.subtle"}
+                      color={concluida ? "fg.subtle" : alta ? CORES_DA_PRIORIDADE.Alta : undefined}
+                      textDecoration={concluida ? "line-through" : undefined}
+                    >
+                      {tarefa.titulo}
+                    </Text>
+                  );
+                })}
+                {tarefas.length > TITULOS_POR_CELULA && (
+                  <Text fontSize="10.5px" fontWeight="700" color="fg.muted" px="6px">
+                    +{tarefas.length - TITULOS_POR_CELULA} mais
+                  </Text>
+                )}
+              </Flex>
+            )}
+
+            {tarefas.length > 0 && (
+              <Flex gap="3px" display="none" css={{ [`@media ${TELA_SEM_ESPACO_PARA_O_MES}`]: { display: "flex" } }}>
                 {tarefas.slice(0, PONTOS_POR_CELULA).map((tarefa) => (
                   <Box
                     key={`${tarefa.subgrupo_id}:${tarefa.tarefa_id}`}
