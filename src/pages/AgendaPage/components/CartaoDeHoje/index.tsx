@@ -10,10 +10,12 @@ import type { CartaoDeHojeProps } from "./types";
  * pessoa para longe, e este cartão é o que sempre responde "e agora, o que é
  * meu para hoje".
  *
- * 🔴 As tarefas saem de `visiveis` -- as mesmas da pilha de dias, já
- * filtradas. Por isso ele SELECIONA junto: a mesma tarefa aparecendo
- * marcável de um lado e como botão de abrir do outro é um defeito que a
- * suíte cobra: `a linha deixa de ser BOTÃO e vira a caixa` conta DUAS.
+ * 🔴 Com hoje à vista, as tarefas saem de `visiveis` -- as mesmas da pilha
+ * de dias, já filtradas. Por isso ele SELECIONA junto: a mesma tarefa
+ * aparecendo marcável de um lado e como botão de abrir do outro é um defeito
+ * que a suíte cobra: `a linha deixa de ser BOTÃO e vira a caixa` conta DUAS.
+ * ⚠️ Com hoje FORA da visão, a consulta da visão não traz hoje; quem traz é
+ * `useTarefasDeHoje`.
  *
  * ➡️ `AgendaPage/index.test.tsx`; `PLANO_ACOES_EM_LOTE.md`, Fase 4.
  */

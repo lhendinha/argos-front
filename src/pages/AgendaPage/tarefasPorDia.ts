@@ -32,3 +32,11 @@ export function agruparPorDia(tarefas: Tarefa[]): Map<string, Tarefa[]> {
   }
   return porDia;
 }
+
+/** O filtro de pessoa da Agenda, aplicado no cliente: `"todas"`, `"sem"`
+ * (sem responsável) ou o e-mail de quem é responsável. */
+export function filtrarPorPessoa(tarefas: Tarefa[], pessoa: string): Tarefa[] {
+  if (pessoa === "todas") return tarefas;
+  if (pessoa === "sem") return tarefas.filter((t) => !t.responsavel_id);
+  return tarefas.filter((t) => t.responsavel_id === pessoa);
+}

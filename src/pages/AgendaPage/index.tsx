@@ -23,7 +23,8 @@ import BarraDeDatas from "./components/BarraDeDatas";
 import CartaoDeHoje from "./components/CartaoDeHoje";
 import FiltrosDaAgenda from "./components/FiltrosDaAgenda";
 import { useTarefasDaAgenda } from "./hooks/useTarefasDaAgenda";
-import { agruparPorDia } from "./tarefasPorDia";
+import { useTarefasDeHoje } from "./hooks/useTarefasDeHoje";
+import { agruparPorDia, filtrarPorPessoa } from "./tarefasPorDia";
 import {
   dataPadraoDaNovaTarefa,
   intervaloDaVisao,
@@ -130,14 +131,18 @@ export default function AgendaPage() {
      um array NOVO, e o `useMemo` de `visiveis` logo abaixo recomputava a cada
      render -- era o que o lint apontava. */
   const tarefas = useMemo(() => tarefasQuery.data || [], [tarefasQuery.data]);
-  const { assuntoDoAtendimento } = useAssuntosDasTarefas(tarefas);
+  const deHoje = useTarefasDeHoje({
+    subgrupoIds: filtros.subgrupoIds,
+    intervalo,
+    atrasadas,
+    pessoa: filtros.pessoa,
+    isoDeHoje,
+    daVisao: tarefas,
+  });
+  const { assuntoDoAtendimento } = useAssuntosDasTarefas(deHoje.paraAssuntos);
   /* UMA vez na página, não uma por linha -- mesma razão do assunto acima. */
   const subgrupoNome = useNomeDeSubgrupo();
-  const visiveis = useMemo(() => {
-    if (filtros.pessoa === "todas") return tarefas;
-    if (filtros.pessoa === "sem") return tarefas.filter((t) => !t.responsavel_id);
-    return tarefas.filter((t) => t.responsavel_id === filtros.pessoa);
-  }, [tarefas, filtros.pessoa]);
+  const visiveis = useMemo(() => filtrarPorPessoa(tarefas, filtros.pessoa), [tarefas, filtros.pessoa]);
 
   /* 🔴 A seleção age sobre `visiveis` -- o que o FILTRO deixou na tela --, e
      não sobre `tarefas`. Aqui o filtro de pessoa é aplicado no CLIENTE sobre
@@ -165,7 +170,7 @@ export default function AgendaPage() {
     : undefined;
 
   const porDia = useMemo(() => agruparPorDia(visiveis), [visiveis]);
-  const doDiaDeHoje = porDia.get(isoDeHoje) || [];
+  const doDiaDeHoje = deHoje.foraDaVisao ? deHoje.tarefas : porDia.get(isoDeHoje) || [];
 
   /* Em que subgrupo o modal ABRE: o da tarefa aberta, ou -- criando -- o
      primeiro exibido. Daí em diante quem manda é o seletor do próprio modal,
@@ -322,7 +327,7 @@ export default function AgendaPage() {
         <CartaoDeHoje
           hoje={hoje}
           tarefas={doDiaDeHoje}
-          carregando={carregando}
+          carregando={deHoje.foraDaVisao ? deHoje.carregando : carregando}
           atrasadas={atrasadas}
           subgrupoNome={subgrupoNome}
           assuntoDoAtendimento={assuntoDoAtendimento}

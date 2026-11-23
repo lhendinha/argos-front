@@ -29,6 +29,7 @@ export function useTarefasDaAgenda(
   subgrupoIds: string[],
   intervalo: IntervaloDeDatas,
   periodo: PeriodoDaAgenda = "todos",
+  ativa = true,
 ) {
   /* 🔴 "Atrasadas" troca a FORMA da consulta, não só um valor: sai a janela
      da visão e entram `apenasAbertas` + `dataAte: ontem`. É a mesma
@@ -46,6 +47,7 @@ export function useTarefasDaAgenda(
     : { dataDe: intervalo.de, dataAte: intervalo.ate };
 
   return useQuery<Tarefa[]>({
+    enabled: ativa,
     /* ⚠️ `periodo` na CHAVE. Sem ele, ligar "Atrasadas" reusaria o resultado
        da janela anterior -- lista errada, sem erro nenhum. */
     queryKey: qk.tarefas({
