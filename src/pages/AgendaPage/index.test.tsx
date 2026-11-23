@@ -74,6 +74,16 @@ function comTarefas(...lista: Record<string, unknown>[]) {
   });
 }
 
+/** Como o servidor: devolve só as tarefas dentro de `dataDe`..`dataAte`. */
+function comTarefasPorJanela(...lista: Record<string, unknown>[]) {
+  mocks.listarTarefas.mockImplementation(async (p: { dataDe?: string; dataAte?: string }) => {
+    const dentro = lista.filter(
+      (t) => (!p.dataDe || String(t.data) >= p.dataDe) && (!p.dataAte || String(t.data) <= p.dataAte),
+    );
+    return { tarefas: dentro, total: dentro.length, total_paginas: 1 };
+  });
+}
+
 /** 🔴 Devolve os timers REAIS ao fim de cada teste, como `ToastContext` já
  * fazia.
  *
@@ -411,8 +421,12 @@ describe("coluna na linha", () => {
 describe("cartão de hoje", () => {
   it("mostra as tarefas de HOJE mesmo navegando pra outro mês", async () => {
     /* É o ponto de retorno de quem foi olhar outro mês -- se ele seguisse a
-     * navegação, seria só uma segunda cópia da visão principal. */
-    comTarefas(tarefa({ titulo: "Coisa de hoje", data: ISO_HOJE }));
+     * navegação, seria só uma segunda cópia da visão principal.
+     *
+     * 🔴 O mock RESPEITA a janela pedida, como o servidor. Com `comTarefas`,
+     * que devolve a mesma lista para qualquer período, este teste passava
+     * enquanto produção dizia "Nenhuma tarefa para hoje" em setembro. */
+    comTarefasPorJanela(tarefa({ titulo: "Coisa de hoje", data: ISO_HOJE }));
     await montar();
     await screen.findByText("Hoje · 19/08/2026");
 
@@ -421,6 +435,36 @@ describe("cartão de hoje", () => {
 
     expect(screen.getByText("Hoje · 19/08/2026")).toBeInTheDocument();
     expect(screen.getAllByText("Coisa de hoje").length).toBeGreaterThan(0);
+  });
+
+  it("fora de hoje, pede SÓ o dia de hoje -- e com hoje à vista, não pede de novo", async () => {
+    comTarefasPorJanela(tarefa({ titulo: "Coisa de hoje", data: ISO_HOJE }));
+    await montar();
+    await screen.findAllByText("Coisa de hoje");
+    const pediuSoHoje = () =>
+      mocks.listarTarefas.mock.calls.filter(
+        ([p]) => p.dataDe === ISO_HOJE && p.dataAte === ISO_HOJE,
+      ).length;
+    expect(pediuSoHoje()).toBe(0);
+
+    await userEvent.click(screen.getByLabelText("Próximo período"));
+    await screen.findByText("Setembro de 2026");
+    await waitFor(() => expect(pediuSoHoje()).toBe(1));
+  });
+
+  it("navegando, respeita o filtro de pessoa", async () => {
+    comTarefasPorJanela(
+      tarefa({ tarefa_id: "t1", titulo: "Da Ana", data: ISO_HOJE, responsavel_id: "ana@x.com" }),
+      tarefa({ tarefa_id: "t2", titulo: "Sem dono", data: ISO_HOJE }),
+    );
+    await montar();
+    await userEvent.click(screen.getByText("Todas as pessoas"));
+    await userEvent.click(await screen.findByRole("option", { name: "Sem responsável" }));
+    await userEvent.click(screen.getByLabelText("Próximo período"));
+    await screen.findByText("Setembro de 2026");
+
+    expect(await screen.findByText("Sem dono")).toBeInTheDocument();
+    expect(screen.queryByText("Da Ana")).not.toBeInTheDocument();
   });
 
   it("diz quando não há nada hoje", async () => {
