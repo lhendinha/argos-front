@@ -48,26 +48,17 @@
  */
 export const TELA_APERTADA_PARA_DIALOGO = "(max-width: 599px), (max-height: 599px)";
 
-/** Quando a célula da visão por mês encolhe de 84px para 52px.
+/** Quando a célula da visão por mês troca os TÍTULOS por pontos e baixa de 100px para 52px.
  *
- * 🔴 **A grade de seis semanas precisa caber INTEIRA, senão a visão por mês
- * não tem razão de existir** -- ela é a única da Agenda que mostra o mês de
- * uma vez. Com 84px ela mede 544px e começa por volta dos 265px do topo:
- * pede uns 810px de janela. Com 52px cai para 352px.
+ * 🔴 Largura OU altura: o celular deitado (832x334) passa de 640 de largura,
+ * mas seis semanas de 100px não cabem em 334 de altura.
+ * ⚠️ **500, e não mais 899**: com 899 um notebook de 800px de altura caía
+ * nos pontos, e o título na célula é justamente o que a grade do computador
+ * oferece. Ali a última semana fica abaixo da dobra, e foi aceito.
  *
- * 🔴 **A altura foi acrescentada depois, e é o que conserta o celular
- * deitado.** A regra era só `max-width: 640px`, com a justificativa de que
- * "a grade não cabe na tela" -- razão vertical, régua horizontal. Medido nos
- * quatro formatos da régua do mobile: em 832x334 a célula ficava em 84px
- * porque 832 passa de 640, e 476px da grade iam para baixo da dobra. É o
- * mesmo erro que `TELA_APERTADA_PARA_DIALOGO` já tinha anotado.
- *
- * ⚠️ **899 e não 810**: a janela precisa da folga do cabeçalho e das abas,
- * que variam com a largura. Medido: em 390x844 a grade alta terminaria em
- * 897px, 53 além da janela -- por isso 844 fica com a célula baixa. Em
- * 1440x900 ela termina em 811 e a alta cabe.
+ * ➡️ `NARRATIVA.md`, "A grade do mês com os títulos".
  */
-export const TELA_SEM_ESPACO_PARA_O_MES = "(max-width: 640px), (max-height: 899px)";
+export const TELA_SEM_ESPACO_PARA_O_MES = "(max-width: 640px), (max-height: 500px)";
 
 /** Quando a visão por semana para de encolher e passa a ROLAR de lado.
  *

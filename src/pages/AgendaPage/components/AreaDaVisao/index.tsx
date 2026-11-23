@@ -21,6 +21,8 @@ export default function AreaDaVisao({
   subgrupoNome,
   onAbrirTarefa,
   onEscolherDia,
+  isoSelecionado,
+  onSelecionarDia,
   selecaoDe,
 }: AreaDaVisaoProps) {
   /* 🔴 No modo atrasadas os três ramos de calendário são PULADOS e a
@@ -48,8 +50,9 @@ export default function AreaDaVisao({
       <VisaoPorMes
         data={dataVisivel}
         isoDeHoje={isoDeHoje}
+        isoSelecionado={isoSelecionado}
         porDia={porDia}
-        onEscolherDia={onEscolherDia}
+        onEscolherDia={onSelecionarDia}
       />
     );
   }

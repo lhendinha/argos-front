@@ -16,4 +16,8 @@ export interface AreaDaVisaoProps {
    * precise saber o que é seleção -- elas só repassam. */
   selecaoDe?: (tarefa: Tarefa) => { marcada: boolean; onAlternar: (comShift: boolean) => void } | undefined;
   onEscolherDia: (iso: string) => void;
+  /** No mês o clique SELECIONA o dia (o cartão lateral mostra), em vez de
+   * trocar para a visão "Por dia". */
+  isoSelecionado: string;
+  onSelecionarDia: (iso: string) => void;
 }
