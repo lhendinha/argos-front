@@ -1,4 +1,6 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidarTarefas } from "../../../../services/queryClient";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -27,6 +29,7 @@ import type { MovimentacoesProps } from "./types";
  * endereço próprio na URL. Ver `ItemDeMovimentacao` e `PARAM_DA_COMUNICACAO`.
  */
 export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
+  const queryClient = useQueryClient();
   const navegar = useNavigate();
   /* ⚠️ O subgrupo vem da URL (`/processos/:subgrupoId/:numero`), e não de
      uma busca: o MESMO número de processo vive em vários subgrupos, e é
@@ -211,7 +214,10 @@ export default function Movimentacoes({ comunicacoes }: MovimentacoesProps) {
             id: aberta.numero_processo,
             rotulo: mascararNumeroProcesso(aberta.numero_processo),
           }}
-          onSalvo={() => setCriandoTarefa(false)}
+          onSalvo={() => {
+            setCriandoTarefa(false);
+            invalidarTarefas(queryClient);
+          }}
           onFechar={() => setCriandoTarefa(false)}
         />
       )}

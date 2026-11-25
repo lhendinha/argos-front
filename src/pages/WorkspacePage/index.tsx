@@ -8,7 +8,7 @@ import {
 import { CONTAINER_DE_DUAS_COLUNAS_DO_PAINEL } from "../../constants";
 import { useToast } from "../../contexts/ToastContext";
 import { getApelido, getEmail, resumoDaAreaDeTrabalho } from "../../services";
-import { toastErroMutation, useToastOnQueryError } from "../../services/queryClient";
+import { toastErroMutation, useToastOnQueryError, invalidarTarefas } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
 import BotaoDeAssumir from "./components/BotaoDeAssumir";
 import BotaoDeConcluir from "./components/BotaoDeConcluir";
@@ -53,8 +53,7 @@ export default function WorkspacePage() {
    * do resumo mudam junto. Invalidar os dois mantém o card e a contagem
    * contando a mesma história. */
   function recarregar() {
-    queryClient.invalidateQueries({ queryKey: ["tarefas"] });
-    queryClient.invalidateQueries({ queryKey: qk.resumo() });
+    invalidarTarefas(queryClient);
   }
 
   /** "Tarefas sem responsável", no Resumo rápido, conta exatamente o que o

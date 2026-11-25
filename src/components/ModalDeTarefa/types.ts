@@ -1,5 +1,8 @@
 import type { Tarefa, Vinculo } from "../../types";
 
+/** O par que identifica a tarefa que o modal de editar vai LER. */
+export type ChaveDoModalDeTarefa = Pick<Tarefa, "subgrupo_id" | "tarefa_id">;
+
 /** As props de `ModalDeTarefa` que o formulário usa -- todas menos o nome
  * do subgrupo, que só a tela mostra. A explicação de cada uma está lá. */
 export interface OpcoesDoFormularioDeTarefa {
@@ -13,8 +16,8 @@ export interface OpcoesDoFormularioDeTarefa {
 }
 
 export interface ModalDeTarefaProps {
-  /** Ausente = criando. */
-  tarefa?: Tarefa | null;
+  /** Ausente = criando. Editando, só a CHAVE dela vale: o modal lê a tarefa de novo (`useTarefaPelaChave`). */
+  tarefa?: ChaveDoModalDeTarefa | null;
   /** Subgrupo em que o modal ABRE. Depois disso quem manda é o seletor:
    * ao criar, a pessoa pode escolher outro. */
   subgrupoAtual: string;
@@ -45,4 +48,9 @@ export interface ModalDeTarefaProps {
   dataInicial?: string;
   onSalvo: () => void;
   onFechar: () => void;
+}
+
+/** As props do formulário: as do modal, com a tarefa INTEIRA (lida pela chave) no lugar da chave. */
+export interface FormularioDeTarefaProps extends Omit<ModalDeTarefaProps, "tarefa"> {
+  tarefa: Tarefa | null;
 }

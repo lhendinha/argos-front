@@ -53,6 +53,7 @@ export default function CartaoDoDia({
               }
               onAbrir={onAbrir}
               ultima={indice === tarefas.length - 1}
+              horaNoDetalhe
             />
           ))}
         </Box>

@@ -670,12 +670,12 @@ describe("modo Atrasadas", () => {
 
      Este modo é o que faz o clique contar a mesma história que o número. */
 
-  it("troca a FORMA da consulta: sem janela, com apenas abertas", async () => {
+  it("troca a FORMA da consulta: sem janela, e o SERVIDOR decide quem está atrasada (D6)", async () => {
     await montar("atrasadas");
 
     await waitFor(() =>
       expect(mocks.listarTarefas).toHaveBeenCalledWith(
-        expect.objectContaining({ apenasAbertas: true }),
+        expect.objectContaining({ apenasAbertas: true, atrasadas: true }),
       ),
     );
     /* ⚠️ Índice, não `.at(-1)`: o alvo do `tsc` deste projeto não tem
@@ -684,7 +684,8 @@ describe("modo Atrasadas", () => {
     const chamadas = mocks.listarTarefas.mock.calls;
     const [chamada] = chamadas[chamadas.length - 1];
     expect(chamada.dataDe, "a janela da visão não pode ir junto").toBeUndefined();
-    expect(chamada.dataAte, "recorta em ontem").toBeTruthy();
+    /* 🔴 "Até ontem" deixou de bastar: a tarefa de hoje com a hora passada também está atrasada. */
+    expect(chamada.dataAte, "o recorte é a regra do servidor, não uma data").toBeUndefined();
   });
 
   it("desabilita a troca de visão, e diz por quê", async () => {
@@ -889,11 +890,22 @@ describe("seleção em lote na Agenda (Fase 4 do PLANO_ACOES_EM_LOTE)", () => {
     /* O modificador só existe no evento de CLIQUE -- `onCheckedChange`
        recebe o estado novo e mais nada, que é onde o Shift morreria calado. */
     const usuario = await entrar();
-    await usuario.click(screen.getAllByText("Peticionar recurso")[0]);
+    await usuario.click(screen.getAllByText("Juntar procuração")[0]);
     await usuario.keyboard("{Shift>}");
     await usuario.click(screen.getAllByText("Ligar para o cliente")[0]);
     await usuario.keyboard("{/Shift}");
     expect(screen.getByText("3 de 3 selecionadas")).toBeInTheDocument();
+  });
+
+  it("🔴 o intervalo do Shift é o da TELA, não o da resposta do servidor", async () => {
+    /* No mesmo dia a tela põe "Juntar" antes de "Peticionar" (pelo título); o servidor os manda na outra ordem.
+       Pela ordem do servidor, Peticionar -> Ligar marcaria "Juntar", que na tela não está entre os dois. */
+    const usuario = await entrar();
+    await usuario.click(screen.getAllByText("Peticionar recurso")[0]);
+    await usuario.keyboard("{Shift>}");
+    await usuario.click(screen.getAllByText("Ligar para o cliente")[0]);
+    await usuario.keyboard("{/Shift}");
+    expect(screen.getByText("2 de 3 selecionadas")).toBeInTheDocument();
   });
 
   it("⚠️ trocar o filtro de pessoa LIMPA a seleção", async () => {

@@ -17,7 +17,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { removerTarefasEmLote } from "../services";
-import { qk } from "../services/queryKeys";
+import { invalidarTarefas } from "../services/queryClient";
 import { paraOLote } from "../utils/selecao";
 import type { ResultadoDoLote, Tarefa } from "../types";
 
@@ -30,8 +30,7 @@ export function useExcluirTarefasEmLote(
   return useMutation({
     mutationFn: (tarefas: Tarefa[]) => removerTarefasEmLote(paraOLote(tarefas)),
     onSuccess: (resultado, tarefas) => {
-      queryClient.invalidateQueries({ queryKey: ["tarefas"] });
-      queryClient.invalidateQueries({ queryKey: qk.resumo() });
+      invalidarTarefas(queryClient);
       aoTerminar(resultado, tarefas);
     },
     onError: aoFalhar,

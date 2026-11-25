@@ -28,6 +28,17 @@ describe("ListaDoLote", () => {
     expect(itens[1]).toHaveTextContent("Tarefa 2");
   });
 
+  it("com títulos repetidos, a hora diz qual é qual; sem hora, só o título", () => {
+    renderComProviders(
+      <ListaDoLote tarefas={[tarefa(1, { titulo: "Audiência", hora: "09:00" }),
+                             tarefa(2, { titulo: "Audiência", hora: "14:30" }), tarefa(3)]} />,
+    );
+    const itens = screen.getAllByRole("listitem");
+    expect(itens[0]).toHaveTextContent("09:00Audiência");
+    expect(itens[1]).toHaveTextContent("14:30Audiência");
+    expect(itens[2]).toHaveTextContent(/^Tarefa 3/);
+  });
+
   it("com processo mostra o número mascarado; sem processo diz isso", () => {
     renderComProviders(
       <ListaDoLote tarefas={[tarefa(1, { processo_numero: "08012345620268190001" }), tarefa(2)]} />,

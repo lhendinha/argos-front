@@ -461,7 +461,9 @@ describe("responsável que saiu do subgrupo", () => {
 
     montar({ subgrupoId: "sg-trab", tarefaId: "t-atrasada" });
 
-    const modal = await screen.findByRole("dialog");
+    /* O modal mostra o carregando até ler a tarefa pela chave (D21): espera o FORMULÁRIO, não o primeiro diálogo. */
+    await screen.findByLabelText(/Descrição da tarefa/);
+    const modal = screen.getByRole("dialog");
     expect(await within(modal).findByText("quem.saiu@x.com")).toBeInTheDocument();
   });
 });

@@ -10,6 +10,7 @@ export * from "./abasDoGrupo";
 export * from "./subgrupos";
 export * from "./suporte";
 export * from "./prioridade";
+export * from "./aviso";
 export * from "./atendimento";
 export * from "./arquivamento";
 export * from "./cliente";

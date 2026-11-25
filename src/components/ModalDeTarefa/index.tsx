@@ -1,246 +1,38 @@
-import { Stack, Textarea } from "@chakra-ui/react";
-import { useId } from "react";
+import { useEffect } from "react";
 
-/* Irmãos importados um a um, e não pelo índice de `components`: este
-   componente É exportado por aquele índice, e importar dele criaria um ciclo
-   -- mesmo padrão do `SeletorDePeriodo`. */
-import Botao from "../Botao";
-import RodapeDeFormulario from "../RodapeDeFormulario";
-import Campo from "../Campo";
-import LinhaDeCampos from "../LinhaDeCampos";
+/* Irmãos importados um a um, e não pelo índice de `components`: este componente É exportado por aquele índice. */
+import Esqueleto from "../Esqueleto";
 import Modal from "../Modal";
-import ModalDeConfirmacao from "../ModalDeConfirmacao";
-import { Select } from "../Select";
-import SeletorData from "../SeletorData";
-import { comOpcaoEscolhida } from "../../utils/opcoesEscolhidas";
-import { PRIORIDADES, TAMANHO_MAXIMO_DO_TITULO_DE_TAREFA } from "../../constants";
-import VinculoDeRegistro from "../VinculoDeRegistro";
-import { useFormularioDeTarefa } from "./useFormularioDeTarefa";
+import { useToast } from "../../contexts/ToastContext";
+import FormularioDeTarefa from "./FormularioDeTarefa";
+import { useTarefaPelaChave } from "./useTarefaPelaChave";
 import type { ModalDeTarefaProps } from "./types";
 
-
-/** Criar e editar tarefa.
+/** Criar e editar tarefa. Editando, a tarefa é lida PELA CHAVE antes de o formulário montar.
  *
- * ⚠️ Duas divergências do artifact, as duas por limite real da API:
- *
- * 1. **"Lista de tarefas" não existe aqui.** No artifact é um `select`
- *    obrigatório com UMA opção, já selecionada, que ninguém consegue mudar
- *    -- e não existe no backend: nenhuma rota aceita esse campo. É resquício
- *    de uma ideia que virou o próprio quadro. Um obrigatório de uma opção só
- *    é ruído puro, com um asterisco que promete uma decisão inexistente.
- *
- * 2. **Subgrupo só se escolhe ao CRIAR.** `subgrupo_id` faz parte da chave
- *    primária (`{subgrupo_id, tarefa_id}`) e o `PATCH` não o aceita -- nem
- *    poderia, DynamoDB não altera chave. Mover entre subgrupos seria apagar
- *    e recriar, o que gera um `tarefa_id` novo e mata os links de lembrete
- *    já enviados por e-mail. Editando, o campo fica desabilitado mostrando
- *    a qual subgrupo a tarefa pertence: sumir com ele deixaria a pessoa sem
- *    saber onde a tarefa vive, e deixá-lo editável seria prometer o que
- *    falha ao salvar.
+ * 🔴 O formulário semeia o estado uma vez, ao montar: montá-lo com a tarefa da lista (sem o aviso) ou do cache (com
+ * a hora velha) faria salvar gravar o que a pessoa não viu. Por isso ele só nasce com a tarefa lida agora, e com
+ * `key` pelo id. ⚠️ 404 na leitura é tarefa excluída: fecha com aviso, e a lista atrás recarrega.
  */
-export default function ModalDeTarefa({
-  tarefa,
-  subgrupoAtual,
-  subgrupoAtualNome,
-  colunaInicial,
-  vinculoInicial,
-  dataInicial,
-  onSalvo,
-  onFechar,
-}: ModalDeTarefaProps) {
-  const idFormulario = useId();
-  const {
-    editando,
-    titulo,
-    setTitulo,
-    data,
-    setData,
-    subgrupoId,
-    trocarSubgrupo,
-    subgrupos,
-    colunas,
-    colunaEscolhida,
-    setColunaId,
-    carregandoQuadro,
-    prioridade,
-    setPrioridade,
-    responsavel,
-    setResponsavel,
-    opcoesDeResponsavel,
-    vinculos,
-    setVinculos,
-    confirmandoRemocao,
-    setConfirmandoRemocao,
-    mudou,
-    salvando,
-    excluindo,
-    excluir,
-    handleSubmit,
-  } = useFormularioDeTarefa({
-    tarefa,
-    subgrupoAtual,
-    colunaInicial,
-    vinculoInicial,
-    dataInicial,
-    onSalvo,
-    onFechar,
-  });
+export default function ModalDeTarefa(props: ModalDeTarefaProps) {
+  const { tarefa: chave, onSalvo, onFechar } = props;
+  const { tarefa, sumiu, falhou } = useTarefaPelaChave(chave ?? null);
+  const toast = useToast();
 
-  return (
-    <>
-      <Modal
-        descarte={{ mudou, caso: editando ? "edicao" : "criacao" }}
-      titulo={editando ? "Editar tarefa" : "Nova tarefa"}
-      onFechar={onFechar}
-      rodape={
-        <RodapeDeFormulario
-          salvando={salvando}
-          acaoAEsquerda={
-            editando ? (
-            <Botao
-              variante="perigoContorno"
-              mr="auto"
-              disabled={excluindo}
-              /* Passa pelo diálogo como TODA exclusão do sistema. Era a
-                 única que não passava: um clique só, sem volta, e cujo
-                 único retorno era o botão ficar desabilitado com o mesmo
-                 rótulo -- parecia não ter feito nada. */
-              onClick={() => setConfirmandoRemocao(true)}
-            >
-              {excluindo ? "Excluindo…" : "Excluir"}
-            </Botao>
-            ) : undefined
-          }
-        >
-          <Botao
-            type="submit"
-            form={idFormulario}
-            disabled={salvando || !titulo.trim() || !colunaEscolhida}
-          >
-            {salvando ? "Salvando…" : "Salvar"}
-          </Botao>
-        </RodapeDeFormulario>
-      }
-    >
-      <form id={idFormulario} onSubmit={handleSubmit}>
-        <Stack gap="0">
-          <Campo rotulo="Descrição da tarefa" para="tf-titulo" obrigatorio>
-            <Textarea
-              id="tf-titulo"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              maxLength={TAMANHO_MAXIMO_DO_TITULO_DE_TAREFA}
-              autoFocus
-            />
-          </Campo>
+  useEffect(() => {
+    if (!falhou) return;
+    toast.erro(sumiu ? "Esta tarefa foi excluída." : "Não foi possível abrir a tarefa.");
+    if (sumiu) onSalvo();
+    onFechar();
+  }, [falhou, sumiu, toast, onSalvo, onFechar]);
 
-          <LinhaDeCampos>
-            <Campo rotulo="Data" para="tf-data" obrigatorio>
-              <SeletorData
-                id="tf-data"
-                rotuladoPor="tf-data-rotulo"
-                valor={data}
-                onMudar={setData}
-              />
-            </Campo>
-            <Campo rotulo="Prioridade" para="tf-prioridade" obrigatorio>
-              <Select
-                id="tf-prioridade"
-                opcoes={PRIORIDADES.map((p) => ({ value: p, label: p }))}
-                valor={prioridade}
-                onMudar={setPrioridade}
-              />
-            </Campo>
-          </LinhaDeCampos>
-
-          {/* Posição do artifact: depois da linha de Data, antes de
-              Responsável. Não é obrigatório -- tarefa solta, sem processo
-              nem atendimento, é caso comum.
-
-              ⚠️ O campo é UM, então na prática escolhe-se um vínculo só.
-              Isso é a forma do campo (é assim no artifact), NÃO uma regra
-              do sistema: a API aceita `processo_numero` e `atendimento_id`
-              ao mesmo tempo e grava os dois -- verificado. A dica não pode
-              anunciar uma restrição que o servidor não tem. */}
-          <Campo
-            rotulo="Processo ou atendimento vinculado"
-            para="tf-vinculo"
-            dica="Opcional. Dá pra vincular um processo, um atendimento, ou os dois."
-          >
-            <VinculoDeRegistro id="tf-vinculo" valor={vinculos} onMudar={setVinculos} />
-          </Campo>
-
-          <LinhaDeCampos>
-            <Campo rotulo="Responsável" para="tf-responsavel">
-              <Select
-                id="tf-responsavel"
-                opcoes={opcoesDeResponsavel}
-                valor={responsavel}
-                onMudar={setResponsavel}
-              />
-            </Campo>
-            <Campo
-              rotulo="Subgrupo"
-              para="tf-subgrupo"
-              obrigatorio
-              dica={editando ? "O subgrupo de uma tarefa não muda." : undefined}
-            >
-              <Select
-                id="tf-subgrupo"
-                /* O atual entra na lista mesmo fora da primeira página --
-                   editando, este campo existe só pra DIZER a que subgrupo a
-                   tarefa pertence, e sem o nome ele diria o id. */
-                opcoes={comOpcaoEscolhida(subgrupos.opcoes, subgrupoId, subgrupoAtualNome ?? "")}
-                valor={subgrupoId}
-                onMudar={trocarSubgrupo}
-                desabilitado={editando}
-                /* Sem busca quando está desabilitado: não há o que escolher. */
-                {...(editando
-                  ? {}
-                  : {
-                      onBuscar: subgrupos.buscar,
-                      carregando: subgrupos.carregando,
-                      erro: subgrupos.erro,
-                      onTentarDeNovo: subgrupos.tentarDeNovo,
-                    })}
-              />
-            </Campo>
-          </LinhaDeCampos>
-
-          <Campo
-            rotulo="Status"
-            para="tf-coluna"
-            obrigatorio
-          >
-            <Select
-              id="tf-coluna"
-              opcoes={colunas.map((c) => ({ value: c.coluna_id, label: c.nome }))}
-              valor={colunaEscolhida}
-              onMudar={setColunaId}
-              carregando={carregandoQuadro}
-            />
-          </Campo>
-        </Stack>
-      </form>
+  if (!chave) return <FormularioDeTarefa {...props} tarefa={null} />;
+  if (!tarefa) {
+    return (
+      <Modal titulo="Editar tarefa" descarte="semFormulario" onFechar={onFechar}>
+        <Esqueleto linhas={4} altura="44px" />
       </Modal>
-
-      {/* IRMÃO do modal, não filho: o corpo do `Modal` tem `overflow-y`, e
-          uma sobreposição `position: fixed` lá dentro fica à mercê de
-          qualquer ancestral com `transform`. Fora, é uma camada limpa por
-          cima da outra. */}
-      {confirmandoRemocao && tarefa && (
-        <ModalDeConfirmacao
-          titulo="Excluir tarefa"
-          mensagem={
-            <>
-              A tarefa <strong>{tarefa.titulo}</strong> será removida do quadro.
-            </>
-          }
-          confirmando={excluindo}
-          onConfirmar={excluir}
-          onFechar={() => setConfirmandoRemocao(false)}
-        />
-      )}
-    </>
-  );
+    );
+  }
+  return <FormularioDeTarefa key={tarefa.tarefa_id} {...props} tarefa={tarefa} />;
 }

@@ -13,7 +13,8 @@ import {
   ConfirmacoesDoLote,
   ModalDeTarefa,
 } from "../../components";
-import { useToastOnQueryError } from "../../services/queryClient";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidarTarefas, useToastOnQueryError } from "../../services/queryClient";
 import { useAssuntosDasTarefas } from "./hooks/useAssuntosDasTarefas";
 import { useNomeDeSubgrupo } from "../../hooks/useNomeDeSubgrupo";
 import { hojeISO } from "../../utils";
@@ -24,7 +25,7 @@ import CartaoDoDia from "./components/CartaoDoDia";
 import FiltrosDaAgenda from "./components/FiltrosDaAgenda";
 import { useDiaDoCartao } from "./hooks/useDiaDoCartao";
 import { useTarefasDaAgenda } from "./hooks/useTarefasDaAgenda";
-import { agruparPorDia, filtrarPorPessoa } from "./tarefasPorDia";
+import { agruparPorDia, compararComoNaAgenda, filtrarPorPessoa } from "./tarefasPorDia";
 import {
   dataPadraoDaNovaTarefa,
   intervaloDaVisao,
@@ -51,6 +52,7 @@ import { useSubgruposBuscaveis } from "../../hooks/useSubgruposBuscaveis";
  * só responde uma fração dela.
  */
 export default function AgendaPage() {
+  const queryClient = useQueryClient();
   /** A Área de trabalho abre esta tela já no modo atrasadas: clicar em
    * "Tarefas atrasadas" tem que mostrar exatamente as que geraram o número.
    *
@@ -144,7 +146,8 @@ export default function AgendaPage() {
   const { selecao, setConfirmando, excluir } = acoes;
   const selecionando = selecao.escopo === "agenda";
 
-  const chavesVisiveis = visiveis.map(chaveDe);
+  /* 🔴 Na ordem da TELA (`compararComoNaAgenda`), não na do servidor: é a âncora do Shift. */
+  const chavesVisiveis = [...visiveis].sort(compararComoNaAgenda).map(chaveDe);
 
   /* ⚠️ A ordem do Shift é `chavesVisiveis` -- a do período inteiro, não a
      de um dia. É o que faz o intervalo atravessar os dias da lista. */
@@ -371,7 +374,7 @@ export default function AgendaPage() {
           }
           onSalvo={() => {
             fecharModal();
-            tarefasQuery.refetch();
+            invalidarTarefas(queryClient);
           }}
           onFechar={fecharModal}
         />

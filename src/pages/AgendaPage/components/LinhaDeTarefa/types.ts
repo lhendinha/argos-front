@@ -34,4 +34,8 @@ export interface LinhaDeTarefaProps {
     marcada: boolean;
     onAlternar: (comShift: boolean) => void;
   };
+  /** Desenha a coluna de horário à esquerda: a lista tem ao menos uma tarefa com hora. */
+  colunaDeHora?: boolean;
+  /** Põe a hora na segunda linha, em negrito: onde a linha é ESTREITA e uma coluna comeria o título. */
+  horaNoDetalhe?: boolean;
 }

@@ -21,4 +21,6 @@ export interface ListaDeUmDiaProps {
    * lista o cabeçalho é necessário (são vários dias empilhados); na de um
    * dia só, é a mesma frase duas vezes. */
   comData?: boolean;
+  /** Coluna de horário. Quem decide é a VISÃO, pela lista inteira: decidida dia a dia, um dia sem hora perdia a coluna e desalinhava os títulos dos outros. */
+  colunaDeHora: boolean;
 }

@@ -63,7 +63,7 @@ export default function LinhaDeTarefa({ tarefa, acao, responsavel, subgrupoNome 
           vence se leem juntos, e o prazo fica encostado na borda. */}
       <Flex align="center" gap="10px" flexShrink={0}>
         {responsavel}
-        <EtiquetaDePrazo data={tarefa.data} />
+        <EtiquetaDePrazo data={tarefa.data} hora={tarefa.hora} />
       </Flex>
     </Flex>
   );

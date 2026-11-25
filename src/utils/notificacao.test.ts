@@ -356,3 +356,18 @@ describe("🔴 estadoMorto: só dois valores matam a linha", () => {
     expect(estadoMorto(com(""))).toBeNull();
   });
 });
+
+describe("a hora da tarefa no sino (D23)", () => {
+  const LEMBRETE = {
+    notificacao_id: "n9", tipo: "lembrete", titulo: "Audiência", detalhe: "Começa em breve", subgrupo_id: "s1",
+    alvo_tipo: "tarefa", alvo_id: "t1", criado_em: "2026-12-01T12:00:00+00:00", lida: false, autor: "",
+  } as unknown as Notificacao;
+
+  it("põe 'às HH:MM' no INÍCIO do texto secundário", () => {
+    expect(detalheSecundario({ ...LEMBRETE, alvo_hora: "09:00" })).toBe("às 09:00 · Audiência");
+  });
+
+  it("par negativo: sem hora, a linha fica como era", () => {
+    expect(detalheSecundario(LEMBRETE)).toBe("Audiência");
+  });
+});

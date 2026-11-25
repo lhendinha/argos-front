@@ -12,7 +12,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { concluirTarefasEmLote } from "../services";
-import { qk } from "../services/queryKeys";
+import { invalidarTarefas } from "../services/queryClient";
 import { paraOLote } from "../utils/selecao";
 import type { ResultadoDaConclusao, Tarefa } from "../types";
 
@@ -25,8 +25,7 @@ export function useConcluirTarefasEmLote(
   return useMutation({
     mutationFn: (tarefas: Tarefa[]) => concluirTarefasEmLote(paraOLote(tarefas)),
     onSuccess: (resultado, pedido) => {
-      queryClient.invalidateQueries({ queryKey: ["tarefas"] });
-      queryClient.invalidateQueries({ queryKey: qk.resumo() });
+      invalidarTarefas(queryClient);
       aoTerminar(resultado, pedido);
     },
     onError: aoFalhar,

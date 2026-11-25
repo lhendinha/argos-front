@@ -1,4 +1,4 @@
-import { Grid, Text } from "@chakra-ui/react";
+import { Box, Grid, Text } from "@chakra-ui/react";
 
 import { BotaoNu } from "../../../../components";
 
@@ -107,6 +107,11 @@ export default function VisaoPorSemana({
                   }
                   textDecoration={concluida ? "line-through" : undefined}
                 >
+                  {tarefa.hora && (
+                    <Box as="span" fontWeight="800">
+                      {`${tarefa.hora} `}
+                    </Box>
+                  )}
                   {tarefa.titulo}
                 </Text>
               );
