@@ -888,6 +888,28 @@ da API.
 Trabalhista e trocando pro Cível, a coluna passa de "Triagem" pra "A Fazer"
 e o `POST` sai com o par certo.
 
+### A hora e o aviso antes da tarefa (`api/PLANO_HORARIO_DAS_TAREFAS.md`, 23-25/11/2026)
+
+- **O modal de EDITAR lê a tarefa pela chave antes de montar o formulário** (`ModalDeTarefa/useTarefaPelaChave.ts`,
+  `gcTime: 0`, `refetchOnMount: "always"`, formulário só com `isFetchedAfterMount` e `key` pelo id). A lista das
+  abertas não traz `aviso_minutos` (a API o omite), e o cache traria a hora velha: semear por qualquer um dos dois
+  faria salvar gravar o que a pessoa não viu. 404 na leitura fecha o modal com "Esta tarefa foi excluída.".
+- **Horário e Aviso antes** (`CampoDeHorario`, `CampoDeAviso`): sem horário, os DOIS vão nulos, senão a API responde
+  400 "Aviso exige horário"; a hora incompleta (`validity.badInput`) trava o Salvar em vez de virar "sem horário"; o
+  "Outro" mostra o valor gravado exato (`avisoEmUnidade`: 90 minutos não vira 2 horas).
+- 🔴 **Toda mudança numa tarefa chama `invalidarTarefas`** (as listas, `qk.tarefa`, a home e o sino): cada tela
+  invalidava uma coisa diferente, e Movimentações e Histórico não invalidavam nada.
+- **A etiqueta de prazo fica vermelha quando a hora passa**, pelo relógio de Brasília que avança na virada de cada
+  minuto (`useAgoraEmBrasilia`), com a mesma regra da API (`utils/horaDaTarefa.estaAtrasada`). A lista "Atrasadas"
+  pede `atrasadas=true` ao servidor, que é quem decide -- a cor só espelha.
+- **A Agenda ordena a tela e o Shift pelo mesmo comparador** (`AgendaPage/tarefasPorDia.compararComoNaAgenda`): sem
+  horário primeiro, depois a hora, a prioridade e o título. Com a ordem do servidor, o Shift marcava tarefa que não
+  estava entre as duas clicadas.
+- Com títulos repetidos ("Audiência"), **a hora é o que distingue**: entra no nome acessível da caixa de seleção
+  (`nomeComHora`), na confirmação do lote e no início da linha do sino (`alvo_hora`, a hora ATUAL da tarefa).
+- ➡️ `scripts/verificar-hora-da-tarefa.mjs` (Chrome a 1440, 390 e 360) e `scripts/medir-hora-no-ios.mjs` (o campo de
+  hora no Safari do iOS, vazio e preenchido).
+
 ### Escape fecha a camada de cima, não o que está atrás (25/08/2026)
 
 `Modal` fecha por um listener de `keydown` no `document`. O menu do
