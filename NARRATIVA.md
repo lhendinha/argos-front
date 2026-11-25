@@ -4012,3 +4012,23 @@ cabeçalho e das abas: em 390x844 a grade alta terminaria em 897px, e em
 1440x900 terminava em 811. Com títulos na célula, 899 mandaria um notebook de
 800px de altura para os pontos -- justamente o desenho que o item 3 queria
 mostrar ali. 500 ainda cobre o celular deitado.
+
+## A tarefa com hora e o aviso antes
+
+23-25/11/2026. A tarefa ganhou hora opcional e o aviso antes dela (o plano mora na API,
+`PLANO_HORARIO_DAS_TAREFAS.md`). O desenho saiu de um protótipo com horas simuladas que o dono aprovou na Fase 0 e
+que não foi para a `main`; a Fase 5 levou as telas dele, sem as horas falsas.
+
+O modal passou a ler a tarefa pela chave porque a lista das abertas não traz o aviso: semeado pela lista, o formulário
+mostraria "sem aviso" e o salvamento o apagaria. Os testes antigos do modal guardavam o primeiro diálogo da tela e
+quebraram com o carregando que agora vem antes do formulário; passaram a esperar o formulário.
+
+Dois achados de passagem. O Shift da Agenda selecionava pela ordem em que o servidor mandou as tarefas, e no mesmo dia
+a tela as põe pelo título: entre "Peticionar" e "Ligar" ele marcava "Juntar", que na tela vinha antes de ambas. O
+teste antigo afirmava exatamente esse comportamento e foi reescrito, com o par. E o guarda de comentários, que lê a
+API na pasta ao lado, acusou nomes "sumidos" porque a pasta estava em outra branch de outra sessão: com a API na `main`
+ao lado, passou -- o guarda mede a pasta vizinha, não a `main`.
+
+No Safari do iOS, o campo de hora vazio tem a altura do campo de data e cabe no modal (medido no simulador, iPhone 18
+Pro, iOS 27.2), que era o risco que o Chrome não mostraria.
+
