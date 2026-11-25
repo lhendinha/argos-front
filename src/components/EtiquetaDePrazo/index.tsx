@@ -1,4 +1,6 @@
+import { useAgoraEmBrasilia } from "../../hooks/useAgoraEmBrasilia";
 import { formatarData, diasAte } from "../../utils";
+import { estaAtrasada } from "../../utils/horaDaTarefa";
 import Etiqueta from "../Etiqueta";
 import type { EtiquetaDePrazoProps } from "./types";
 
@@ -8,10 +10,13 @@ import type { EtiquetaDePrazoProps } from "./types";
  * data: é assim que se fala de prazo, e a data crua exige o leitor calcular
  * a distância sozinho. Longe, a data serve melhor.
  */
-export default function EtiquetaDePrazo({ data, concluida }: EtiquetaDePrazoProps) {
+export default function EtiquetaDePrazo({ data, concluida, hora }: EtiquetaDePrazoProps) {
   const dias = diasAte(data);
-  const atrasada = dias < 0 && !concluida;
-  const hoje = dias === 0;
+  /* 🔴 A mesma regra da lista "Atrasadas" e da home (`estaAtrasada`), pelo relógio de Brasília que avança a cada
+     minuto: com hora, fica vermelha no mesmo dia, quando a hora passa. */
+  const agora = useAgoraEmBrasilia();
+  const atrasada = estaAtrasada(data, hora, agora) && !concluida;
+  const hoje = data === agora.dia && !atrasada;
 
   const texto =
     dias === 0 ? "Hoje" : dias === 1 ? "Amanhã" : dias === -1 ? "Ontem" : formatarData(data);
@@ -26,5 +31,5 @@ export default function EtiquetaDePrazo({ data, concluida }: EtiquetaDePrazoProp
       ? { bg: "status.warn.bg", color: "status.warn.text" }
       : { bg: "border.subtle", color: "fg.muted" };
 
-  return <Etiqueta cores={cores}>{texto}</Etiqueta>;
+  return <Etiqueta cores={cores}>{hora ? `${texto} ${hora}` : texto}</Etiqueta>;
 }

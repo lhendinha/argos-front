@@ -10,7 +10,7 @@ import {
   ModalDeTarefa,
 } from "../../../../components";
 import { useCatalogosDeProcesso } from "../../../../hooks/useCatalogosDeProcesso";
-import { useToastOnQueryError } from "../../../../services/queryClient";
+import { invalidarTarefas, useToastOnQueryError } from "../../../../services/queryClient";
 import { formatarData } from "../../../../utils";
 import { useTarefasDoProcesso } from "../../hooks/useTarefasDoProcesso";
 import type { Tarefa } from "../../../../types";
@@ -85,7 +85,7 @@ export default function TarefasVinculadas({ numeroProcesso }: TarefasVinculadasP
         <ItemDeLista
           key={t.tarefa_id}
           onAbrir={() => setAberta(t)}
-          rotulo={`${t.titulo}${t.esta_concluida ? ", concluída" : ""}`}
+          rotulo={`${t.titulo}, ${formatarData(t.data)}${t.hora ? ` às ${t.hora}` : ""}${t.esta_concluida ? ", concluída" : ""}`}
           identificador={t.titulo}
           esmaecido={t.esta_concluida}
           etiquetas={
@@ -97,7 +97,7 @@ export default function TarefasVinculadas({ numeroProcesso }: TarefasVinculadasP
               <EtiquetaDeMetadado>{t.prioridade}</EtiquetaDeMetadado>
             </>
           }
-          rodape={{ texto: formatarData(t.data) }}
+          rodape={{ texto: t.hora ? `${formatarData(t.data)} às ${t.hora}` : formatarData(t.data) }}
         />
       ))}
 
@@ -108,11 +108,9 @@ export default function TarefasVinculadas({ numeroProcesso }: TarefasVinculadasP
           subgrupoAtualNome={apoio.subgrupoNome(aberta.subgrupo_id)}
           onSalvo={() => {
             setAberta(null);
-            /* Prefixo, e uma invalidação só: `qk.tarefasDoProcesso`
-               COMEÇA com "tarefas", então isto já derruba a lista deste
-               cartão junto com Agenda, Kanban e Área de trabalho, que
-               podem estar em cache. */
-            queryClient.invalidateQueries({ queryKey: ["tarefas"] });
+            /* `qk.tarefasDoProcesso` COMEÇA com "tarefas", então isto já derruba a lista deste cartão junto com
+               Agenda, Kanban e Área de trabalho, que podem estar em cache. */
+            invalidarTarefas(queryClient);
           }}
           onFechar={() => setAberta(null)}
         />

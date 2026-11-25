@@ -66,6 +66,13 @@ export interface Tarefa {
    * backend grava, e o campo da tela reflete isso sendo um só. */
   processo_numero?: string | null;
   atendimento_id?: string | null;
+  /** `HH:MM` de Brasília, ou ausente: a tarefa vale o dia inteiro e vem antes das com hora. */
+  hora?: string | null;
+  /** Minutos antes da hora em que sai o aviso; ausente, sem aviso.
+   *
+   * ⚠️ Só a tarefa lida PELA CHAVE o traz: a lista das abertas não o projeta e o OMITE, então ausente na lista
+   * não quer dizer "sem aviso". Quem precisa do aviso (o formulário) lê a tarefa. */
+  aviso_minutos?: number | null;
 }
 
 /** Um intervalo de datas, `aaaa-mm-dd` e inclusive nas duas pontas. */
@@ -100,6 +107,9 @@ export interface OpcoesListarTarefas {
   responsavel?: string;
   semResponsavel?: boolean;
   apenasAbertas?: boolean;
+  /** As abertas que passaram do prazo, pela regra do servidor (`horario_da_tarefa.esta_atrasada`): data passada,
+   * ou hoje com a hora já passada. É o que faz a lista "Atrasadas" bater com a contagem da home. */
+  atrasadas?: boolean;
   /** Intervalo de `data`, inclusivo nas duas pontas. */
   dataDe?: string;
   dataAte?: string;
@@ -115,5 +125,10 @@ export interface NovaTarefa {
   prioridade: string;
   responsavel_id?: string | null;
   processo_numero?: string | null;
+  atendimento_id?: string | null;
   observacoes?: string | null;
+  /** ⚠️ `null` APAGA (a hora e o aviso); ausente não toca. Apagar a hora de uma tarefa com aviso exige mandar
+   * os dois nulos, senão o servidor responde 400 "Aviso exige horário". */
+  hora?: string | null;
+  aviso_minutos?: number | null;
 }

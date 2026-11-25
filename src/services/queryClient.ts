@@ -142,3 +142,18 @@ export function invalidarCatalogoFinanceiro(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ["contas-financeiras"] });
   queryClient.invalidateQueries({ queryKey: ["centros-de-custo"] });
 }
+
+
+/** Toda mudança numa tarefa derruba o que a mostra: as listas, a tarefa lida pela chave, a home e o sino.
+ *
+ * 🔴 Uma função só, chamada por todo salvamento e todo arraste: cada tela invalidava uma coisa diferente, e o
+ * modal reaberto semeava a hora velha de `qk.tarefa` (que fica FORA do prefixo `"tarefas"`) -- salvar a gravaria
+ * de volta.
+ * ➡️ `components/ModalDeTarefa/index.test.tsx`
+ */
+export function invalidarTarefas(queryClient: QueryClient) {
+  queryClient.invalidateQueries({ queryKey: ["tarefas"] });
+  queryClient.invalidateQueries({ queryKey: ["tarefa"] });
+  queryClient.invalidateQueries({ queryKey: qk.resumo() });
+  queryClient.invalidateQueries({ queryKey: qk.notificacoes() });
+}

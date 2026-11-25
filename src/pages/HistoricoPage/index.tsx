@@ -5,14 +5,14 @@ import { useValorComEspera } from "../../hooks/useValorComEspera";
 import { usePaginacaoDaLista } from "../../hooks/usePaginacaoDaLista";
 import { useParametrosDaUrl } from "../../hooks/useParametrosDaUrl";
 import { useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Botao, CabecalhoDePagina, CampoDeBusca, CartaoDeTabela, AreaAtualizando, EstadoVazio, EstadoDeErro, Esqueleto, IconePlus, Modal, ModalDeTarefa, Pagination } from "../../components";
 import BotaoDeTexto from "../../components/BotaoDeTexto";
 import { LEITURA_LIDOS, LEITURA_NAO_LIDOS } from "../../constants";
 import { useNaoLidosDoHistorico } from "../../hooks/useNaoLidosDoHistorico";
 import { listarHistorico } from "../../services";
-import { useToastOnQueryError } from "../../services/queryClient";
+import { invalidarTarefas, useToastOnQueryError } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
 import { useNomesDeSubgruposVisiveis } from "../../hooks/useNomesDeSubgruposVisiveis";
 import { useTodosOsSubgrupos } from "../../hooks/useTodosOsSubgrupos";
@@ -48,6 +48,7 @@ export default function HistoricoPage({
   diasInicial,
   onDeepLinkConsumido,
 }: HistoricoPageProps) {
+  const queryClient = useQueryClient();
   const { pagina, setPagina, tamanhoPagina, setTamanhoPagina } = usePaginacaoDaLista();
   /* ⚠️ Os filtros vão para a URL JUNTO com a página: restaurar a página sem
      o filtro que a produziu mostraria uma página diferente.
@@ -373,7 +374,10 @@ export default function HistoricoPage({
             id: itemAberto.numero_processo,
             rotulo: mascararNumeroProcesso(itemAberto.numero_processo),
           }}
-          onSalvo={() => setCriandoTarefa(false)}
+          onSalvo={() => {
+            setCriandoTarefa(false);
+            invalidarTarefas(queryClient);
+          }}
           onFechar={() => setCriandoTarefa(false)}
         />
       )}

@@ -12,7 +12,7 @@ import type {
 
 export function listarTarefas(opcoes: OpcoesListarTarefas = {}) {
   const {
-    processoNumero, subgrupoId, responsavel, semResponsavel, apenasAbertas,
+    processoNumero, subgrupoId, responsavel, semResponsavel, apenasAbertas, atrasadas,
     dataDe, dataAte, pagina, tamanhoPagina,
   } = opcoes;
   return chamar("/tarefas", {
@@ -22,6 +22,7 @@ export function listarTarefas(opcoes: OpcoesListarTarefas = {}) {
       responsavel: responsavel,
       sem_responsavel: semResponsavel ? "true" : undefined,
       apenas_abertas: apenasAbertas ? "true" : undefined,
+      atrasadas: atrasadas ? "true" : undefined,
       data_de: dataDe,
       data_ate: dataAte,
       pagina: pagina ? String(pagina) : undefined,

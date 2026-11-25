@@ -24,6 +24,8 @@ const mocks = vi.hoisted(() => ({
   criarTarefa: vi.fn(),
   atualizarTarefa: vi.fn(),
   removerTarefa: vi.fn(),
+  /* Editar lê a tarefa pela chave (D21): devolve a mesma que a lista mostrou. */
+  detalhesTarefa: vi.fn(),
   listarDocumentos: vi.fn(),
   /* Abrir a movimentação com e-mail marca o envio como lido no Histórico. */
   marcarEnvioComoLido: vi.fn(),
@@ -682,6 +684,10 @@ describe("as tarefas vinculadas", () => {
           prioridade: "Alta",
         },
       ],
+    });
+    mocks.detalhesTarefa.mockResolvedValue({
+      tarefa_id: "t1", subgrupo_id: "sg1", titulo: "Protocolar réplica", data: "2026-09-01", coluna_id: "c1",
+      prioridade: "Alta",
     });
     montar();
     await userEvent.click(await screen.findByRole("tab", { name: "Tarefas" }));

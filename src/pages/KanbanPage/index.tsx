@@ -10,7 +10,7 @@ import {
 import { PERIODO_TODOS } from "../../constants";
 import { FILTROS_VAZIOS } from "./constants";
 import { listarQuadro, papelAtende } from "../../services";
-import { useToastOnQueryError } from "../../services/queryClient";
+import { useToastOnQueryError, invalidarTarefas } from "../../services/queryClient";
 import { qk } from "../../services/queryKeys";
 import { intervaloDoPeriodo } from "../../utils";
 import ColunaDoQuadro from "./components/ColunaDoQuadro";
@@ -107,8 +107,7 @@ export default function KanbanPage({ tarefaDoLink }: KanbanPageProps = {}) {
   useTarefaDoLink(tarefaDoLink, setTarefaAberta);
 
   function invalidar() {
-    queryClient.invalidateQueries({ queryKey: ["tarefas"] });
-    queryClient.invalidateQueries({ queryKey: qk.resumo() });
+    invalidarTarefas(queryClient);
   }
 
   const { sensors, handleDragEnd } = useArrastarTarefa(invalidar);

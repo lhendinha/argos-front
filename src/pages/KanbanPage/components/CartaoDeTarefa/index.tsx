@@ -69,7 +69,7 @@ export default function CartaoDeTarefa({ tarefa, responsavel, onAbrir, selecao }
       <Flex align="center" justify="space-between">
         <Flex align="center" gap="5px">
           <Box w="8px" h="8px" borderRadius="full" bg={cor} flex="0 0 auto" aria-hidden="true" />
-          <EtiquetaDePrazo data={tarefa.data} />
+          <EtiquetaDePrazo data={tarefa.data} hora={tarefa.hora} />
         </Flex>
         {responsavel && <Avatar nome={responsavel} tamanho="pequeno" />}
       </Flex>

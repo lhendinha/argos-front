@@ -16,6 +16,7 @@ export * from "./periodo";
 export * from "./planilha";
 export * from "./plural";
 export * from "./prazo";
+export * from "./horaDaTarefa";
 export * from "./atendimentos";
 export * from "./processos";
 export * from "./lancamentos";

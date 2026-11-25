@@ -74,6 +74,7 @@ export default function AreaDaVisao({
         assuntoDoAtendimento={assuntoDoAtendimento}
         onAbrir={onAbrirTarefa}
         selecaoDe={selecaoDe}
+        colunaDeHora={tarefas.some((t) => t.hora)}
         /* A barra de datas logo acima já diz que dia é este. */
         comData={false}
       />
@@ -110,6 +111,8 @@ export default function AreaDaVisao({
     );
   }
 
+  const comHora = dias.some(({ tarefas }) => tarefas.some((t) => t.hora));
+
   return (
     <Stack gap="12px">
       {dias.map(({ dia, tarefas }) => (
@@ -121,6 +124,7 @@ export default function AreaDaVisao({
           assuntoDoAtendimento={assuntoDoAtendimento}
           onAbrir={onAbrirTarefa}
           selecaoDe={selecaoDe}
+          colunaDeHora={comHora}
         />
       ))}
     </Stack>

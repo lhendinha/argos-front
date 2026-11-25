@@ -25,8 +25,7 @@ import { useRef, useState } from "react";
 
 import { useToast } from "../contexts/ToastContext";
 import { alterarStatusEmLote, atribuirTarefasEmLote } from "../services";
-import { toastErroMutation } from "../services/queryClient";
-import { qk } from "../services/queryKeys";
+import { toastErroMutation, invalidarTarefas } from "../services/queryClient";
 import {
   FRASE_DESFEITO,
   agruparPorOrigem,
@@ -58,8 +57,7 @@ export function useAcoesEmLote() {
   const nomeDoDestino = useRef<string | null>(null);
 
   function recarregar() {
-    queryClient.invalidateQueries({ queryKey: ["tarefas"] });
-    queryClient.invalidateQueries({ queryKey: qk.resumo() });
+    invalidarTarefas(queryClient);
   }
 
   /** Roda a chamada inversa, grupo a grupo, e diz como terminou. */

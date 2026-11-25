@@ -1,5 +1,6 @@
 import { ORDEM_DAS_PRIORIDADES } from "../../constants/prioridade";
 import type { PrioridadeDaTarefa, Tarefa } from "../../types";
+import { compararPelaAgenda } from "../../utils/horaDaTarefa";
 
 function pesoDaPrioridade(prioridade: string): number {
   const indice = ORDEM_DAS_PRIORIDADES.indexOf(prioridade as PrioridadeDaTarefa);
@@ -8,7 +9,21 @@ function pesoDaPrioridade(prioridade: string): number {
   return indice === -1 ? ORDEM_DAS_PRIORIDADES.length : indice;
 }
 
-/** Agrupa as tarefas por `data` (`aaaa-mm-dd`), já ordenadas por prioridade.
+/** A ordem em que a Agenda DESENHA as tarefas: pela data, sem horário primeiro (vale o dia inteiro), depois pela
+ * hora, pela prioridade e pelo título.
+ *
+ * 🔴 Um comparador só, para a tela E para a âncora do Shift (`chavesVisiveis`): com a ordem do servidor no Shift,
+ * selecionar entre duas tarefas clicadas marcaria uma que não está entre elas na tela.
+ */
+export function compararComoNaAgenda(a: Tarefa, b: Tarefa): number {
+  const pela = compararPelaAgenda(a, b);
+  if (pela !== 0) return pela;
+  const peso = pesoDaPrioridade(a.prioridade) - pesoDaPrioridade(b.prioridade);
+  // Desempate estável pelo título: sem ele, duas tarefas de mesma prioridade trocam de lugar entre renders.
+  return peso !== 0 ? peso : a.titulo.localeCompare(b.titulo, "pt-BR");
+}
+
+/** Agrupa as tarefas por `data` (`aaaa-mm-dd`), cada dia na ordem de `compararComoNaAgenda`.
  *
  * Um Map montado UMA vez por consulta, em vez de peneirar o array inteiro
  * para cada célula: a grade do mês tem 42 células, e filtrar dentro de cada
@@ -22,14 +37,7 @@ export function agruparPorDia(tarefas: Tarefa[]): Map<string, Tarefa[]> {
     if (doDia) doDia.push(tarefa);
     else porDia.set(tarefa.data, [tarefa]);
   }
-  for (const doDia of porDia.values()) {
-    doDia.sort((a, b) => {
-      const peso = pesoDaPrioridade(a.prioridade) - pesoDaPrioridade(b.prioridade);
-      // Desempate estável pelo título: sem ele, duas tarefas de mesma
-      // prioridade trocam de lugar entre renders e a lista "pisca".
-      return peso !== 0 ? peso : a.titulo.localeCompare(b.titulo, "pt-BR");
-    });
-  }
+  for (const doDia of porDia.values()) doDia.sort(compararComoNaAgenda);
   return porDia;
 }
 

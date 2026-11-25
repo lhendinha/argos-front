@@ -30,6 +30,8 @@ export default function LinhaDeTarefa({
   onAbrir,
   ultima,
   selecao,
+  colunaDeHora,
+  horaNoDetalhe,
 }: LinhaDeTarefaProps) {
   const cor = CORES_DA_PRIORIDADE[tarefa.prioridade] ?? "fg.subtle";
 
@@ -59,6 +61,18 @@ export default function LinhaDeTarefa({
 
   const miolo = (
     <>
+      {colunaDeHora && (
+        <Text
+          w="56px"
+          flexShrink="0"
+          fontFamily={tarefa.hora ? "mono" : undefined}
+          fontSize={tarefa.hora ? "12.5px" : "11px"}
+          fontWeight={tarefa.hora ? "800" : "700"}
+          color={tarefa.hora ? "fg" : "fg.subtle"}
+        >
+          {tarefa.hora ?? "Dia todo"}
+        </Text>
+      )}
       {/* `minW=0` pra que o texto longo possa encolher e reticenciar em vez
           de esticar a linha e empurrar a etiqueta pra fora. */}
       <Box flex="1" minW="0">
@@ -71,8 +85,14 @@ export default function LinhaDeTarefa({
         >
           {tarefa.titulo}
         </Text>
-        {detalhe && (
+        {(detalhe || (horaNoDetalhe && tarefa.hora)) && (
           <Text fontSize="11.5px" color="fg.muted" mt="2px" truncate>
+            {horaNoDetalhe && tarefa.hora && (
+              <Box as="span" fontWeight="800" color="fg">
+                {tarefa.hora}
+                {detalhe ? " · " : ""}
+              </Box>
+            )}
             {detalhe}
           </Text>
         )}

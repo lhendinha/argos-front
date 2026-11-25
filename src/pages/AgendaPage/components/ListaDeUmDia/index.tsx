@@ -18,6 +18,7 @@ export default function ListaDeUmDia({
   subgrupoNome,
   onAbrir,
   comData = true,
+  colunaDeHora,
   selecaoDe,
 }: ListaDeUmDiaProps) {
   return (
@@ -36,6 +37,7 @@ export default function ListaDeUmDia({
             onAbrir={onAbrir}
             selecao={selecaoDe?.(tarefa)}
             ultima={indice === tarefas.length - 1}
+            colunaDeHora={colunaDeHora}
           />
         ))}
       </Box>

@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { TETO_POR_PAGINA } from "../../../constants";
 import { listarTarefas } from "../../../services";
 import { qk } from "../../../services/queryKeys";
-import { emDias } from "../../../utils";
 import type { IntervaloDeDatas, Tarefa } from "../../../types";
 import type { PeriodoDaAgenda } from "../types";
 
@@ -30,19 +29,12 @@ export function useTarefasDaAgenda(
   intervalo: IntervaloDeDatas,
   periodo: PeriodoDaAgenda = "todos",
 ) {
-  /* 🔴 "Atrasadas" troca a FORMA da consulta, não só um valor: sai a janela
-     da visão e entram `apenasAbertas` + `dataAte: ontem`. É a mesma
-     definição que o card "Tarefas atrasadas" da Área de trabalho conta --
-     abertas com `data < hoje` --, e é ela que faz o número bater com a
-     lista que o clique abre.
-
-     ⚠️ `emDias(-1)`, o mesmo auxiliar que o Resumo rápido usa -- ele monta
-     pelo relógio LOCAL, nunca por `toISOString()`, que às 21h em Brasília já
-     devolve o dia seguinte e faria a tarefa de hoje aparecer como atrasada
-     toda noite. */
+  /* 🔴 "Atrasadas" troca a FORMA da consulta, não só um valor: sai a janela da visão e entra `atrasadas`, que o
+     SERVIDOR decide pela mesma regra que conta o card da home (`horario_da_tarefa.esta_atrasada`): data passada, ou
+     hoje com a hora já passada. Peneirar no cliente quebraria a paginação. */
   const atrasadas = periodo === "atrasadas";
   const parametrosDeData = atrasadas
-    ? { apenasAbertas: true, dataAte: emDias(-1) }
+    ? { apenasAbertas: true, atrasadas: true }
     : { dataDe: intervalo.de, dataAte: intervalo.ate };
 
   return useQuery<Tarefa[]>({

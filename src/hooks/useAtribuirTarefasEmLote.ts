@@ -12,7 +12,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { atribuirTarefasEmLote } from "../services";
-import { qk } from "../services/queryKeys";
+import { invalidarTarefas } from "../services/queryClient";
 import { paraOLote } from "../utils/selecao";
 import type { PedidoDeAtribuicaoEmLote, ResultadoDaAtribuicao } from "../types";
 
@@ -26,8 +26,7 @@ export function useAtribuirTarefasEmLote(
     mutationFn: ({ tarefas, responsavelId }: PedidoDeAtribuicaoEmLote) =>
       atribuirTarefasEmLote(paraOLote(tarefas), responsavelId),
     onSuccess: (resultado, pedido) => {
-      queryClient.invalidateQueries({ queryKey: ["tarefas"] });
-      queryClient.invalidateQueries({ queryKey: qk.resumo() });
+      invalidarTarefas(queryClient);
       aoTerminar(resultado, pedido);
     },
     onError: aoFalhar,

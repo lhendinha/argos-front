@@ -15,7 +15,15 @@ const mocks = vi.hoisted(() => ({
   listarProcessos: vi.fn(),
   listarAtendimentos: vi.fn(),
   listarClientes: vi.fn(),
+  detalhesTarefa: vi.fn(),
 }));
+
+/** O que a leitura pela chave devolve: a tarefa que cada teste abriu (o modal de editar lê de novo, D21). */
+const servidas = new Map<string, unknown>();
+function servir(tarefa: unknown) {
+  const t = tarefa as { tarefa_id?: string } | undefined;
+  if (t?.tarefa_id) servidas.set(t.tarefa_id, t);
+}
 
 vi.mock("../../services", () => mocks);
 
@@ -35,6 +43,9 @@ beforeEach(() => {
   mocks.listarProcessos.mockResolvedValue({ processos: [] });
   mocks.listarAtendimentos.mockResolvedValue({ atendimentos: [] });
   mocks.listarClientes.mockResolvedValue({ clientes: [] });
+  servidas.clear();
+  mocks.detalhesTarefa.mockImplementation((_s: string, id: string) =>
+    servidas.has(id) ? Promise.resolve(servidas.get(id)) : Promise.reject(new ApiError("não achou", 404)));
 });
 
 function montar() {
@@ -78,6 +89,7 @@ describe("vinculoInicial", () => {
   };
 
   function montarCom(props: Record<string, unknown>) {
+    servir(props.tarefa);
     renderComProviders(
       <MemoryRouter>
         <ModalDeTarefa subgrupoAtual="s1" onSalvo={vi.fn()} onFechar={vi.fn()} {...props} />
@@ -234,6 +246,7 @@ describe("a tarefa que sumiu com o modal aberto", () => {
   const AVISO_DE_SUMIDA = "Esta tarefa foi excluída, e as alterações não foram salvas.";
 
   function montarCom(tarefa?: Tarefa) {
+    servir(tarefa);
     const onSalvo = vi.fn();
     const onFechar = vi.fn();
     renderComProviders(

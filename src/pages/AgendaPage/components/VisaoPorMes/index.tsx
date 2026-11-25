@@ -128,6 +128,11 @@ export default function VisaoPorMes({
                       color={concluida ? "fg.subtle" : alta ? CORES_DA_PRIORIDADE.Alta : undefined}
                       textDecoration={concluida ? "line-through" : undefined}
                     >
+                      {tarefa.hora && (
+                        <Box as="span" fontWeight="800">
+                          {`${tarefa.hora} `}
+                        </Box>
+                      )}
                       {tarefa.titulo}
                     </Text>
                   );

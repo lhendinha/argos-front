@@ -38,6 +38,16 @@ export function useFormularioDeTarefa({
 
   const [titulo, setTitulo] = useState(tarefa?.titulo ?? "");
   const [data, setData] = useState(tarefa?.data ?? dataInicial ?? hojeISO());
+  const [hora, setHora] = useState(tarefa?.hora ?? "");
+  /** `true` enquanto o campo de hora tem algo que não é uma hora (`validity.badInput`): "09:" não vira "". */
+  const [horaIncompleta, setHoraIncompleta] = useState(false);
+  const [aviso, setAviso] = useState<number | null>(tarefa?.aviso_minutos ?? null);
+  /** Tirar a hora tira o aviso junto: sem hora não há "antes", e o servidor recusa o aviso sozinho. */
+  function semHorario() {
+    setHora("");
+    setHoraIncompleta(false);
+    setAviso(null);
+  }
   const [subgrupoId, setSubgrupoId] = useState(tarefa?.subgrupo_id ?? subgrupoAtual);
 
   /* 🔴 Quadro e membros seguem o subgrupo ESCOLHIDO AQUI, não o da tela.
@@ -170,6 +180,8 @@ export function useFormularioDeTarefa({
     processo_numero: vinculos.processo?.id ?? null,
     atendimento_id: vinculos.atendimento?.id ?? null,
   };
+  /** A hora e o aviso como a API espera: sem hora, os DOIS nulos (D3). */
+  const camposDaHora = { hora: hora || null, aviso_minutos: hora ? aviso : null };
 
   /* A projeção é o corpo do envio. `colunaEscolhida` e não `colunaId`, porque
      é o derivado que vai para o servidor -- e é justamente por isso que ele
@@ -181,6 +193,8 @@ export function useFormularioDeTarefa({
   const { mudou, resemear } = useGuardaDeDescarte({
     titulo: titulo.trim(),
     data,
+    hora,
+    aviso: hora ? aviso : null,
     subgrupoId,
     coluna: colunaEscolhida,
     prioridade,
@@ -218,6 +232,7 @@ export function useFormularioDeTarefa({
             prioridade,
             responsavel_id: responsavel || null,
             ...camposDoVinculo,
+            ...camposDaHora,
           })
         : criarTarefa({
             subgrupo_id: subgrupoId,
@@ -227,6 +242,7 @@ export function useFormularioDeTarefa({
             prioridade,
             responsavel_id: responsavel || null,
             ...camposDoVinculo,
+            ...camposDaHora,
           }),
     onSuccess: () => {
       toast.sucesso(editando ? "Tarefa atualizada." : "Tarefa criada.");
@@ -274,6 +290,13 @@ export function useFormularioDeTarefa({
     setTitulo,
     data,
     setData,
+    hora,
+    setHora,
+    horaIncompleta,
+    setHoraIncompleta,
+    semHorario,
+    aviso,
+    setAviso,
     subgrupoId,
     trocarSubgrupo,
     subgrupos,
