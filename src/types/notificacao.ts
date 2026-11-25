@@ -88,6 +88,10 @@ export interface Notificacao {
    * o objeto que chega pelo canal WebSocket não tem o campo, e a linha sem
    * alvo também não. Ausente, a linha abre como sempre abriu. */
   alvo_estado?: EstadoDoAlvo;
+  /** A data e a hora ATUAIS da tarefa-alvo (`sino_service._agenda_do_alvo`), só nas linhas de tarefa que quem lê
+   * pode abrir. ⚠️ A atual, não a do aviso gravado: remarcada a tarefa, a linha diz a hora nova. */
+  alvo_data?: string;
+  alvo_hora?: string;
 }
 
 /** O que o canal de tempo real manda. `tipo` distingue os formatos --

@@ -170,6 +170,13 @@ export function frasePrincipal(n: Notificacao): string {
 /** O que aparece embaixo da frase: o objeto e, quando ajuda, o
  * complemento. */
 export function detalheSecundario(n: Notificacao): string {
+  /* A hora da tarefa vem no INÍCIO: no fim, o corte da linha a esconderia. */
+  const texto = semAHora(n);
+  if (!n.alvo_hora) return texto;
+  return texto ? `às ${n.alvo_hora} · ${texto}` : `às ${n.alvo_hora}`;
+}
+
+function semAHora(n: Notificacao): string {
   /* ⚠️ Vazio de propósito: o título de `sessao_alterada` já É a frase
      inteira ("Você foi movido para o grupo X"), e o `default` desta função
      devolve o título -- sem esta linha, a MESMA frase apareceria duas vezes

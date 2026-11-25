@@ -59,3 +59,9 @@ export function compararPelaAgenda(
   const hb = b.hora ?? "";
   return ha === hb ? 0 : ha < hb ? -1 : 1;
 }
+
+/** O nome da tarefa para quem lê em voz alta ou escolhe entre parecidas: com títulos repetidos ("Audiência"), é a
+ * hora que distingue uma da outra. */
+export function nomeComHora(tarefa: { titulo: string; hora?: string | null }): string {
+  return tarefa.hora ? `${tarefa.titulo}, às ${tarefa.hora}` : tarefa.titulo;
+}

@@ -3,7 +3,7 @@ import { Box, Checkbox, Flex, Text } from "@chakra-ui/react";
 import { BotaoNu, EtiquetasDeSubgrupo } from "../../../../components";
 
 import { CORES_DA_PRIORIDADE } from "../../../../constants";
-import { mascararNumeroProcesso } from "../../../../utils";
+import { mascararNumeroProcesso, nomeComHora } from "../../../../utils";
 import type { LinhaDeTarefaProps } from "./types";
 
 /** Uma linha de tarefa na Agenda (`.agenda-list-item` do artifact).
@@ -150,7 +150,7 @@ export default function LinhaDeTarefa({
           evento.preventDefault();
           selecao.onAlternar(evento.shiftKey);
         }}
-        aria-label={`Selecionar ${tarefa.titulo}`}
+        aria-label={`Selecionar ${nomeComHora(tarefa)}`}
       >
         <Checkbox.HiddenInput />
         <Checkbox.Control />

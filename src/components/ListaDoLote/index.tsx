@@ -56,6 +56,12 @@ export default function ListaDoLote({ tarefas }: ListaDoLoteProps) {
           {/* `minW=0` para o título longo reticenciar em vez de empurrar o
               número do processo para fora da caixa. */}
           <Text fontSize="12.5px" fontWeight="700" truncate minW="0">
+            {/* A hora antes do título: com títulos repetidos ("Audiência"), é ela que diz qual. */}
+            {t.hora && (
+              <Box as="span" fontFamily="mono" fontWeight="800" mr="6px">
+                {t.hora}
+              </Box>
+            )}
             {t.titulo}
           </Text>
           <Text

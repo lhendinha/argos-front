@@ -48,3 +48,11 @@ describe("compararPelaAgenda", () => {
     ]);
   });
 });
+
+describe("nomeComHora", () => {
+  it("põe a hora quando há, e só o título quando não há", async () => {
+    const { nomeComHora } = await import("./horaDaTarefa");
+    expect(nomeComHora({ titulo: "Audiência", hora: "14:30" })).toBe("Audiência, às 14:30");
+    expect(nomeComHora({ titulo: "Audiência", hora: null })).toBe("Audiência");
+  });
+});

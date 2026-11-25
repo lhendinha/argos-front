@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 import { Avatar, EtiquetaDePrazo } from "../../../../components";
-import { mascararNumeroProcesso } from "../../../../utils";
+import { mascararNumeroProcesso, nomeComHora } from "../../../../utils";
 import { CORES_DA_PRIORIDADE } from "../../constants";
 import type { CartaoDeTarefaProps } from "./types";
 
@@ -93,7 +93,7 @@ export default function CartaoDeTarefa({ tarefa, responsavel, onAbrir, selecao }
           evento.preventDefault();
           selecao.onAlternar(evento.shiftKey);
         }}
-        aria-label={`Selecionar ${tarefa.titulo}`}
+        aria-label={`Selecionar ${nomeComHora(tarefa)}`}
       >
         <Checkbox.HiddenInput />
         <Checkbox.Control mt="2px" flexShrink={0} />
