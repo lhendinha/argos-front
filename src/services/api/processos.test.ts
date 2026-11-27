@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /* A assinatura vai explícita: `vi.fn(async () => …)` infere ZERO parâmetros,
    e aí ler `mock.calls[0][1]` não compila. */
@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("./client", () => mocks);
 
-import { listarProcessos, temFiltroAtivo } from "./processos";
+import { listarProcessos, teorDaMovimentacao, temFiltroAtivo } from "./processos";
 
 /** O que sai no fio, para a listagem de processos.
  *
@@ -67,5 +67,42 @@ describe("o que conta como filtro ativo", () => {
   it("sem nada, nada", () => {
     expect(temFiltroAtivo({})).toBe(false);
     expect(temFiltroAtivo({ subgrupoId: "" })).toBe(false);
+  });
+});
+
+describe("o teor que não coube no banco vem por link", () => {
+  const baixar = vi.fn();
+  beforeEach(() => {
+    baixar.mockReset();
+    vi.stubGlobal("fetch", baixar);
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("🔴 com `texto_url`, baixa o teor e o devolve em `texto`", async () => {
+    mocks.chamar.mockResolvedValueOnce({ comunicacao_id: 9, texto: null, texto_url: "https://bucket/teores/x.html" });
+    baixar.mockResolvedValueOnce(new Response("<p>o edital</p>", { status: 200 }));
+    const teor = await teorDaMovimentacao("0001", 9);
+    expect(baixar).toHaveBeenCalledWith("https://bucket/teores/x.html");
+    expect(teor.texto).toBe("<p>o edital</p>");
+  });
+
+  it("o par: com o texto no banco, não baixa nada", async () => {
+    mocks.chamar.mockResolvedValueOnce({ comunicacao_id: 1, texto: "<p>curto</p>", texto_url: null });
+    const teor = await teorDaMovimentacao("0001", 1);
+    expect(baixar).not.toHaveBeenCalled();
+    expect(teor.texto).toBe("<p>curto</p>");
+  });
+
+  it("sem texto e sem link, devolve como veio (a tela diz que chegou sem o texto)", async () => {
+    mocks.chamar.mockResolvedValueOnce({ comunicacao_id: 2, texto: null, texto_url: null });
+    const teor = await teorDaMovimentacao("0001", 2);
+    expect(baixar).not.toHaveBeenCalled();
+    expect(teor.texto).toBeNull();
+  });
+
+  it("o download que falha vira ERRO, nunca teor vazio", async () => {
+    mocks.chamar.mockResolvedValueOnce({ comunicacao_id: 9, texto: null, texto_url: "https://bucket/teores/x.html" });
+    baixar.mockResolvedValueOnce(new Response("AccessDenied", { status: 403 }));
+    await expect(teorDaMovimentacao("0001", 9)).rejects.toThrow("Não foi possível baixar");
   });
 });

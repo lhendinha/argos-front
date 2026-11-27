@@ -1,6 +1,6 @@
 import { chamar } from "./client";
 import { corpoDosCamposDeProcesso } from "../../utils/processos";
-import type { CamposOpcionaisProcesso, FiltrosBuscaProcessos, OpcoesListarProcessos } from "../../types";
+import type { CamposOpcionaisProcesso, Comunicacao, FiltrosBuscaProcessos, OpcoesListarProcessos } from "../../types";
 
 /** true se qualquer filtro estiver preenchido -- mesma checagem que o
  * backend usa (processos_router.py) pra decidir entre listagem paginada
@@ -95,7 +95,17 @@ export function detalhesProcesso(numeroProcesso: string) {
  * movimentado devolvia 100 KB onde 6 KB bastam.
  *
  * Mesma régua de permissão do detalhe: quem não pode abrir o processo
- * recebe 403. */
-export function teorDaMovimentacao(numeroProcesso: string, comunicacaoId: number | string) {
-  return chamar(`/processos/${numeroProcesso}/comunicacoes/${comunicacaoId}`);
+ * recebe 403.
+ *
+ * 🔴 O teor que não coube no banco (editais com centenas de processos) vem
+ * como `texto_url`, e é baixado daqui, dentro da mesma busca: quem mostra
+ * continua em "Carregando o teor…" até ele chegar, e a falha do download é
+ * a mesma falha de carregar. O navegador descomprime sozinho (o objeto tem
+ * `Content-Encoding: gzip`). ➡️ API: `services/teor_no_bucket.py`. */
+export async function teorDaMovimentacao(numeroProcesso: string, comunicacaoId: number | string) {
+  const comunicacao = await chamar<Comunicacao>(`/processos/${numeroProcesso}/comunicacoes/${comunicacaoId}`);
+  if (comunicacao.texto || !comunicacao.texto_url) return comunicacao;
+  const resposta = await fetch(comunicacao.texto_url);
+  if (!resposta.ok) throw new Error("Não foi possível baixar o teor desta movimentação.");
+  return { ...comunicacao, texto: await resposta.text() };
 }
