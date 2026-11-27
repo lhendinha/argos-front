@@ -323,6 +323,10 @@ export interface Comunicacao {
   tipo_comunicacao?: string;
   nome_orgao?: string;
   texto?: string;
+  /** O link curto (60 s) para baixar o teor que não coube no banco, com
+   * `texto` vazio. `teorDaMovimentacao` o baixa e preenche `texto`; quem
+   * mostra nunca lê este campo. */
+  texto_url?: string | null;
   /** Endereço do documento no site do tribunal.
    *
    * ⚠️ **Nenhuma tela mostra isto**: é porta pra fora do sistema, e em 7
